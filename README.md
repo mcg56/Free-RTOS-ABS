@@ -66,7 +66,8 @@ Note that the `program` and `debug` commands require that OpenOCD is running in
 the background. Usually this is done in another terminal window using the
 `openocd` command.
 
-## Coding
+## Coding style
+
 You will note that there are a variety of coding styles present in this project.
 TivaWare uses CamelCase, FreeRTOS uses a prefixed CamelCase, and I use
 snake_case. I suggest picking whichever you prefer and sticking with it.
