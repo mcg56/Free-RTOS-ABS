@@ -27,7 +27,7 @@ sudo apt install gcc-arm-none-eabi gdb-multiarch openocd
 Using [Homebrew](https://brew.sh/):
 
     brew install openocd git
-    brea cask install gcc-arm-embedded
+    brew cask install gcc-arm-embedded
 
 ### Windows
 
