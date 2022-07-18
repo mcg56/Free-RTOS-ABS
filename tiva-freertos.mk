@@ -24,7 +24,7 @@ endif
 OPENOCD ?= openocd
 
 FREERTOS_ARCH ?= GCC/ARM_CM4F
-FREERTOS_HEAP_IMPL ?= heap_1
+FREERTOS_HEAP_IMPL ?= heap_4
 
 SCRIPTS_DIR = $(PROJECT_DIR)/scripts
 
