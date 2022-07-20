@@ -1,0 +1,54 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "inputs": [
+        {
+            "id": "windowsFileDirname",
+            "type": "command",
+            "command": "extension.commandvariable.transform",
+            "args": {
+                "text": "${fileDirname}",
+                "find": "\\\\",
+                "replace": "\\\\\\\\",
+                "flags": "g"
+            }
+        }
+    ],
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/build/${fileBasenameNoExtension}.elf",
+            "cwd": "${fileDirname}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb-multiarch",
+            "preLaunchTask": "Build",
+            "customLaunchSetupCommands": [],
+            "setupCommands": [
+                {"text": "set architecture arm", "description": ""},
+                {"text": "target remote tcp:localhost:3333", "description": ""},
+                {"text": "symbol-file ${fileDirname}/build/${fileBasenameNoExtension}.elf", "description": ""},
+                {"text": "load ${fileDirname}/build/${fileBasenameNoExtension}.elf", "description": ""},
+                {"text": "monitor halt", "description": ""},
+                {"text": "break main", "description": ""}
+            ],
+            "launchCompleteCommand": "None",
+            "externalConsole": false,
+            "windows": {
+                "miDebuggerPath": "C:\\ence461\\tool-chain\\gcc-arm-none-eabi-9-2019-q4\\bin\\arm-none-eabi-gdb.exe",
+                "targetArchitecture": "arm",
+                "setupCommands": [
+                    {"text": "set architecture arm", "description": ""},
+                    {"text": "target remote tcp:localhost:3333", "description": ""},
+                    {"text": "symbol-file ${input:windowsFileDirname}\\\\build\\\\${fileBasenameNoExtension}.elf", "description": ""},
+                    {"text": "load ${input:windowsFileDirname}\\\\build\\\\${fileBasenameNoExtension}.elf", "description": ""},
+                    {"text": "monitor reset halt", "description": ""},
+                    {"text": "break main", "description": ""}
+                ]
+            }
+        }
+    ]
+}

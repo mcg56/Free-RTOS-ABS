@@ -58,12 +58,23 @@ CFLAGS += \
 	-mfpu=fpv4-sp-d16 \
 	-DPART_TM4C123GH6PM \
 	-g3 -Wall -W $(OPT) \
+	$(INCLUDES) \
 	$(CFLAGS_EXTRA)
 
+LDFLAGS += \
+	-T$(SCRIPTS_DIR)/link.ld \
+	-mcpu=cortex-m4 \
+	-mthumb \
+	-mfloat-abi=hard \
+	-mfpu=fpv4-sp-d16
+
 SRC += startup.c $(notdir $(TIVAWARE_SRC) $(FREERTOS_SRC))
-VPATH += $(PROJECT_DIR) $(dir $(TIVAWARE_SRC) $(FREERTOS_SRC))
-LIBS += $(TIVAWARE_LIBS)
+OBJS = $(addprefix $(BUILD_DIR)/, $(patsubst %.c,%.o,$(SRC)))
+VPATH += $(PROJECT_DIR) $(sort $(dir $(TIVAWARE_SRC) $(FREERTOS_SRC)))
+LDLIBS += $(TIVAWARE_LIBS)
 INCLUDES += -I"$(PROJECT_DIR)" $(FREERTOS_INCLUDES) $(TIVAWARE_INCLUDES)
+DEP_DIR = $(BUILD_DIR)/deps
+DEPS = $(sort $(addprefix $(DEP_DIR)/, $(notdir $(sort $(SRC:.c=.d)))))
 
 ifndef VERBOSE
 Q=@
@@ -75,19 +86,32 @@ info:
 	@echo TARGET=$(TARGET)
 	@echo TOOLCHAIN=$(TOOLCHAIN)
 	@echo CC=$(CC)
+	@echo CFLAGS=$(CFLAGS)
 	@echo LD=$(LD)
+	@echo LDFLAGS=$(LDFLAGS)
+	@echo LDLIBS=$(LDLIBS)
 	@echo GDB=$(GDB)
 	@echo SRC=$(SRC)
 	@echo VPATH=$(VPATH)
+	@echo DEPS=$(DEPS)
+
+$(DEP_DIR):
+	mkdir -p $(DEP_DIR)
+
+$(DEPS): | $(DEPDIR)
+
+-include $(DEPS)
 
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p "$(@D)"
-	$(info CC $^)
-	$(Q)$(CC) $(CFLAGS) $(INCLUDES) -o $@ -c $<
+	$(info CC $<)
+	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
+	$(Q)printf "$(BUILD_DIR)/" > $(DEP_DIR)/$*.d
+	$(Q)$(CC) -MM $(CFLAGS) $< >> $(DEP_DIR)/$*.d
 
-$(TARGET): $(addprefix $(BUILD_DIR)/, $(patsubst %.c,%.o,$(SRC)))
+$(TARGET): $(DEP_DIR) $(OBJS)
 	$(info LD $@)
-	$(Q)$(LD) $(CFLAGS) -T$(SCRIPTS_DIR)/link.ld -o $@ $^ $(LIBS)
+	$(Q)$(LD) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
 
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET)

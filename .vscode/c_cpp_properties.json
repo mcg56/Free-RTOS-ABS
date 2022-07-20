@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "hat",
+            "intelliSenseMode": "gcc-x64",
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/FreeRTOS-Kernel-10.4.6",
+                "${workspaceFolder}/FreeRTOS-Kernel-10.4.6/include",
+                "${workspaceFolder}/FreeRTOS-Kernel-10.4.6/portable/GCC/ARM_CM4F",
+                "${workspaceFolder}/SW-TM4C-2.2.0.295"
+            ],
+            "configurationProvider": "ms-vscode.makefile-tools"
+        }
+    ],
+    "version": 4
+}

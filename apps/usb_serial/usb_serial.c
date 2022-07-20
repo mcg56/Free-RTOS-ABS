@@ -65,7 +65,7 @@ void greet(void* args) {
     while (true) {
         char greeting[100];
 
-        usnprintf(greeting, sizeof(greeting), "Hello %i!\n", count++);
+        usnprintf(greeting, sizeof(greeting), "Hello %i!\r\n", count++);
         uart_puts(greeting);
 
         vTaskDelayUntil( &wake_time, 500 );

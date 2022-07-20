@@ -16,7 +16,9 @@ void blink(void* args) {
 
     while (true) {
         GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
-        vTaskDelayUntil( &wake_time, 100 );
+        vTaskDelayUntil(&wake_time, 30);
+
+        // configASSERT(wake_time < 1000);  // Runs vAssertCalled() if false
     }
 }
 
