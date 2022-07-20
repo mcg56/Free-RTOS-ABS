@@ -1,3 +1,7 @@
 {
-    "windowsToolchainEnvCmd": "C:\\ence461\\ence461-path.bat"
+    "windowsToolchainEnvCmd": "C:\\ence461\\ence461-path.bat",
+    "files.associations": {
+        "orbitoled.h": "c",
+        "sysctl.h": "c"
+    }
 }
