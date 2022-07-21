@@ -1,17 +1,9 @@
+LIBS_DIR = $(PROJECT_DIR)/libs
 
-SRC += libs/ap_pwm.c 
-SRC += libs/OrbitOLEDInterface.c
-INCLUDES += -I"$(PROJECT_DIR)/libs/include"
+VPATH += $(LIBS_DIR)
+INCLUDES += -I$(LIBS_DIR)/include
 
+SRC += ap_pwm.c 
+SRC += OrbitOLEDInterface.c
 
-
-SRC += libs/lib_OrbitOled/ChrFont0.c
-SRC += libs/lib_OrbitOled/delay.c
-SRC += libs/lib_OrbitOled/FillPat.c
-SRC += libs/lib_OrbitOled/OrbitOled.c
-SRC += libs/lib_OrbitOled/OrbitOledChar.c
-SRC += libs/lib_OrbitOled/OrbitOledGrph.c
-
-
-#INCLUDES += -I"$(PROJECT_DIR)/libs/OrbitOLED"
-INCLUDES += -I"$(PROJECT_DIR)/libs/lib_OrbitOled"
+include $(LIBS_DIR)/lib_OrbitOled/Oled.mk
