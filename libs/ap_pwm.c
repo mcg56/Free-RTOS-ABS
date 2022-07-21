@@ -22,7 +22,7 @@
 #include "driverlib/systick.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/interrupt.h"
-#include "include/ap_pwm.h"
+#include "ap_pwm.h"
 
 /**********************************************************
  * Generates a single PWM signal on Tiva board pin J4-05 =
