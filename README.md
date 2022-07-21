@@ -229,6 +229,9 @@ machines.)
 
 ## Coding style
 
+- Camel case
+- Every function needs a header abstract, brief, inputs, outputs
+
 You will note that there are a variety of coding styles present in this project.
 TivaWare uses CamelCase, FreeRTOS uses a prefixed CamelCase, and I use
 snake_case. I suggest picking whichever you prefer and sticking with it.
@@ -241,3 +244,11 @@ return types). This is a form of [Hungarian
 notation](https://en.wikipedia.org/wiki/Hungarian_notation) which I personally
 feel is uneccesary given that our development environments give us this type
 information by simply mousing over the variable in question!
+
+
+## Common functions
+
+- Read PWM frequencies
+- Write PWM varied frequency and duty cycle
+- Orbit code 
+- UART
