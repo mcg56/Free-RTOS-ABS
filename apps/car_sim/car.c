@@ -8,6 +8,7 @@
 
 #include <FreeRTOS.h>
 #include <task.h>
+#include "ap_pwm.h"
 
 void blink(void* args) {
     (void)args; // unused
@@ -28,6 +29,12 @@ int main(void) {
 
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1);
+
+    // Set the PWM clock rate (using the prescaler)
+    SysCtlPWMClockSet(PWM_DIVIDER_CODE);
+    SysCtlPeripheralReset (PWM_MAIN_PERIPH_GPIO); // Used for PWM output
+    SysCtlPeripheralReset (PWM_MAIN_PERIPH_PWM);  // Main Rotor PWM
+    initialisePWM ();
 
     xTaskCreate(&blink, "blink", 256, NULL, 0, NULL);
 
