@@ -7,6 +7,8 @@
         "ap_pwm.h": "c",
         "task.h": "c",
         "pin_map.h": "c",
-        "pwm.h": "c"
+        "pwm.h": "c",
+        "ustdlib.h": "c",
+        "freertos.h": "c"
     }
 }
