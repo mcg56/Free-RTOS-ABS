@@ -4,6 +4,9 @@
         "orbitoled.h": "c",
         "sysctl.h": "c",
         "gpio.h": "c",
-        "ap_pwm.h": "c"
+        "ap_pwm.h": "c",
+        "task.h": "c",
+        "pin_map.h": "c",
+        "pwm.h": "c"
     }
 }
