@@ -9,6 +9,7 @@
         "pin_map.h": "c",
         "pwm.h": "c",
         "ustdlib.h": "c",
-        "freertos.h": "c"
+        "freertos.h": "c",
+        "hw_ints.h": "c"
     }
 }
