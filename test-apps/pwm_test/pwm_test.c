@@ -8,24 +8,11 @@
 
 #include <FreeRTOS.h>
 #include <task.h>
-#include "ap_pwm.h"
-#include "OrbitOLEDInterface.h"
+#include "libs/lib_pwm/ap_pwm.h"
+#include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 #include "stdlib.h"
 #include "utils/ustdlib.h"
 #include "driverlib/pwm.h"
-
-void blink(void* args) {
-    (void)args; // unused
-
-    TickType_t wake_time = xTaskGetTickCount();
-
-    while (true) {
-        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
-        vTaskDelayUntil(&wake_time, 100);
-
-        // configASSERT(wake_time < 1000);  // Runs vAssertCalBled() if false
-    }
-}
 
 void initDisplay (void)
 {
@@ -57,17 +44,13 @@ int main(void) {
     // Initialisation is complete, so turn on the output.
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
-    
-    int8_t upPushes = 2;
 
-    displayButtonState ("DOWN ", "RELS", upPushes, 1);
+    setPWM(300, 50);
 
-    // while(1)
-    // {
-    //     continue;
-    // }
-
-    xTaskCreate(&blink, "blink", 256, NULL, 0, NULL);
+    while(1)
+    {
+        continue;
+    }
 
     vTaskStartScheduler();
 
