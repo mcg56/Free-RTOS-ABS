@@ -10,6 +10,7 @@
         "pwm.h": "c",
         "ustdlib.h": "c",
         "freertos.h": "c",
-        "hw_ints.h": "c"
+        "hw_ints.h": "c",
+        "hw_memmap.h": "c"
     }
 }
