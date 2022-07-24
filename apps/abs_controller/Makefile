@@ -1,5 +1,6 @@
 PROJECT_DIR = ../..
 
-SRC = blinky.c
+SRC = abs_controller.c
 
+include $(PROJECT_DIR)/libs/libs.mk
 include $(PROJECT_DIR)/tiva-freertos.mk

@@ -19,7 +19,7 @@
 //*****************************************************************************
 // Global variables
 //*****************************************************************************
-enum absStates absState = ABS_OFF;
+static enum absStates absState = ABS_OFF;
 extern TaskHandle_t pulseABSHandle;
 
 

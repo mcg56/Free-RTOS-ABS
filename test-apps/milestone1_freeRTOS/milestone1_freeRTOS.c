@@ -25,7 +25,6 @@ TaskHandle_t pulseABSHandle;
 TaskHandle_t blinkHandle;
 TaskHandle_t updateABSHandle;
 TaskHandle_t updateStatusButtonHandle;
-extern enum absStates absState;
 
 
 void blink(void* args) {
@@ -82,7 +81,7 @@ void updateOLED(void* args)
         char string[17]; // Display fits 16 characters wide.
         OLEDStringDraw ("                ", 0, 0); //Clear line
 
-        if (absState)
+        if (getABSState())
         {
             OLEDStringDraw ("ABS PWM", 0, 0);
         } else
