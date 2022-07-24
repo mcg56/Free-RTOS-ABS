@@ -24,6 +24,18 @@
 #include "driverlib/interrupt.h"
 #include "ap_pwm.h"
 
+/**
+ * @brief PWM signal struct, used for each PWM signal to define it's parameters
+ * @param - See below 
+ * @return - No return
+ */
+struct pwmSignal{
+int duty;
+int freq;
+int prevRising;
+int prevFalling;
+};
+
 /**********************************************************
  * Generates a single PWM signal on Tiva board pin J4-05 =
  * PC5 (M0PWM7).  This is the same PWM output as the
@@ -73,4 +85,28 @@ setPWM (uint32_t ui32Freq, uint32_t ui32Duty)
     PWMGenPeriodSet(PWM_MAIN_BASE, PWM_MAIN_GEN, ui32Period);
     PWMPulseWidthSet(PWM_MAIN_BASE, PWM_MAIN_OUTNUM, 
         ui32Period * ui32Duty / 100);
+}
+
+
+/**
+ * @brief Update the frequency of the desired PWM signal
+ * @param PWM signal struct
+ * @return No return
+ */
+void
+updateFreq (struct pwmSignal identifier)
+{
+    // Update PWM freq
+}
+
+
+/**
+ * @brief Update the duty cycle of the desired PWM signal
+ * @param PWM signal struct
+ * @return No return
+ */
+void
+updateDuty (struct pwmSignal identifier)
+{
+    // Update PWM duty
 }
