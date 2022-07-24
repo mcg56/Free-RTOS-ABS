@@ -65,6 +65,11 @@ void updateStatusButton (void* args)
     }
 }
 
+/**
+ * @brief Update the OLED screen. Currently only displays the ABS state
+ * @param args
+ * @return No return
+ */
 void updateOLED(void* args)
 {
     (void)args;

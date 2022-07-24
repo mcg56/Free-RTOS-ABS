@@ -23,6 +23,12 @@ enum absStates absState = ABS_OFF;
 extern TaskHandle_t pulseABSHandle;
 
 
+/**
+ * @brief Sets the ABS state
+ * @param state The state to set the ABS to
+
+ * @return No return
+ */
 void setABSState (enum absStates state)
 {
     if (state == ABS_ON)
