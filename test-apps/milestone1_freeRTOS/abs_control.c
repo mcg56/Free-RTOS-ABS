@@ -19,8 +19,9 @@
 //*****************************************************************************
 // Global variables
 //*****************************************************************************
-static enum absStates absState = ABS_OFF;
+enum absStates absState = ABS_OFF;
 extern TaskHandle_t pulseABSHandle;
+
 
 void setABSState (enum absStates state)
 {
@@ -71,6 +72,7 @@ void updateABS (void* args)
                 setPWM(500, 30);
                 break;
         }
+
 
         vTaskDelay(xDelay);
     }

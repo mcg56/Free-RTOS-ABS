@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #include <inc/hw_memmap.h>
 #include <inc/hw_types.h>
@@ -19,10 +20,13 @@
 //*****************************************************************************
 // freeRTOS handles
 //*****************************************************************************
+TaskHandle_t updateOLEDHandle;
 TaskHandle_t pulseABSHandle;
 TaskHandle_t blinkHandle;
 TaskHandle_t updateABSHandle;
 TaskHandle_t updateStatusButtonHandle;
+extern enum absStates absState;
+
 
 void blink(void* args) {
     (void)args; // unused
@@ -52,9 +56,37 @@ void updateStatusButton (void* args)
 
             // Tell the abs controller to update its status
             xTaskNotifyGiveIndexed( updateABSHandle, 0 );
+
+            // Tell the OLED update task to write a new line with new abs state
+            xTaskNotifyGiveIndexed( updateOLEDHandle, 0 );
         }
 
         vTaskDelay(xDelay);
+    }
+}
+
+void updateOLED(void* args)
+{
+    (void)args;
+    //const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+
+    while(true)
+    {
+        // Wait until a task has notified it to run, when a new message is to be written
+        ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+        char string[17]; // Display fits 16 characters wide.
+        OLEDStringDraw ("                ", 0, 0); //Clear line
+
+        if (absState)
+        {
+            OLEDStringDraw ("ABS PWM", 0, 0);
+        } else
+        {
+            OLEDStringDraw ("Continuous PWM", 0, 0);       
+        }
+        /*
+        usnprintf (string, sizeof(string), "ABS state: %d", absState);
+        OLEDStringDraw (string, 0, 0);*/
     }
 }
 
@@ -71,6 +103,8 @@ int main(void) {
 
     initialisePWM ();
     initButtons ();
+    OLEDInitialise ();
+    OLEDStringDraw ("Continuous PWM", 0, 0);
 
     // Initialisation is complete, so turn on the output.
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
@@ -79,6 +113,7 @@ int main(void) {
     xTaskCreate(&updateStatusButton, "updateStatusButton", 256, NULL, 0, &updateStatusButtonHandle);
     xTaskCreate(&updateABS, "updateABS", 256, NULL, 0, &updateABSHandle);
     xTaskCreate(&pulseABS, "pulseABS", 256, NULL, 0, &pulseABSHandle);
+    xTaskCreate(&updateOLED, "updateOLED", 256, NULL, 0, &updateOLEDHandle);
 
     vTaskSuspend(pulseABSHandle);
     setPWM(500, 30);
