@@ -90,7 +90,7 @@ void pulseABS (void* args)
 
     static bool pulseOn = true;
 
-    const TickType_t xDelay = 200 / portTICK_PERIOD_MS; 
+    TickType_t wake_time = xTaskGetTickCount(); 
 
     while (true)
     {
@@ -105,6 +105,6 @@ void pulseABS (void* args)
             pulseOn = true;
         }
 
-        vTaskDelay(xDelay);
+        vTaskDelayUntil(&wake_time, 50);
     }   
 }
