@@ -14,6 +14,7 @@
 #include "utils/ustdlib.h"
 #include "driverlib/pwm.h"
 
+
 void initDisplay (void)
 {
   // intialise the Orbit OLED display
@@ -45,7 +46,7 @@ int main(void) {
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
 
-    setPWM(300, 50);
+    setPWM(750, 50);
 
     while(1)
     {
