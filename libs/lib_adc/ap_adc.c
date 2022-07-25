@@ -1,21 +1,19 @@
 /*****************************************************************************
- altitude.c:
+ ap_adc.c:
  File containing all the functions related to measuring and calculating the
  altitude of the helicopter using an ADC. Initialise the ADC that is used to
- calculate the helicopter altitude by taking samples and to trigger an
- interrupt once the sample is done. The interrupt is handled by ADCIntHandler
- which places the sample in the circular buffer.
+ calculate the helicopter altitude by taking samples. 
  The ADC range corresponding to the volatge range is calculated along with the
  reference point for 0% height and these are used to calculate the current
  altitude.
 
  Authors:  Anton Musalov - Megan Belton - Angus Eason
-
+ Modifications: Anton Musalov
  Acknowledgements:
  Code from labs ~ Author Phil Bones:
  Code from ADCdemo1.c:
   -initADC
-  -ADCIntHandler
+
 
  ************************************************************/
 

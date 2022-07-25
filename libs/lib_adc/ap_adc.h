@@ -1,24 +1,22 @@
-#ifndef ALTITUDE_H
-#define ALTITUDE_H
+#ifndef APADC_H
+#define APADC_H
 
 /*****************************************************************************
- altitude.h:
+ ap_adc.c:
  File containing all the functions related to measuring and calculating the
  altitude of the helicopter using an ADC. Initialise the ADC that is used to
- calculate the helicopter altitude by taking samples and to trigger an
- interrupt once the sample is done. The interrupt is handled by ADCIntHandler
- which places the sample in the circular buffer.
+ calculate the helicopter altitude by taking samples. 
  The ADC range corresponding to the volatge range is calculated along with the
  reference point for 0% height and these are used to calculate the current
  altitude.
 
  Authors:  Anton Musalov - Megan Belton - Angus Eason
-
+ Modifications: Anton Musalov
  Acknowledgements:
  Code from labs ~ Author Phil Bones:
  Code from ADCdemo1.c:
   -initADC
-  -ADCIntHandler
+
 
  ************************************************************/
 
@@ -57,14 +55,15 @@ int32_t sum;
 
 /*****************************************************************************
  initADC: Function to initialise the ADC peripheral.
- Initialises the ADC interrupt. Configures sequence 3 to do a single sample when
- the processor sends a signal and set the interrupt flag once the sample is done.
- Enables the interrupt to be ready for use.
+ Initialises the ADC. Configures sequence 3 to do a single sample when
+ updateSteering function is called
  ****************************************************************************/
 void initADC (void);
+/*****************************************************************************
+ updateSteering: Function to trigger ADC reading of the potentiometer.
+ The data is sent to a circular buffer where it is stored ready to be read 
+ ****************************************************************************/
+void updateSteering(void);
 
-void
-updateSteering(void);
 
-
-#endif /*ALTITUDE_H*/
+#endif /*APADC_H*/

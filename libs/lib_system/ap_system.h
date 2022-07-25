@@ -1,18 +1,17 @@
 #ifndef SYSTEM_H_
 #define SYSTEM_H_
 
-// *******************************************************
-// buttons4.h
-//
-// Support for a set of FOUR specific buttons on the Tiva/Orbit.
-// ENCE361 sample code.
-// The buttons are:  UP and DOWN (on the Orbit daughterboard) plus
-// LEFT and RIGHT on the Tiva.
-//
-// P.J. Bones UCECE
-// Last modified:  7.2.2018
-// 
-// *******************************************************
+/************************************************************
+ system.h:
+ File containing general functions related to the system such
+ as the clock and sysTick interrupt. These are responsible for
+ the timing of the program and also the interrupts.
+
+ Authors:  Anton Musalov
+
+ Acknowledgements: Megan Belton - Angus Eason
+
+ ***********************************************************/
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -27,9 +26,7 @@
 //*****************************************************************************
 
 //*****************************************************************************
-//
-// The interrupt handler for the for SysTick interrupt.
-//
+// Initialisation functions for the clock (incl. SysTick), ADC, display
 //*****************************************************************************
 
 void
