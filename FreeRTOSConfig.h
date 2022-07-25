@@ -5,9 +5,8 @@
 #define configUSE_PREEMPTION                    1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 0
 #define configUSE_TICKLESS_IDLE                 0
-#define configCPU_CLOCK_HZ                      60000000
-#define configSYSTICK_CLOCK_HZ                  1000000
-#define configTICK_RATE_HZ                      250
+#define configCPU_CLOCK_HZ                      80000000UL
+#define configTICK_RATE_HZ                      1000
 #define configMAX_PRIORITIES                    5
 #define configMINIMAL_STACK_SIZE                128
 #define configMAX_TASK_NAME_LEN                 16
@@ -15,7 +14,7 @@
 #define configIDLE_SHOULD_YIELD                 1
 #define configUSE_TASK_NOTIFICATIONS            1
 #define configTASK_NOTIFICATION_ARRAY_ENTRIES   3
-#define configUSE_MUTEXES                       0
+#define configUSE_MUTEXES                       1
 #define configUSE_RECURSIVE_MUTEXES             0
 #define configUSE_COUNTING_SEMAPHORES           0
 #define configUSE_ALTERNATIVE_API               0 /* Deprecated! */
@@ -59,7 +58,7 @@
 
 /* Interrupt nesting behaviour configuration. */
 #define configKERNEL_INTERRUPT_PRIORITY         0
-#define configMAX_SYSCALL_INTERRUPT_PRIORITY    32
+#define configMAX_SYSCALL_INTERRUPT_PRIORITY    16
 #define configMAX_API_CALL_INTERRUPT_PRIORITY   32
 
 /* Define to trap errors during development. */
