@@ -12,6 +12,8 @@
         "freertos.h": "c",
         "hw_ints.h": "c",
         "hw_memmap.h": "c",
-        "math.h": "C"
+        "math.h": "C",
+        "orbitoledinterface.h": "c",
+        "ap_adc.h": "c"
     }
 }

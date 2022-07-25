@@ -57,6 +57,8 @@ CFLAGS += \
 	-mfloat-abi=hard \
 	-mfpu=fpv4-sp-d16 \
 	-DPART_TM4C123GH6PM \
+	-specs=nano.specs \
+	-specs=nosys.specs \
 	-g3 -Wall -W $(OPT) \
 	$(INCLUDES) \
 	$(CFLAGS_EXTRA)
@@ -66,7 +68,9 @@ LDFLAGS += \
 	-mcpu=cortex-m4 \
 	-mthumb \
 	-mfloat-abi=hard \
-	-mfpu=fpv4-sp-d16
+	-mfpu=fpv4-sp-d16 \
+	-specs=nano.specs \
+	-specs=nosys.specs
 
 SRC += startup.c $(notdir $(TIVAWARE_SRC) $(FREERTOS_SRC))
 OBJS = $(addprefix $(BUILD_DIR)/, $(patsubst %.c,%.o,$(SRC)))

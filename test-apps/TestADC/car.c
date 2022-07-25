@@ -1,37 +1,39 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdio.h>
+#include <math.h>
 
 #include <inc/hw_memmap.h>
 #include <inc/hw_types.h>
 #include <driverlib/sysctl.h>
 #include <driverlib/gpio.h>
+#include <driverlib/interrupt.h>
+#include "driverlib/systick.h"
+
 
 #include <FreeRTOS.h>
 #include <task.h>
 
-#include "driverlib/pwm.h"
-
 #include "libs/lib_buttons/ap_buttons.h"
 #include "libs/lib_pwm/ap_pwm.h"
 #include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
-#include "abs_control.h"
+#include "libs/lib_adc/ap_adc.h"
+#include "libs/lib_system/ap_system.h"
+#include "stdlib.h"
+#include "utils/ustdlib.h"
+#include "driverlib/pwm.h"
 
-//*****************************************************************************
-// freeRTOS handles
-//*****************************************************************************
 TaskHandle_t updateOLEDHandle;
-TaskHandle_t pulseABSHandle;
 TaskHandle_t blinkHandle;
-TaskHandle_t updateABSHandle;
 TaskHandle_t updateStatusButtonHandle;
+TaskHandle_t updateADCHandle;
+
+int32_t steering_value;
 
 
 void blink(void* args) {
     (void)args; // unused
 
-    const TickType_t xDelay = 1000 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 100 / portTICK_PERIOD_MS;
 
     while (true) {
         GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
@@ -52,10 +54,6 @@ void updateStatusButton (void* args)
 
         if (checkButton(UP) == PUSHED)
         {
-            toggleABSState();
-
-            // Tell the abs controller to update its status
-            xTaskNotifyGiveIndexed( updateABSHandle, 0 );
 
             // Tell the OLED update task to write a new line with new abs state
             xTaskNotifyGiveIndexed( updateOLEDHandle, 0 );
@@ -73,61 +71,93 @@ void updateStatusButton (void* args)
 void updateOLED(void* args)
 {
     (void)args;
-    //const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
-
+    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+    uint16_t meanVal;
     while(true)
     {
         // Wait until a task has notified it to run, when a new message is to be written
-        ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+        //ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+
+        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+
         char string[17]; // Display fits 16 characters wide.
         OLEDStringDraw ("                ", 0, 0); //Clear line
+        
+        OLEDStringDraw ("ADC From Pot", 0, 0);
 
-        if (getABSState())
-        {
-            OLEDStringDraw ("ABS PWM", 0, 0);
-        } else
-        {
-            OLEDStringDraw ("Continuous PWM", 0, 0);       
-        }
-        /*
-        usnprintf (string, sizeof(string), "ABS state: %d", absState);
-        OLEDStringDraw (string, 0, 0);*/
+        meanVal = (2 * sum + BUF_SIZE) / 2 / BUF_SIZE;
+        
+        // Form a new string for the line.  The maximum width specified for the
+        //  number field ensures it is displayed right justified.
+        usnprintf (string, sizeof(string), "Mean ADC = %4d", meanVal);
+        // Update line on display.
+        OLEDStringDraw (string, 0, 1);
+        vTaskDelay(xDelay);
+    }
+}
+
+/**
+ * @brief Update the OLED screen. Currently only displays the ABS state
+ * @param args
+ * @return No return
+ */
+void updateADC(void* args)
+{
+    (void)args;
+    const TickType_t xDelay = 5 / portTICK_PERIOD_MS;
+    uint16_t i;
+	
+    while(true)
+    {
+       
+        // Wait until a task has notified it to run, when a new message is to be written
+        //ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+        //
+		// Background task: calculate the (approximate) mean of the values in the
+		// circular buffer and display it, together with the sample number.
+		sum = 0;
+        updateSteering();
+		for (i = 0; i < BUF_SIZE; i++)
+			sum = sum + readCircBuf (&g_inBuffer);
+		
+        
+		vTaskDelay(xDelay);
     }
 }
 
 int main(void) {
-    SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
+
+    initClock ();
 
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1);
-
-    // Set the PWM clock rate (using the prescaler)
+     // Set the PWM clock rate (using the prescaler)
     SysCtlPWMClockSet(PWM_DIVIDER_CODE);
     SysCtlPeripheralReset (PWM_MAIN_PERIPH_GPIO); // Used for PWM output
     SysCtlPeripheralReset (PWM_MAIN_PERIPH_PWM);  // Main Rotor PWM
 
+    
+	
     initialisePWM ();
     initButtons ();
-    OLEDInitialise ();
-    OLEDStringDraw ("Continuous PWM", 0, 0);
+    initDisplay ();
+    initADC ();
+	initCircBuf (&g_inBuffer, BUF_SIZE);
 
-    // Initialisation is complete, so turn on the output.
-    PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
-    xTaskCreate(&blink, "blink", 256, NULL, 0, &blinkHandle);
+    OLEDStringDraw ("Initialising       ", 0, 0); //Clear line
+
+
+    //xTaskCreate(&blink, "blink", 256, NULL, 0, &blinkHandle);
     xTaskCreate(&updateStatusButton, "updateStatusButton", 256, NULL, 0, &updateStatusButtonHandle);
-    xTaskCreate(&updateABS, "updateABS", 256, NULL, 0, &updateABSHandle);
-    xTaskCreate(&pulseABS, "pulseABS", 256, NULL, 0, &pulseABSHandle);
     xTaskCreate(&updateOLED, "updateOLED", 256, NULL, 0, &updateOLEDHandle);
+    xTaskCreate(&updateADC, "updateADC", 256, NULL, 0, &updateADCHandle);
 
-    vTaskSuspend(pulseABSHandle);
-    setPWM(500, 30);
 
     vTaskStartScheduler();
 
     return 0;
 }
-
 
 // This is an error handling function called when FreeRTOS asserts.
 // This should be used for debugging purposes
@@ -136,3 +166,5 @@ void vAssertCalled( const char * pcFile, unsigned long ulLine ) {
     (void)ulLine; // unused
     while (true) ;
 }
+
+
