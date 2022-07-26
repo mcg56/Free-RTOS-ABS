@@ -14,6 +14,9 @@
         "hw_memmap.h": "c",
         "math.h": "C",
         "orbitoledinterface.h": "c",
-        "ap_adc.h": "c"
+        "ap_adc.h": "c",
+        "stdint.h": "c",
+        "stdbool.h": "c",
+        "stdio.h": "c"
     }
 }

@@ -84,8 +84,6 @@ updateSteering(void)
     // Place it in the circular buffer (advancing write index)
     writeCircBuf (&g_inBuffer, ul_value);
     //
-    // Clean up, clearing the interrupt
-    ADCIntClear(ADC0_BASE, 3);
  
 }
 
