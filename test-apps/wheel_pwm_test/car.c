@@ -34,6 +34,7 @@ TaskHandle_t readButtonsHandle;
 TaskHandle_t blinkHandle;
 TaskHandle_t updateOLEDHandle;
 TaskHandle_t updateUARTHandle;
+TaskHandle_t updatePWMTaskHandle;
 
 /**
  * @brief Struture for storing input data and passing between tasks 
@@ -72,6 +73,7 @@ typedef struct {
 QueueHandle_t inputDataQueue = NULL;
 QueueHandle_t OLEDDisplayQueue = NULL;
 QueueHandle_t UARTDisplayQueue = NULL;
+QueueHandle_t updatePWMQueue = NULL;
 
 /**
  * @brief Creates instances of all queues
@@ -82,7 +84,30 @@ void createQueues(void)
     inputDataQueue = xQueueCreate(5, sizeof(InputData));
     OLEDDisplayQueue = xQueueCreate(5, sizeof(DisplayInfo));
     UARTDisplayQueue = xQueueCreate(5, sizeof(DisplayInfo));
+    updatePWMQueue = xQueueCreate(10, sizeof(pwmSignal));
 }
+
+/**
+ * @brief Task that changes PWM output
+ * @param args Unused
+ * @return None
+ */
+void updatePWMTask(void* args) 
+{
+    (void)args; // unused
+    while(true)
+    {
+        // Wait until a new message is to be written, as its added to queue
+        pwmSignal requestedPWM;
+        portBASE_TYPE status = xQueueReceive(updatePWMQueue, &requestedPWM, 100);
+        if (status == pdPASS)
+        {
+            setPWMGeneral(requestedPWM.freq, requestedPWM.duty, requestedPWM.base, requestedPWM.gen);
+
+        } else continue;
+    }
+}
+
 
 /**
  * @brief Task that blinks LED
@@ -281,11 +306,16 @@ void updateWheelInfoTask(void* args)
                 calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed);
             }
             calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
-            // Wheel info updated, allow display to OLED task to run
-            // Add to queue so wheel update task to run
+            // Wheel info updated, signal display tasks to run via queues
+
             DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty, alpha};
             xQueueSendToBack(UARTDisplayQueue, &updatedDisplayInfo, 0);
             xQueueSendToBack(OLEDDisplayQueue, &updatedDisplayInfo, 0);
+
+            /* Sending wheel pwms 1 at a time may cause issues as it updates them one at a time so abs
+            controller might think its slipping whne it just hasnt updated all wheels yet*/
+            pwmSignal leftFrontPWM = {WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, PWM_MAIN_BASE, PWM_MAIN_GEN};
+            xQueueSendToBack(updatePWMQueue, &leftFrontPWM, 0);
         }else continue;
     }
 }
@@ -360,6 +390,7 @@ int main(void) {
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
     xTaskCreate(&updateOLEDTask, "update OLED", 256, NULL, 0, &updateOLEDHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
+    xTaskCreate(&updatePWMTask, "update PWM", 256, NULL, 0, &updatePWMTaskHandle);
 
     vTaskStartScheduler();
 

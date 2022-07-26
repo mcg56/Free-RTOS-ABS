@@ -24,17 +24,7 @@
 #include "driverlib/interrupt.h"
 #include "ap_pwm.h"
 
-/**
- * @brief PWM signal struct, used for each PWM signal to define it's parameters
- * @param - See below 
- * @return - No return
- */
-struct pwmSignal{
-int duty;
-int freq;
-int prevRising;
-int prevFalling;
-};
+
 
 /**********************************************************
  * Generates a single PWM signal on Tiva board pin J4-05 =
@@ -87,26 +77,18 @@ setPWM (uint32_t ui32Freq, uint32_t ui32Duty)
         ui32Period * ui32Duty / 100);
 }
 
-
 /**
- * @brief Update the frequency of the desired PWM signal
- * @param PWM signal struct
+ * @brief Set the frequency and duty cycle of any PWM signal
+ * @param ui32Freq Desired PWM frequency (Hz)
+ * @param ui32Duty Desired PWM duty cycle (%)
+ * @param base Base of PWM signal to change
+ * @param gen PWM generator to change
  * @return No return
  */
-void
-updateFreq (struct pwmSignal identifier)
+void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, int base, int gen)
 {
-    // Update PWM freq
-}
-
-
-/**
- * @brief Update the duty cycle of the desired PWM signal
- * @param PWM signal struct
- * @return No return
- */
-void
-updateDuty (struct pwmSignal identifier)
-{
-    // Update PWM duty
+    // Calculate the PWM period corresponding to the freq.
+    uint32_t ui32Period = SysCtlClockGet() / PWM_DIVIDER / ui32Freq;
+    PWMGenPeriodSet(base, gen, ui32Period);
+    PWMPulseWidthSet(base, gen, ui32Period * ui32Duty / 100);
 }
