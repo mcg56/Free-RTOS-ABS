@@ -15,7 +15,11 @@
 #include "libs/lib_buttons/ap_buttons.h"
 #include "libs/lib_pwm/ap_pwm.h"
 #include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
+<<<<<<< HEAD
 #include "libs/lib_uart/ap_uart.h"
+=======
+#include "inc/tm4c123gh6pm.h"
+>>>>>>> 26ae0b740451b3f73152f14d83131dc2320360be
 
 #define TIMER_RATE 1
 
@@ -75,6 +79,7 @@ initGPIOPins (void)
 void
 initResponseTimer (void)
 {
+<<<<<<< HEAD
     // The Timer0 peripheral must be enabled for use.
     SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
 
@@ -88,23 +93,13 @@ initResponseTimer (void)
 
     // Enable timer
     TimerEnable(TIMER0_BASE, TIMER_A);
+=======
+    SYSCTL->RCGCTIMER |= 1;
+>>>>>>> 26ae0b740451b3f73152f14d83131dc2320360be
 }
 
 
-//*****************************************************************************
-//
-// Function to display the mean interval in usec
-//
-//*****************************************************************************
-void
-displayButtonState (char *butStr, char *stateStr, uint16_t numPushes, uint8_t charLine)
-{
-    char string[17]; // Display fits 16 characters wide.
-	
-    // OLEDStringDraw ("                ", 0, charLine);
-    usnprintf (string, sizeof(string), "%s - %s %2d", butStr, stateStr, numPushes);
-    OLEDStringDraw (string, 0, charLine);
-}
+
 
 int main(void) {
     SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
@@ -112,9 +107,12 @@ int main(void) {
     initGPIOPins();
     initButtons ();
     initResponseTimer();
+<<<<<<< HEAD
     OLEDInitialise ();
     initialiseUSB_UART ();
 
+=======
+>>>>>>> 26ae0b740451b3f73152f14d83131dc2320360be
 
     char str[80];
     while (true)

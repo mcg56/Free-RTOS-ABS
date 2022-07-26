@@ -12,11 +12,14 @@
         "freertos.h": "c",
         "hw_ints.h": "c",
         "hw_memmap.h": "c",
-        "math.h": "C",
+        "math.h": "c",
         "orbitoledinterface.h": "c",
         "ap_adc.h": "c",
         "stdint.h": "c",
         "stdbool.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "timer.h": "c",
+        "tm4c123gh6pm.h": "c",
+        "buttons4.h": "c"
     }
 }

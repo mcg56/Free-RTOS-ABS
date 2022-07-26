@@ -24,17 +24,7 @@
 #include "driverlib/interrupt.h"
 #include "ap_pwm.h"
 
-/**
- * @brief PWM signal struct, used for each PWM signal to define it's parameters
- * @param - See below 
- * @return - No return
- */
-struct pwmSignal{
-int duty;
-int freq;
-int prevRising;
-int prevFalling;
-};
+
 
 /**********************************************************
  * Generates a single PWM signal on Tiva board pin J4-05 =
@@ -50,21 +40,21 @@ int prevFalling;
 
 /*********************************************************
  * initialisePWM
- * M0PWM7 (J4-05, PC5) is used for the main rotor motor
+ * M0PWM7 (J4-05, PC5) is used
  *********************************************************/
 void
 initialisePWM (void)
 {
-    SysCtlPeripheralEnable(PWM_MAIN_PERIPH_PWM);
-    SysCtlPeripheralEnable(PWM_MAIN_PERIPH_GPIO);
+    SysCtlPeripheralEnable(PWM_MAIN_PERIPH_PWM);  	// turn on main pwm peripheral
+    SysCtlPeripheralEnable(PWM_MAIN_PERIPH_GPIO);	// turn on GPIO for PWM mode
 
-    GPIOPinConfigure(PWM_MAIN_GPIO_CONFIG);
-    GPIOPinTypePWM(PWM_MAIN_GPIO_BASE, PWM_MAIN_GPIO_PIN);
+    GPIOPinConfigure(PWM_MAIN_GPIO_CONFIG);			// config for GPIO_PC5_M0PWM7  (J4 pin 5)
+    GPIOPinTypePWM(PWM_MAIN_GPIO_BASE, PWM_MAIN_GPIO_PIN);  // use GPIO Pin 5
 
     PWMGenConfigure(PWM_MAIN_BASE, PWM_MAIN_GEN,
                     PWM_GEN_MODE_UP_DOWN | PWM_GEN_MODE_NO_SYNC);
     // Set the initial PWM parameters
-    setPWM (PWM_START_RATE_HZ, PWM_FIXED_DUTY);
+    setPWM (PWM_START_RATE_HZ, PWM_FIXED_DUTY);	// start rate is 250 Hz, 67% duty cycle
 
     PWMGenEnable(PWM_MAIN_BASE, PWM_MAIN_GEN);
 
@@ -83,30 +73,22 @@ setPWM (uint32_t ui32Freq, uint32_t ui32Duty)
         SysCtlClockGet() / PWM_DIVIDER / ui32Freq;
 
     PWMGenPeriodSet(PWM_MAIN_BASE, PWM_MAIN_GEN, ui32Period);
-    PWMPulseWidthSet(PWM_MAIN_BASE, PWM_MAIN_OUTNUM, 
+    PWMPulseWidthSet(PWM_MAIN_BASE, PWM_MAIN_OUTNUM,
         ui32Period * ui32Duty / 100);
 }
 
-
 /**
- * @brief Update the frequency of the desired PWM signal
- * @param PWM signal struct
+ * @brief Set the frequency and duty cycle of any PWM signal
+ * @param ui32Freq Desired PWM frequency (Hz)
+ * @param ui32Duty Desired PWM duty cycle (%)
+ * @param base Base of PWM signal to change
+ * @param gen PWM generator to change
  * @return No return
  */
-void
-updateFreq (struct pwmSignal identifier)
+void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, int base, int gen)
 {
-    // Update PWM freq
-}
-
-
-/**
- * @brief Update the duty cycle of the desired PWM signal
- * @param PWM signal struct
- * @return No return
- */
-void
-updateDuty (struct pwmSignal identifier)
-{
-    // Update PWM duty
+    // Calculate the PWM period corresponding to the freq.
+    uint32_t ui32Period = SysCtlClockGet() / PWM_DIVIDER / ui32Freq;
+    PWMGenPeriodSet(base, gen, ui32Period);
+    PWMPulseWidthSet(base, gen, ui32Period * ui32Duty / 100);
 }
