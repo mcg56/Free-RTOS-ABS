@@ -6,11 +6,6 @@
 #include "utils/ustdlib.h"
 #include <stdio.h>
 
-Wheel leftFront  = {0, 0, 0};
-Wheel leftRear   = {0, 0, 0};
-Wheel rightFront = {0, 0, 0};
-Wheel rightRear  = {0, 0, 0};
-
 #define ALPHA_MAX 29.1
 float calculateSteeringAngle(float steeringWheelDuty)
 {

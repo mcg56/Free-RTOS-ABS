@@ -28,45 +28,67 @@
 #include "libs/lib_system/ap_system.h"
 #include "libs/lib_uart/ap_uart.h"
 
-
-typedef struct {
-    uint8_t speed; //m
-    uint8_t steeringWheelDuty; //km/h
-} InputData;
-InputData currentInput = {0, 50};
-
-typedef struct {
-    Wheel LF;
-    Wheel LR;
-    Wheel RF;
-    Wheel RR;
-    float speed; //m
-    uint8_t steeringWheelDuty; //km/h
-} OLEDDisplayInfo;
-
-
-QueueHandle_t inputDataQueue = NULL;
-QueueHandle_t OLEDDisplayQueue = NULL;
-
-void createQueues(void)
-{
-    inputDataQueue = xQueueCreate(5, sizeof(InputData));
-    OLEDDisplayQueue = xQueueCreate(5, sizeof(OLEDDisplayInfo));
-}
-
+//Task handles
 TaskHandle_t updateWheelInfoHandle;
 TaskHandle_t readButtonsHandle;
 TaskHandle_t blinkHandle;
 TaskHandle_t updateOLEDHandle;
 TaskHandle_t updateUARTHandle;
 
-extern Wheel leftFront;
-extern Wheel leftRear;
-extern Wheel rightFront;
-extern Wheel rightRear;
+/**
+ * @brief Struture for storing input data and passing between tasks 
+ * through queues
+ * @param steeringWheelDuty Car steering wheel duty (%)
+ * @param alpha             Turn angle (degrees)
+ */
+typedef struct {
+    uint8_t speed; //m
+    uint8_t steeringWheelDuty; //km/h
+} InputData;
 
-float alpha = 0;
 
+/**
+ * @brief Struture for storing display data and passing display information 
+ * between tasks through queues
+ * @param LF                Left front wheel object
+ * @param LR                Left rear wheel object                
+ * @param RF                Right front wheel object
+ * @param RR                Right rear wheel object
+ * @param speed             Car speed (km/h)
+ * @param steeringWheelDuty Car steering wheel duty (%)
+ * @param alpha             Turn angle (degrees)
+ */
+typedef struct {
+    Wheel LF;
+    Wheel LR;
+    Wheel RF;
+    Wheel RR;
+    uint8_t speed; //m
+    uint8_t steeringWheelDuty; //km/h
+    float alpha;
+} DisplayInfo;
+
+
+QueueHandle_t inputDataQueue = NULL;
+QueueHandle_t OLEDDisplayQueue = NULL;
+QueueHandle_t UARTDisplayQueue = NULL;
+
+/**
+ * @brief Creates instances of all queues
+ * @return None
+ */
+void createQueues(void)
+{
+    inputDataQueue = xQueueCreate(5, sizeof(InputData));
+    OLEDDisplayQueue = xQueueCreate(5, sizeof(DisplayInfo));
+    UARTDisplayQueue = xQueueCreate(5, sizeof(DisplayInfo));
+}
+
+/**
+ * @brief Task that blinks LED
+ * @param args Unused
+ * @return None
+ */
 void blink(void* args) {
     (void)args; // unused
 
@@ -79,14 +101,19 @@ void blink(void* args) {
         // configASSERT(wake_time < 1000);  // Runs vAssertCalBled() if false
     }
 }
-
-void updateOLED(void* args)
+/**
+ * @brief Task that updates the OLED with current car information.
+ * Mostly used just for debugging at the moment
+ * @param args Unused
+ * @return None
+ */
+void updateOLEDTask(void* args)
 {
     (void)args; // unused
     while(true)
     {
         // Wait until a new message is to be written, as its added to queue
-        OLEDDisplayInfo updatedDisplayInfo;
+        DisplayInfo updatedDisplayInfo;
         portBASE_TYPE status = xQueueReceive(OLEDDisplayQueue, &updatedDisplayInfo, 100);
         if (status == pdPASS)
         {
@@ -112,16 +139,24 @@ void updateOLED(void* args)
 }
 
 /**
- * @brief Update the UART terminal.
- * @param args
+ * @brief Update the UART terminal with data about the car.
+ * @param args Unused
  * @return No return
  */
-void updateUART(void* args)
+void updateUARTTask(void* args)
 {
     (void)args;
     const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
 
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
+
+    // Create empty ine array to clear lines
+    char empytLine[MAX_STR_LEN + 1];
+    for(int i = 0; i < MAX_STR_LEN; i++)
+    {
+        empytLine[i] = ' ';
+    }
+    empytLine[sizeof(empytLine)/sizeof(empytLine[0]) - 1] = '\r'; // Put last index as carridge return
 
     //First write static text in yellow
     sprintf (ANSIString, "%c%s", VT100_ESC, VT100_CLS);
@@ -142,71 +177,73 @@ void updateUART(void* args)
     UARTSend (ANSIString);
     while(true)
     {
-        sprintf (ANSIString, "%c%s", VT100_ESC, VT100_HOME);
-        UARTSend (ANSIString);
+        // Wait until a new message is to be written, as its added to queue
+        DisplayInfo updatedDisplayInfo;
+        portBASE_TYPE status = xQueueReceive(UARTDisplayQueue, &updatedDisplayInfo, 100);
+        if (status == pdPASS)
+        {
+            sprintf (ANSIString, "%c%s", VT100_ESC, VT100_HOME);
+            UARTSend (ANSIString);
 
-        //Steering line
-        sprintf (ANSIString, "%c%s", VT100_ESC, VT100_THREE_DOWN);
-        UARTSend (ANSIString);
+            //Steering line
+            sprintf (ANSIString, "%c%s", VT100_ESC, VT100_THREE_DOWN);
+            UARTSend (ANSIString);
 
-        char alphaStr[6]; // Display fits 16 characters wide.
-        gcvt (alpha, 4, &alphaStr);
-        sprintf (ANSIString, "Duty: %d%%    Angle: %s degrees\r\n\n", currentInput.steeringWheelDuty, alphaStr);
-        UARTSend (ANSIString);
+            char alphaStr[6];
+            gcvt (updatedDisplayInfo.alpha, 4, &alphaStr);
+            sprintf (ANSIString, "Duty: %2d%%    Angle: %5s degrees\r\n\n", updatedDisplayInfo.steeringWheelDuty, alphaStr);
+            UARTSend (ANSIString);
 
-        // Car speed line
-        sprintf (ANSIString, "%d km/h\r\n\n", currentInput.speed);
-        UARTSend (ANSIString);
+            // Car speed line
+            sprintf (ANSIString, "%2d km/h\r\n\n", updatedDisplayInfo.speed);
+            UARTSend (ANSIString);
 
-        // Wheel turn radii line
-        //First, convert floats to strings
-        char LFbuff[6];
-        char LRbuff[6]; 
-        char RFbuff[6]; 
-        char RRbuff[6];
-        gcvt (leftFront.turnRadius, 4, &LFbuff);
-        gcvt (leftRear.turnRadius, 4, &LRbuff);
-        gcvt (rightFront.turnRadius, 4, &RFbuff);
-        gcvt (rightRear.turnRadius, 4, &RRbuff);
+            // Wheel turn radii line
+            //First, convert floats to strings
+            char LFbuff[6];
+            char LRbuff[6]; 
+            char RFbuff[6]; 
+            char RRbuff[6];
+            gcvt (updatedDisplayInfo.LF.turnRadius, 4, &LFbuff);
+            gcvt (updatedDisplayInfo.LR.turnRadius, 4, &LRbuff);
+            gcvt (updatedDisplayInfo.RF.turnRadius, 4, &RFbuff);
+            gcvt (updatedDisplayInfo.RR.turnRadius, 4, &RRbuff);
 
-        sprintf (ANSIString, "Lf: %s, Lr: %s, Rf: %s, Rr: %s\r\n\n", LFbuff, LRbuff, RFbuff, RRbuff);
-        UARTSend (ANSIString);
+            sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LFbuff, LRbuff, RFbuff, RRbuff);
+            UARTSend (ANSIString);
 
-        // Wheel speed line
-        //First, convert floats to strings
-        gcvt (leftFront.speed, 4, &LFbuff);
-        gcvt (leftRear.speed, 4, &LRbuff);
-        gcvt (rightFront.speed, 4, &RFbuff);
-        gcvt (rightRear.speed, 4, &RRbuff);
+            // Wheel speed line
+            //First, convert floats to strings
+            gcvt (updatedDisplayInfo.LF.speed, 4, &LFbuff);
+            gcvt (updatedDisplayInfo.LR.speed, 4, &LRbuff);
+            gcvt (updatedDisplayInfo.RF.speed, 4, &RFbuff);
+            gcvt (updatedDisplayInfo.RR.speed, 4, &RRbuff);
 
-        sprintf (ANSIString, "Lf: %s, Lr: %s, Rf: %s, Rr: %s\r\n\n", LFbuff, LRbuff, RFbuff, RRbuff);
-        UARTSend (ANSIString);
-
-        // meanVal = (2 * sum + BUF_SIZE) / 2 / BUF_SIZE;
-        // /* Form and send a status message to the console. Desired
-        //     height/yaw is in the brackets and current is outside*/
-        // sprintf (statusStr, "Raw ADC: %ld \r\nMeanVal: %d \r\n----------\r\n",
-        //             sum, meanVal);
-        
-        // UARTSend (statusStr);
-        
-
-
-
+            sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LFbuff, LRbuff, RFbuff, RRbuff);
+            UARTSend (ANSIString);
+        }
         vTaskDelay(xDelay);
     }
 }
-
-void updateWheelInfo(void* args)
+/**
+ * @brief Task to update the UART terminal with data about the car.
+ * @param args Unused
+ * @return No return
+ */
+void updateWheelInfoTask(void* args)
 {
     (void)args; // unused
+    static Wheel leftFront  = {0, 0, 0};
+    static Wheel leftRear   = {0, 0, 0};
+    static Wheel rightFront = {0, 0, 0};
+    static Wheel rightRear  = {0, 0, 0};
     while(true) {
         // Wait until driving inputs change, indicated by a new value on the queue
         InputData updatedInput;
         portBASE_TYPE status = xQueueReceive(inputDataQueue, &updatedInput, 100);
         if (status == pdPASS)
         {
-            alpha = calculateSteeringAngle((float)updatedInput.steeringWheelDuty);
+            float alpha = calculateSteeringAngle((float)updatedInput.steeringWheelDuty);
             if (alpha == 0) // Driving straight
             {
                 leftFront.speed = updatedInput.speed;
@@ -224,7 +261,6 @@ void updateWheelInfo(void* args)
             } 
             else if (alpha < 0.0) //Turning left
             {
-                OLEDStringDraw ("Here", 0, 2);
                 calculateWheelRadii(&leftRear, &leftFront, &rightRear, &rightFront, alpha);
                 calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed);
             }
@@ -236,17 +272,23 @@ void updateWheelInfo(void* args)
             calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
             // Wheel info updated, allow display to OLED task to run
             // Add to queue so wheel update task to run
-            OLEDDisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty};
+            DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty, alpha};
+            xQueueSendToBack(UARTDisplayQueue, &updatedDisplayInfo, 0);
             xQueueSendToBack(OLEDDisplayQueue, &updatedDisplayInfo, 0);
         }else continue;
     }
 }
 
-
-void readButtons(void* args)
+/**
+ * @brief Reads the buttons and changes inputs accordingly
+ * @param args Unused
+ * @return No return
+ */
+void readButtonsTask(void* args)
 {
     (void)args; // unused
     const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+    static InputData currentInput = {0, 50};
     while (true) 
     {
         updateButtons();
@@ -302,15 +344,12 @@ int main(void) {
     // Initialisation is complete, so turn on the output.
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
     createQueues();
-    //xTaskCreate(&blink, "blink", 256, NULL, 0, &blinkHandle);
-    xTaskCreate(&readButtons, "read buttons", 256, NULL, 0, &readButtonsHandle);
-    xTaskCreate(&updateWheelInfo, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
-    xTaskCreate(&updateOLED, "update OLED", 256, NULL, 0, &updateOLEDHandle);
-    xTaskCreate(&updateUART, "update UART", 256, NULL, 0, &updateUARTHandle);
+    xTaskCreate(&blink, "blink", 256, NULL, 0, &blinkHandle);
+    xTaskCreate(&readButtonsTask, "read buttons", 256, NULL, 0, &readButtonsHandle);
+    xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
+    xTaskCreate(&updateOLEDTask, "update OLED", 256, NULL, 0, &updateOLEDHandle);
+    xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
 
-    // Allow OLED task to run initially to give first values on screen
-    //sxTaskNotifyGiveIndexed(updateOLEDHandle, 0);
-    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
     vTaskStartScheduler();
 
     return 0;
