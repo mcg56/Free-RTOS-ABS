@@ -50,10 +50,10 @@ typedef struct {
 /**
  * @brief Struture for storing display data and passing display information 
  * between tasks through queues
- * @param LF                Left front wheel object
- * @param LR                Left rear wheel object                
- * @param RF                Right front wheel object
- * @param RR                Right rear wheel object
+ * @param LF                Left front wheel struct
+ * @param LR                Left rear wheel struct                
+ * @param RF                Right front wheel struct
+ * @param RR                Right rear wheel struct
  * @param speed             Car speed (km/h)
  * @param steeringWheelDuty Car steering wheel duty (%)
  * @param alpha             Turn angle (degrees)
@@ -221,6 +221,17 @@ void updateUARTTask(void* args)
 
             sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LFbuff, LRbuff, RFbuff, RRbuff);
             UARTSend (ANSIString);
+
+            //Wheel PRR line
+            //First, convert floats to strings
+            gcvt (updatedDisplayInfo.LF.pulseHz, 4, &LFbuff);
+            gcvt (updatedDisplayInfo.LR.pulseHz, 4, &LRbuff);
+            gcvt (updatedDisplayInfo.RF.pulseHz, 4, &RFbuff);
+            gcvt (updatedDisplayInfo.RR.pulseHz, 4, &RRbuff);
+
+            sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LFbuff, LRbuff, RFbuff, RRbuff);
+            UARTSend (ANSIString);
+
         }
         vTaskDelay(xDelay);
     }
@@ -297,12 +308,12 @@ void readButtonsTask(void* args)
         bool change = false;
         if (checkButton(UP) == PUSHED)
         {
-            currentInput.speed += 10;
+            currentInput.speed += 5;
             change = true;            
         }
         if (checkButton(DOWN) == PUSHED)
         {
-            currentInput.speed -= 10;
+            currentInput.speed -= 5;
             change = true;
         }
         if (checkButton(LEFT) == PUSHED)

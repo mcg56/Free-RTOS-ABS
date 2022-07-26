@@ -7,9 +7,9 @@
 #include "stdlib.h"
 #include "utils/ustdlib.h"
 
-#define PULSES_PER_REV 20     // (#)
+#define PULSES_PER_REV 20.0     // (#)
 #define WHEEL_DIAMETER 0.5    // (m)
-#define KPH_TO_MS_SCALE_FACTOR (1000/3600)
+#define KPH_TO_MS_SCALE_FACTOR (1000.0/3600.0)
 #define PI (3.141592653589793)
 
 /**
