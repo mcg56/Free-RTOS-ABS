@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "stdlib.h"
 #include "utils/ustdlib.h"
+#include <stdio.h>
 
 Wheel leftFront  = {0, 0, 0};
 Wheel leftRear   = {0, 0, 0};
@@ -13,13 +14,13 @@ Wheel rightRear  = {0, 0, 0};
 #define ALPHA_MAX 29.1
 float calculateSteeringAngle(float steeringWheelDuty)
 {
-    return ALPHA_MAX*(float)((steeringWheelDuty - (float)50)/(float)45);
+    return ALPHA_MAX*((steeringWheelDuty - 50.0)/45.0);
 }
 
 void calculateWheelRadii(Wheel* innerRear, Wheel* innerFront, Wheel* outerRear, Wheel* outerFront, float alpha)
 {
-    innerRear->turnRadius = 2.5/tan(abs(alpha*PI/180));
-    innerFront->turnRadius = 2.5/sin(abs(alpha*PI/180));
+    innerRear->turnRadius = 2.5/tan(fabs(alpha*PI/180.0));
+    innerFront->turnRadius = 2.5/sin(fabs(alpha*PI/180.0));
     outerRear->turnRadius = innerRear->turnRadius + 1.5;
     outerFront->turnRadius = innerFront->turnRadius + 1.5;
 }

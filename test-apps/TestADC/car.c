@@ -152,16 +152,20 @@ void updateUART(void* args)
     char title[MAX_STR_LEN + 1]; // For uart message
     sprintf (VT1001, "%c%s", VT100_ESC, VT100_CLS);
     UARTSend (VT1001);
-    sprintf (VT1002, "%c%s", VT100_ESC, VT100_HOME);
-    UARTSend (VT1002);
+    sprintf (VT1001, "%c%s", VT100_ESC, VT100_HOME);
+    UARTSend (VT1001);
+    sprintf (VT1001, "%c%s", VT100_ESC, VT100_FG_YELLOW);
+    UARTSend (VT1001);
     sprintf (title, "ADC Readings from Pot \r\n");
     UARTSend (title);
+    sprintf (VT1001, "%c%s", VT100_ESC, VT100_FG_WHITE);
+    UARTSend (VT1001);
     while(true)
     {
         sprintf (VT1002, "%c%s", VT100_ESC, VT100_HOME);
         UARTSend (VT1002);
    
-        sprintf (VT1003, "%c%s", VT100_ESC, VT100_THREE_DOWN);
+        sprintf (VT1003, "%c%s", VT100_ESC, VT100_TWO_DOWN);
         UARTSend (VT1003);
 
         meanVal = (2 * sum + BUF_SIZE) / 2 / BUF_SIZE;

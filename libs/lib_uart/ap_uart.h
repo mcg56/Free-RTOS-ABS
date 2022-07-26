@@ -43,7 +43,21 @@
 #define VT100_ESC 0x1B
 #define VT100_HOME "[H"
 #define VT100_CLS "[2J"
+#define VT100_ONE_DOWN "[1B"
+#define VT100_TWO_DOWN "[2B"
 #define VT100_THREE_DOWN "[3B"
+#define VT100_FOUR_DOWN "[3B"
+#define VT100_FIVE_DOWN "[3B"
+#define VT100_SIX_DOWN "[6B"
+#define VT100_SEVEN_DOWN "[7B"
+#define VT100_NINE_DOWN "[9B"
+#define VT100_ELEVEN_DOWN "[11B"
+
+#define VT100_NORMAL "[m"
+#define VT100_FG_YELLOW "[33m"
+#define VT100_FG_WHITE "[37m"
+#define VT100_BG_BLACK "[40m"
+#define VT100_BG_MAGENTA "[45m"
 
 /**********************************************************************
  Functions

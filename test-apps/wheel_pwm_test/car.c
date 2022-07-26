@@ -5,7 +5,6 @@
     -UART/USB user interface? text based VT100 examples?
 */
 
-
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
@@ -26,6 +25,8 @@
 #include "wheels.h"
 #include <queue.h>
 #include "libs/lib_pwm/ap_pwm.h"
+#include "libs/lib_system/ap_system.h"
+#include "libs/lib_uart/ap_uart.h"
 
 
 typedef struct {
@@ -57,11 +58,14 @@ TaskHandle_t updateWheelInfoHandle;
 TaskHandle_t readButtonsHandle;
 TaskHandle_t blinkHandle;
 TaskHandle_t updateOLEDHandle;
+TaskHandle_t updateUARTHandle;
 
 extern Wheel leftFront;
 extern Wheel leftRear;
 extern Wheel rightFront;
 extern Wheel rightRear;
+
+float alpha = 0;
 
 void blink(void* args) {
     (void)args; // unused
@@ -76,13 +80,6 @@ void blink(void* args) {
     }
 }
 
-void
-initDisplay (void)
-{
-  // intialise the Orbit OLED display
-	OLEDInitialise ();
-}
-
 void updateOLED(void* args)
 {
     (void)args; // unused
@@ -93,20 +90,110 @@ void updateOLED(void* args)
         portBASE_TYPE status = xQueueReceive(OLEDDisplayQueue, &updatedDisplayInfo, 100);
         if (status == pdPASS)
         {
-            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
             char string[17]; // Display fits 16 characters wide.
             OLEDStringDraw ("                ", 0, 0); //Clear line
             OLEDStringDraw ("                ", 0, 1); //Clear line
-            OLEDStringDraw ("                ", 0, 2); //Clear line
 
-            usnprintf (string, sizeof(string), "D: %02d | v: %03d", updatedDisplayInfo.steeringWheelDuty, (int)updatedDisplayInfo.speed);
+            char LFfloatStr[6]; // Display fits 16 characters wide.
+            gcvt (updatedDisplayInfo.LF.speed, 4, &LFfloatStr);
+            char str2[17];
+            //usnprintf (string, sizeof(string), "D: %02d | v: %03d", updatedDisplayInfo.steeringWheelDuty, (int)updatedDisplayInfo.speed);
+            sprintf(string, "D: %02d | v: %03d", updatedDisplayInfo.steeringWheelDuty, (int)updatedDisplayInfo.speed);
             OLEDStringDraw (string, 0, 0);
-            usnprintf (string, sizeof(string), "Lf %.2f Lr %.2f", updatedDisplayInfo.LF.speed, updatedDisplayInfo.LR.speed);
-            OLEDStringDraw (string, 0, 1);
-            usnprintf (string, sizeof(string), "Rf %.2f Rr %.2f", updatedDisplayInfo.RF.speed, updatedDisplayInfo.RR.speed);
-            OLEDStringDraw (string, 0, 2);
+            sprintf(str2, "Lf %s", LFfloatStr);
+            OLEDStringDraw (str2, 0, 1);
+            //usnprintf (string, sizeof(string), "Lf %.2f Lr %.2f", updatedDisplayInfo.LF.speed, updatedDisplayInfo.LR.speed);
+            //
+            //usnprintf (string, sizeof(string), "Rf %.2f Rr %.2f", updatedDisplayInfo.RF.speed, updatedDisplayInfo.RR.speed);
+            //OLEDStringDraw (string, 0, 2);
         } else continue;
 
+    }
+}
+
+/**
+ * @brief Update the UART terminal.
+ * @param args
+ * @return No return
+ */
+void updateUART(void* args)
+{
+    (void)args;
+    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+
+    char ANSIString[MAX_STR_LEN + 1]; // For uart message
+
+    //First write static text in yellow
+    sprintf (ANSIString, "%c%s", VT100_ESC, VT100_CLS);
+    UARTSend (ANSIString);
+    sprintf (ANSIString, "%c%s", VT100_ESC, VT100_HOME);
+    UARTSend (ANSIString);
+    sprintf (ANSIString, "%c%s", VT100_ESC, VT100_FG_YELLOW);
+    UARTSend (ANSIString);
+    UARTSend ("~~~~~~~Angus Anton Car sim outputs~~~~~~~\r\n\n");
+    UARTSend ("Steering\r\n\n");
+    UARTSend ("Car speed (km/h)\r\n\n");
+    UARTSend ("Wheel turn radii (m)\r\n\n");
+    UARTSend ("Wheel speed (km/h)\r\n\n");
+    UARTSend ("Wheel PRR (Hz)\r\n\n");
+    UARTSend ("Brake pressure\r\n\n");
+
+    sprintf (ANSIString, "%c%s", VT100_ESC, VT100_FG_WHITE);
+    UARTSend (ANSIString);
+    while(true)
+    {
+        sprintf (ANSIString, "%c%s", VT100_ESC, VT100_HOME);
+        UARTSend (ANSIString);
+
+        //Steering line
+        sprintf (ANSIString, "%c%s", VT100_ESC, VT100_THREE_DOWN);
+        UARTSend (ANSIString);
+
+        char alphaStr[6]; // Display fits 16 characters wide.
+        gcvt (alpha, 4, &alphaStr);
+        sprintf (ANSIString, "Duty: %d%%    Angle: %s degrees\r\n\n", currentInput.steeringWheelDuty, alphaStr);
+        UARTSend (ANSIString);
+
+        // Car speed line
+        sprintf (ANSIString, "%d km/h\r\n\n", currentInput.speed);
+        UARTSend (ANSIString);
+
+        // Wheel turn radii line
+        //First, convert floats to strings
+        char LFbuff[6];
+        char LRbuff[6]; 
+        char RFbuff[6]; 
+        char RRbuff[6];
+        gcvt (leftFront.turnRadius, 4, &LFbuff);
+        gcvt (leftRear.turnRadius, 4, &LRbuff);
+        gcvt (rightFront.turnRadius, 4, &RFbuff);
+        gcvt (rightRear.turnRadius, 4, &RRbuff);
+
+        sprintf (ANSIString, "Lf: %s, Lr: %s, Rf: %s, Rr: %s\r\n\n", LFbuff, LRbuff, RFbuff, RRbuff);
+        UARTSend (ANSIString);
+
+        // Wheel speed line
+        //First, convert floats to strings
+        gcvt (leftFront.speed, 4, &LFbuff);
+        gcvt (leftRear.speed, 4, &LRbuff);
+        gcvt (rightFront.speed, 4, &RFbuff);
+        gcvt (rightRear.speed, 4, &RRbuff);
+
+        sprintf (ANSIString, "Lf: %s, Lr: %s, Rf: %s, Rr: %s\r\n\n", LFbuff, LRbuff, RFbuff, RRbuff);
+        UARTSend (ANSIString);
+
+        // meanVal = (2 * sum + BUF_SIZE) / 2 / BUF_SIZE;
+        // /* Form and send a status message to the console. Desired
+        //     height/yaw is in the brackets and current is outside*/
+        // sprintf (statusStr, "Raw ADC: %ld \r\nMeanVal: %d \r\n----------\r\n",
+        //             sum, meanVal);
+        
+        // UARTSend (statusStr);
+        
+
+
+
+        vTaskDelay(xDelay);
     }
 }
 
@@ -119,17 +206,7 @@ void updateWheelInfo(void* args)
         portBASE_TYPE status = xQueueReceive(inputDataQueue, &updatedInput, 100);
         if (status == pdPASS)
         {
-            float alpha = calculateSteeringAngle((float)updatedInput.steeringWheelDuty);
-            char string[17]; // Display fits 16 characters wide.
-            OLEDStringDraw ("                ", 0, 0);
-            OLEDStringDraw ("                ", 0, 1);
-            usnprintf (string, sizeof(string), "Speed: %d", updatedInput.speed);
-            OLEDStringDraw (string, 0, 0);
-            usnprintf (string, sizeof(string), "Float: %d", round(alpha));
-            char floatbuff[17];
-            //gcvt (12.34567, 7, &floatbuff);
-            OLEDStringDraw (floatbuff, 0, 1);
-
+            alpha = calculateSteeringAngle((float)updatedInput.steeringWheelDuty);
             if (alpha == 0) // Driving straight
             {
                 leftFront.speed = updatedInput.speed;
@@ -143,21 +220,15 @@ void updateWheelInfo(void* args)
 
                 rightRear.speed = updatedInput.speed;
                 rightRear.turnRadius = 0;
-                /*
-                char string[17]; // Display fits 16 characters wide.
-                OLEDStringDraw ("                ", 0, 0);
-                OLEDStringDraw ("                ", 0, 1);
-                usnprintf (string, sizeof(string), "Lf %d Lr %d", leftFront.speed, leftRear.speed);
-                OLEDStringDraw (string, 0, 1);
-                usnprintf (string, sizeof(string), "Rf %d Rr %d", rightFront.speed, rightRear.speed);
-                OLEDStringDraw (string, 0, 2);*/
+                
             } 
-            else if (alpha < 0) //Turning left
+            else if (alpha < 0.0) //Turning left
             {
+                OLEDStringDraw ("Here", 0, 2);
                 calculateWheelRadii(&leftRear, &leftFront, &rightRear, &rightFront, alpha);
                 calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed);
             }
-            else if (alpha > 0) //Turning right
+            else if (alpha > 0.0) //Turning right
             {
                 calculateWheelRadii(&rightRear, &rightFront, &leftRear, &leftFront, alpha);
                 calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed);
@@ -226,6 +297,7 @@ int main(void) {
     
     initialisePWM ();
     initButtons();
+    initialiseUSB_UART ();
 
     // Initialisation is complete, so turn on the output.
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
@@ -234,6 +306,7 @@ int main(void) {
     xTaskCreate(&readButtons, "read buttons", 256, NULL, 0, &readButtonsHandle);
     xTaskCreate(&updateWheelInfo, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
     xTaskCreate(&updateOLED, "update OLED", 256, NULL, 0, &updateOLEDHandle);
+    xTaskCreate(&updateUART, "update UART", 256, NULL, 0, &updateUARTHandle);
 
     // Allow OLED task to run initially to give first values on screen
     //sxTaskNotifyGiveIndexed(updateOLEDHandle, 0);
