@@ -53,6 +53,9 @@ initialisePWM (void)
 
     PWMGenConfigure(PWM_MAIN_BASE, PWM_MAIN_GEN,
                     PWM_GEN_MODE_UP_DOWN | PWM_GEN_MODE_NO_SYNC);
+
+    SysCtlPWMClockSet(PWM_DIVIDER_CODE);
+    
     // Set the initial PWM parameters
     setPWM (PWM_START_RATE_HZ, PWM_FIXED_DUTY);	// start rate is 250 Hz, 67% duty cycle
 

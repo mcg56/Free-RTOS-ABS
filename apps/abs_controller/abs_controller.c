@@ -25,3 +25,70 @@
  * 1. The overall main and task creation stuff
  *
  */
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
+
+#include <inc/hw_memmap.h>
+#include <inc/hw_types.h>
+#include <driverlib/sysctl.h>
+#include <driverlib/gpio.h>
+
+#include <FreeRTOS.h>
+#include <task.h>
+
+#include "driverlib/pwm.h"
+#include "driverlib/timer.h"
+
+#include "libs/lib_buttons/ap_buttons.h"
+#include "libs/lib_pwm/ap_pwm.h"
+#include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
+#include "libs/lib_uart/ap_uart.h"
+#include "libs/lib_system/ap_system.h"
+
+#include "pwm_manager.h"
+
+int main (void)
+{
+    SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
+
+    initButtons ();
+    initPWMManager ();
+    initialiseUSB_UART ();
+    initialisePWM();
+
+    PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
+
+    setPWM(41, 87);
+
+    char str[100];
+    PWMInputSignals_t PWMInputSignals;
+    UARTSend("\n\rWaiting for press...\r\n");
+    while (true)
+    {
+        updateButtons();
+
+        if (checkButton(UP) == PUSHED)
+        {
+            updateAllPWMInfo();
+            
+            PWMInputSignals = getPWMInputSignals();
+            sprintf(str, "Frequency = %ld Hz\r\n", PWMInputSignals.FLWheel.frequency);
+            UARTSend(str);
+            sprintf(str, "Duty : %ld\r\n", PWMInputSignals.FLWheel.duty);
+            UARTSend(str);
+        }
+    }
+
+    vTaskStartScheduler();
+
+    return 0;
+}
+
+// This is an error handling function called when FreeRTOS asserts.
+// This should be used for debugging purposes
+void vAssertCalled( const char * pcFile, unsigned long ulLine ) {
+    (void)pcFile; // unused
+    (void)ulLine; // unused
+    while (true) ;
+}

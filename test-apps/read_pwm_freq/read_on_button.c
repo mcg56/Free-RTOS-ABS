@@ -51,8 +51,6 @@ GPIOPinIntHandler (void)
     lastTimeStamp = currTimeStamp;
 
     firstPWM++;
-
-    UARTSend("Dick");
 }
 
 //*************************************************************
@@ -118,7 +116,11 @@ int main(void) {
     initResponseTimer();
     OLEDInitialise ();
     initialiseUSB_UART ();
+    
+    initialisePWM();
 
+    PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
+    setPWM(400, 50);
 
     char str[80];
     UARTSend("\n\rWaiting for press...\r\n");
