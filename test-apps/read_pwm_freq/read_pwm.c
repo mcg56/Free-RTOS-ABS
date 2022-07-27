@@ -106,6 +106,8 @@ int main(void) {
     char str[80];
     while (true)
     {
+        
+
         sprintf(str, "%d\r\n", SysCtlClockGet() / diffTimeStamp);
         UARTSend(str);
 

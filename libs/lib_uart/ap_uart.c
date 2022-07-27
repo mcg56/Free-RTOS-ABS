@@ -28,7 +28,7 @@
 #include "driverlib/gpio.h"
 #include "driverlib/uart.h"
 #include "driverlib/sysctl.h"
-#include "libs/lib_uart/ap_uart.h"
+#include "ap_uart.h"
 
 /**********************************************************************
  initialiseUSB_UART: The UART is responsible for transmitting
@@ -47,8 +47,8 @@ void initialiseUSB_UART (void)
     // Select the alternate (UART) function for these pins.
     //
     GPIOPinTypeUART(UART_USB_GPIO_BASE, UART_USB_GPIO_PINS);
-    //GPIOPinConfigure (GPIO_PA0_U0RX);
-    //GPIOPinConfigure (GPIO_PA1_U0TX);
+    GPIOPinConfigure (GPIO_PA0_U0RX);
+    GPIOPinConfigure (GPIO_PA1_U0TX);
 
     UARTConfigSetExpClk(UART_USB_BASE, SysCtlClockGet(), BAUD_RATE,
             UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE |

@@ -28,7 +28,7 @@ int main(void) {
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
 
-    setPWM(89, 10);
+    setPWM(110, 10);
 
     while(1)
     {
