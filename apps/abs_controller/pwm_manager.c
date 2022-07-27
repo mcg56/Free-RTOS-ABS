@@ -63,7 +63,7 @@ static enum PWMEdgesFound edgeCount;
  * @return None
  */
 static void
-initResponseTimer (void)
+initTimer (void)
 {
     // The Timer0 peripheral must be enabled for use.
     SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
@@ -90,16 +90,16 @@ initFLWheelPins (void)
     // Enable port peripheral
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
     // Set pin 0,1 and 4 as input
-    GPIOPinTypeGPIOInput(GPIO_PORTB_BASE, GPIO_PIN_0);
+    GPIOPinTypeGPIOInput(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
     // Set what pin interrupt conditions
-    GPIOIntTypeSet(GPIO_PORTB_BASE, GPIO_PIN_0, GPIO_BOTH_EDGES);
+    GPIOIntTypeSet(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1, GPIO_BOTH_EDGES);
 
     // Register interrupt
     GPIOIntRegister(GPIO_PORTB_BASE, FLWheelIntHandler);
 
     // Enable pins
-    GPIOIntDisable(GPIO_PORTB_BASE, GPIO_PIN_0);
+    GPIOIntDisable(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 }
 
 /**
@@ -109,7 +109,8 @@ initFLWheelPins (void)
 void
 initPWMManager (void)
 {
-    initResponseTimer();
+    PWMInputSignals.FLWheel.InterruptHandler = FLWheelIntHandler;
+    initTimer();
     initFLWheelPins();
 }
 
@@ -120,10 +121,7 @@ initPWMManager (void)
 static void
 FLWheelIntHandler (void)
 {
-    // Clean up, clearing the interrupt
-    GPIOIntClear(GPIO_PORTB_BASE, GPIO_PIN_0);
-
-    if (GPIOPinRead (GPIO_PORTB_BASE, GPIO_PIN_0))
+    if (GPIOPinRead (GPIO_PORTB_BASE, GPIOIntStatus(GPIO_PORTB_BASE, true)))
     {
         PWMInputSignals.FLWheel.lastRisingEdgeTS = PWMInputSignals.FLWheel.currRisingEdgeTS;
         PWMInputSignals.FLWheel.currRisingEdgeTS = TimerValueGet(TIMER0_BASE, TIMER_A);
@@ -134,6 +132,9 @@ FLWheelIntHandler (void)
     {
         PWMInputSignals.FLWheel.currFallingEdgeTS = TimerValueGet(TIMER0_BASE, TIMER_A);
     }
+
+    // Clean up, clearing the interrupt
+    GPIOIntClear(GPIO_PORTB_BASE, GPIO_INT_PIN_0 | GPIO_INT_PIN_1);
 }
 
 /**
@@ -154,13 +155,13 @@ updateAllPWMInfo(void)
 static void 
 updatePWMInfo(PWMSignal_t* PWMSignal)
 {
-    edgeCount = NONE;
+    edgeCount = NONE; // May need to be specific to PWM signal - not sure yet
 
-    GPIOIntClear(GPIO_PORTB_BASE, GPIO_PIN_0); // Need to generalise these. Didn't seem to work first try
+    GPIOIntClear(GPIO_PORTB_BASE, GPIO_INT_PIN_0 | GPIO_INT_PIN_1); // Need to generalise these. Didn't seem to work first try
 
-    GPIOIntEnable(GPIO_PORTB_BASE, GPIO_PIN_0);
-    while (edgeCount != TWO_EDGES);
-    GPIOIntDisable(GPIO_PORTB_BASE, GPIO_PIN_0);
+    GPIOIntEnable(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+    while (edgeCount != TWO_EDGES); // Timeout of some kind needed
+    GPIOIntDisable(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
     calculatePWMProperties(PWMSignal);
 }

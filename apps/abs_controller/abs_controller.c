@@ -59,7 +59,7 @@ int main (void)
 
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
-    setPWM(41, 87);
+    setPWM(69, 96);
 
     char str[100];
     PWMInputSignals_t PWMInputSignals;

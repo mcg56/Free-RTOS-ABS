@@ -24,6 +24,7 @@ typedef struct {
     uint32_t currRisingEdgeTS;
     uint32_t lastRisingEdgeTS;
     uint32_t currFallingEdgeTS;
+    void (*InterruptHandler)(void);
 } PWMSignal_t;
 
 /**
