@@ -15,38 +15,20 @@
 #include "driverlib/pwm.h"
 
 
-void initDisplay (void)
-{
-  // intialise the Orbit OLED display
-	OLEDInitialise ();
-}
 
-void displayButtonState (char *butStr, char *stateStr, uint8_t numPushes, uint8_t charLine)
-{
-    char string[17]; // Display fits 16 characters wide.
-	
-    OLEDStringDraw ("                ", 0, charLine);
-    usnprintf (string, sizeof(string), "%s - %s %2d", butStr, stateStr, numPushes);
-    OLEDStringDraw (string, 0, charLine);
-}
+
 
 int main(void) {
-    SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
-    initDisplay ();
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1);
 
-    // Set the PWM clock rate (using the prescaler)
+    SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
     SysCtlPWMClockSet(PWM_DIVIDER_CODE);
     SysCtlPeripheralReset (PWM_MAIN_PERIPH_GPIO); // Used for PWM output
     SysCtlPeripheralReset (PWM_MAIN_PERIPH_PWM);  // Main Rotor PWM
-    initialisePWM ();
-
-    // Initialisation is complete, so turn on the output.
+    initialisePWM();
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
 
-    setPWM(750, 50);
+    setPWM(110, 10);
 
     while(1)
     {

@@ -17,8 +17,8 @@
 #define PWM_RATE_MIN_HZ    50
 #define PWM_RATE_MAX_HZ    400
 #define PWM_FIXED_DUTY     40
-#define PWM_DIVIDER_CODE   SYSCTL_PWMDIV_4
-#define PWM_DIVIDER        4
+#define PWM_DIVIDER_CODE   SYSCTL_PWMDIV_16
+#define PWM_DIVIDER        16
 
 //  PWM Hardware Details M0PWM7 (gen 3)
 //  ---Main Rotor PWM: PC5, J4-05
