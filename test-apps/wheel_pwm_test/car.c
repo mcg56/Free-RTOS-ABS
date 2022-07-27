@@ -73,7 +73,7 @@ typedef struct {
 QueueHandle_t inputDataQueue = NULL;
 QueueHandle_t OLEDDisplayQueue = NULL;
 QueueHandle_t UARTDisplayQueue = NULL;
-QueueHandle_t updatePWMQueue = NULL;
+extern QueueHandle_t updatePWMQueue;
 
 /**
  * @brief Creates instances of all queues
@@ -85,27 +85,6 @@ void createQueues(void)
     OLEDDisplayQueue = xQueueCreate(5, sizeof(DisplayInfo));
     UARTDisplayQueue = xQueueCreate(5, sizeof(DisplayInfo));
     updatePWMQueue = xQueueCreate(10, sizeof(pwmSignal));
-}
-
-/**
- * @brief Task that changes PWM output
- * @param args Unused
- * @return None
- */
-void updatePWMTask(void* args) 
-{
-    (void)args; // unused
-    while(true)
-    {
-        // Wait until a new message is to be written, as its added to queue
-        pwmSignal requestedPWM;
-        portBASE_TYPE status = xQueueReceive(updatePWMQueue, &requestedPWM, 100);
-        if (status == pdPASS)
-        {
-            setPWMGeneral(requestedPWM.freq, requestedPWM.duty, requestedPWM.base, requestedPWM.gen);
-
-        } else continue;
-    }
 }
 
 
@@ -314,7 +293,7 @@ void updateWheelInfoTask(void* args)
 
             /* Sending wheel pwms 1 at a time may cause issues as it updates them one at a time so abs
             controller might think its slipping whne it just hasnt updated all wheels yet*/
-            pwmSignal leftFrontPWM = {WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, PWM_MAIN_BASE, PWM_MAIN_GEN};
+            pwmSignal leftFrontPWM = {WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, PWM_MAIN_BASE, PWM_MAIN_GEN, PWM_MAIN_OUTNUM};
             xQueueSendToBack(updatePWMQueue, &leftFrontPWM, 0);
         }else continue;
     }

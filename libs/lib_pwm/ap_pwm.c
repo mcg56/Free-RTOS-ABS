@@ -23,19 +23,12 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/interrupt.h"
 #include "ap_pwm.h"
+#include <FreeRTOS.h>
+#include <queue.h>
 
 
 
-/**********************************************************
- * Generates a single PWM signal on Tiva board pin J4-05 =
- * PC5 (M0PWM7).  This is the same PWM output as the
- * helicopter main rotor.
- **********************************************************/
-
-/**********************************************************
- * Constants
- **********************************************************/
-// Systick configuration
+QueueHandle_t updatePWMQueue = NULL;
 
 
 /*********************************************************
@@ -85,10 +78,31 @@ setPWM (uint32_t ui32Freq, uint32_t ui32Duty)
  * @param gen PWM generator to change
  * @return No return
  */
-void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, int base, int gen)
+void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, int base, int gen, int outnum)
 {
     // Calculate the PWM period corresponding to the freq.
     uint32_t ui32Period = SysCtlClockGet() / PWM_DIVIDER / ui32Freq;
     PWMGenPeriodSet(base, gen, ui32Period);
-    PWMPulseWidthSet(base, gen, ui32Period * ui32Duty / 100);
+    PWMPulseWidthSet(base, outnum, ui32Period * ui32Duty / 100);
+}
+
+
+/**
+ * @brief Task that changes PWM output
+ * @param args Unused
+ * @return None
+ */
+void updatePWMTask(void* args) 
+{
+    (void)args; // unused
+    while(true)
+    {
+        // Wait until a new pwm is to be made, as its added to queue
+        pwmSignal requestedPWM;
+        portBASE_TYPE status = xQueueReceive(updatePWMQueue, &requestedPWM, 100);
+        if (status == pdPASS)
+        {
+            setPWMGeneral(requestedPWM.freq, requestedPWM.duty, requestedPWM.base, requestedPWM.gen, requestedPWM.outnum);
+        } else continue;
+    }
 }

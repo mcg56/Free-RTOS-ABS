@@ -17,6 +17,7 @@
         "ap_adc.h": "c",
         "stdint.h": "c",
         "stdbool.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "interrupt.h": "c"
     }
 }

@@ -59,9 +59,9 @@ void calculateWheelSpeedsFromRadii(Wheel* leftFront, Wheel* leftRear, Wheel* rig
 }
 
 /**
- * @brief Function to calculate the pwm pulse frequency of each wheel based on wheel speed. I divide
- * by 2*pi as this is how many radians are in a circle so I think its right and the formula in the
- * specification is wrong (They seme to only divide by pi). SO get different output to example (half).
+ * @brief Function to calculate the pwm pulse frequency of each wheel based on wheel speed. I think it should
+ * divide by 2*pi as this is how many radians are in a circle, but the formula in the
+ * specification says to only divide by pi.
  * @param leftFront Left front wheel struct
  * @param leftRear Left rear wheel struct                
  * @param rightFront Right front wheel struct
@@ -70,8 +70,8 @@ void calculateWheelSpeedsFromRadii(Wheel* leftFront, Wheel* leftRear, Wheel* rig
  */
 void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear)
 {
-    leftFront->pulseHz = PULSES_PER_REV*leftFront->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(2.0*PI);
-    leftRear->pulseHz = PULSES_PER_REV*leftRear->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(2.0*PI);
-    rightFront->pulseHz = PULSES_PER_REV*rightFront->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(2.0*PI);
-    rightRear->pulseHz = PULSES_PER_REV*rightRear->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(2.0*PI);
+    leftFront->pulseHz = PULSES_PER_REV*leftFront->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(1.0*PI);
+    leftRear->pulseHz = PULSES_PER_REV*leftRear->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(1.0*PI);
+    rightFront->pulseHz = PULSES_PER_REV*rightFront->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(1.0*PI);
+    rightRear->pulseHz = PULSES_PER_REV*rightRear->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(1.0*PI);
 }

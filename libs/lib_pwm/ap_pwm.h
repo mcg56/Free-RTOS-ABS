@@ -6,11 +6,13 @@
 #define PWM_H_
 
 #include <stdint.h>
+#include <FreeRTOS.h>
+#include <queue.h>
 #include <stdbool.h>
 
 
 // PWM configuration
-#define PWM_START_RATE_HZ  250
+#define PWM_START_RATE_HZ  17
 #define PWM_RATE_STEP_HZ   50
 #define PWM_RATE_MIN_HZ    50
 #define PWM_RATE_MAX_HZ    400
@@ -31,23 +33,28 @@
 #define PWM_MAIN_GPIO_PIN    GPIO_PIN_5
 #define WHEEL_FIXED_DUTY     50
 
+QueueHandle_t updatePWMQueue;
+
 /**
  * @brief PWM signal struct, used for each PWM signal to define it's parameters
  * @param duty Desired duty cycle (%)
  * @param freq Desired frequency (Hz)
  * @param base Base of PWM signal
  * @param gen PWM generator
+ * @param outnum Output number of PWM
  */
 typedef struct{
 uint32_t duty;
 uint32_t freq;
 int base;
 int gen;
+int outnum;
 }pwmSignal;
 
 void setPWM (uint32_t ui32Freq, uint32_t ui32Duty);
-void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, int base, int gen);
+void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, int base, int gen, int outnum);
 void initialisePWM (void);
+void updatePWMTask(void* args);
 
 
 #endif
