@@ -6,12 +6,6 @@
 //*************************************************************
 // Type Definitions
 //*************************************************************
-
-/**
- * @brief Identifies the number of edges found in an update
- */
-enum PWMEdgesFound {NONE, ONE_EDGE, TWO_EDGES};
-
 /**
  * @brief Information regarding any one PWM signal.
  * @param gpioPort - GPIO port base the PWM signal is attached to
@@ -21,7 +15,6 @@ enum PWMEdgesFound {NONE, ONE_EDGE, TWO_EDGES};
  * @param currRisingEdgeTS - Timestamp of the most recent rising edge
  * @param lastRisingEdgeTS - Timestamp of the previous rising edge
  * @param currFallingEdgeTS - Timestamp of the most recent falling edge
- * @param updateStatus - Used to record the number edges that have been identified in an update
  */
 typedef struct {
     uint32_t gpioPort;
@@ -31,7 +24,6 @@ typedef struct {
     uint32_t currRisingEdgeTS;
     uint32_t lastRisingEdgeTS;
     uint32_t currFallingEdgeTS;
-    enum PWMEdgesFound updateStatus;
 } PWMSignal_t;
 
 /**

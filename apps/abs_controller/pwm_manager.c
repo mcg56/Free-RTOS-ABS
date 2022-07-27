@@ -37,6 +37,15 @@
 #include "pwm_manager.h"
 
 //*************************************************************
+// Type Definitions
+//*************************************************************
+
+/**
+ * @brief Identifies the number of edges found in an update
+ */
+static enum PWMEdgesFound {NONE, ONE_EDGE, TWO_EDGES};
+
+//*************************************************************
 // Function handles
 //*************************************************************
 static void FLWheelIntHandler (void);
@@ -47,6 +56,7 @@ static void updatePWMInfo(PWMSignal_t* PWMSignal);
 // Global variables
 //*************************************************************
 static PWMInputSignals_t PWMInputSignals;
+static enum PWMEdgesFound edgeCount;
 
 /**
  * @brief Initialise the primary timer
@@ -118,7 +128,7 @@ FLWheelIntHandler (void)
         PWMInputSignals.FLWheel.lastRisingEdgeTS = PWMInputSignals.FLWheel.currRisingEdgeTS;
         PWMInputSignals.FLWheel.currRisingEdgeTS = TimerValueGet(TIMER0_BASE, TIMER_A);
 
-        PWMInputSignals.FLWheel.updateStatus++;
+        edgeCount++;
     }
     else
     {
@@ -144,12 +154,12 @@ updateAllPWMInfo(void)
 static void 
 updatePWMInfo(PWMSignal_t* PWMSignal)
 {
-    PWMSignal->updateStatus = NONE;
+    edgeCount = NONE;
 
     GPIOIntClear(GPIO_PORTB_BASE, GPIO_PIN_0); // Need to generalise these. Didn't seem to work first try
 
     GPIOIntEnable(GPIO_PORTB_BASE, GPIO_PIN_0);
-    while (PWMSignal->updateStatus != TWO_EDGES);
+    while (edgeCount != TWO_EDGES);
     GPIOIntDisable(GPIO_PORTB_BASE, GPIO_PIN_0);
 
     calculatePWMProperties(PWMSignal);
