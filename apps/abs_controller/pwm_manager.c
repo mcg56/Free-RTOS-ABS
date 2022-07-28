@@ -20,6 +20,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <inc/hw_memmap.h>
 #include <inc/hw_types.h>
@@ -36,6 +37,9 @@
 
 #include "pwm_manager.h"
 
+#define LEN(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
+#define MAX_NUM_SIGNALS 6
+
 //*************************************************************
 // Type Definitions
 //*************************************************************
@@ -45,18 +49,43 @@
  */
 static enum PWMEdgesFound {NONE, ONE_EDGE, TWO_EDGES};
 
+/**
+ * @brief Collection of all input PWM signals
+ * @param signals - List of PWM signals
+ * @param count - Count of PWM input signal
+ * @param pins - Bitmask of the input signal pins
+ */
+typedef struct {
+    PWMSignal_t signals[MAX_NUM_SIGNALS];
+    int count;
+    uint32_t pins;
+} PWMInputSignals_t;
+
+/**
+ * @brief Record of edge timestamps for PWM calculations
+ * @param currRisingEdge - Timestamp of the most recent rising edge
+ * @param lastRisingEdge - Timestamp of the previous rising edge
+ * @param currFallingEdge - Timestamp of the most recent falling edge
+ */
+typedef struct {
+    uint32_t currRisingEdge;
+    uint32_t lastRisingEdge;
+    uint32_t currFallingEdge;
+} edgeTimestamps_t;
+
 //*************************************************************
 // Function handles
 //*************************************************************
-static void FLWheelIntHandler (void);
-static void calculatePWMProperties (PWMSignal_t* PWMSignal);
+static void PWMIntHandler (void);
+static void calculatePWMProperties (PWMSignal_t* PWMSignal, edgeTimestamps_t* edgeTimestamps);
 static void updatePWMInfo(PWMSignal_t* PWMSignal);
 
 //*************************************************************
 // Global variables
 //*************************************************************
 static PWMInputSignals_t PWMInputSignals;
-static enum PWMEdgesFound edgeCount;
+static enum PWMEdgesFound risingEdgeCount;
+static edgeTimestamps_t edgeTimestamps;
 
 /**
  * @brief Initialise the primary timer
@@ -81,25 +110,26 @@ initTimer (void)
 }
 
 /**
- * @brief Initialise the pins for the front left wheel
+ * @brief Initialise the pins of a given inputSignal
+ * @param inputSignal - PWM signal to be initialised
  * @return None
  */
 static void
-initFLWheelPins (void)
+initPWMInput (PWMSignal_t inputSignal)
 {
     // Enable port peripheral
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
     // Set pin 0,1 and 4 as input
-    GPIOPinTypeGPIOInput(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+    GPIOPinTypeGPIOInput(GPIO_PORTB_BASE, inputSignal.gpioPin);
 
     // Set what pin interrupt conditions
-    GPIOIntTypeSet(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1, GPIO_BOTH_EDGES);
+    GPIOIntTypeSet(GPIO_PORTB_BASE, inputSignal.gpioPin, GPIO_BOTH_EDGES);
 
     // Register interrupt
-    GPIOIntRegister(GPIO_PORTB_BASE, FLWheelIntHandler);
+    GPIOIntRegister(GPIO_PORTB_BASE, PWMIntHandler);
 
     // Enable pins
-    GPIOIntDisable(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+    GPIOIntDisable(GPIO_PORTB_BASE, inputSignal.gpioPin);
 }
 
 /**
@@ -109,9 +139,28 @@ initFLWheelPins (void)
 void
 initPWMManager (void)
 {
-    PWMInputSignals.FLWheel.InterruptHandler = FLWheelIntHandler;
     initTimer();
-    initFLWheelPins();
+}
+
+/**
+ * @brief Add a PWM signal to the list of tracked input signals
+ * @param newSignal - PWM signal to be added
+ * @return Bool - true if successful, false if failed
+ */
+int
+trackPWMSignal (PWMSignal_t newSignal)
+{
+    if (PWMInputSignals.count == MAX_NUM_SIGNALS)
+    {
+        return false;
+    }
+    
+    initPWMInput(newSignal);
+
+    PWMInputSignals.signals[PWMInputSignals.count++] = newSignal;
+    PWMInputSignals.pins |= newSignal.gpioPin;
+
+    return true;
 }
 
 /**
@@ -119,22 +168,22 @@ initPWMManager (void)
  * @return None
  */
 static void
-FLWheelIntHandler (void)
+PWMIntHandler (void)
 {
     if (GPIOPinRead (GPIO_PORTB_BASE, GPIOIntStatus(GPIO_PORTB_BASE, true)))
     {
-        PWMInputSignals.FLWheel.lastRisingEdgeTS = PWMInputSignals.FLWheel.currRisingEdgeTS;
-        PWMInputSignals.FLWheel.currRisingEdgeTS = TimerValueGet(TIMER0_BASE, TIMER_A);
+        edgeTimestamps.lastRisingEdge = edgeTimestamps.currRisingEdge;
+        edgeTimestamps.currRisingEdge = TimerValueGet(TIMER0_BASE, TIMER_A);
 
-        edgeCount++;
+        risingEdgeCount++;
     }
     else
     {
-        PWMInputSignals.FLWheel.currFallingEdgeTS = TimerValueGet(TIMER0_BASE, TIMER_A);
+        edgeTimestamps.currFallingEdge = TimerValueGet(TIMER0_BASE, TIMER_A);
     }
 
     // Clean up, clearing the interrupt
-    GPIOIntClear(GPIO_PORTB_BASE, GPIO_INT_PIN_0 | GPIO_INT_PIN_1);
+    GPIOIntClear(GPIO_PORTB_BASE, PWMInputSignals.pins);
 }
 
 /**
@@ -144,7 +193,10 @@ FLWheelIntHandler (void)
 void 
 updateAllPWMInfo(void)
 {
-    updatePWMInfo(&PWMInputSignals.FLWheel);
+    for (int i = 0; i < PWMInputSignals.count; i++)
+    {
+        updatePWMInfo(&PWMInputSignals.signals[i]);
+    }   
 }
 
 /**
@@ -155,48 +207,58 @@ updateAllPWMInfo(void)
 static void 
 updatePWMInfo(PWMSignal_t* PWMSignal)
 {
-    edgeCount = NONE; // May need to be specific to PWM signal - not sure yet
+    risingEdgeCount = NONE; // May need to be specific to PWM signal - not sure yet
 
-    GPIOIntClear(GPIO_PORTB_BASE, GPIO_INT_PIN_0 | GPIO_INT_PIN_1); // Need to generalise these. Didn't seem to work first try
+    GPIOIntClear(GPIO_PORTB_BASE, PWMInputSignals.pins); // Need to generalise these. Didn't seem to work first try - TASK
 
-    GPIOIntEnable(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-    while (edgeCount != TWO_EDGES); // Timeout of some kind needed
-    GPIOIntDisable(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+    GPIOIntEnable(GPIO_PORTB_BASE, PWMSignal->gpioPin);
+    while (risingEdgeCount != TWO_EDGES); // Timeout of some kind needed - TASK
+    GPIOIntDisable(GPIO_PORTB_BASE, PWMSignal->gpioPin);
 
-    calculatePWMProperties(PWMSignal);
+    calculatePWMProperties(PWMSignal, &edgeTimestamps);
 }
 
 /**
  * @brief Update the duty and frequency given a PWM signal's edge timestamps
- * @param PWMSgnal PWM signal to update
+ * @param PWMSgnal - PWM signal to update
+ * @param edgeTimestamps - Timestamps of the required edge points 
  * @return None
  */
 static void
-calculatePWMProperties(PWMSignal_t* PWMSignal)
+calculatePWMProperties(PWMSignal_t* PWMSignal, edgeTimestamps_t* edgeTimestamps)
 {
     // Account for overflow of the timer
-    if (PWMSignal->currRisingEdgeTS < PWMSignal->lastRisingEdgeTS)
+    if (edgeTimestamps->currRisingEdge < edgeTimestamps->lastRisingEdge)
     {
-        PWMSignal->frequency = SysCtlClockGet() / (PWMSignal->currRisingEdgeTS 
-            + SysCtlClockGet() - PWMSignal->lastRisingEdgeTS);
+        PWMSignal->frequency = SysCtlClockGet() / (edgeTimestamps->currRisingEdge
+            + SysCtlClockGet() - edgeTimestamps->lastRisingEdge);
     }
     else
     {
-        PWMSignal->frequency = SysCtlClockGet() / (PWMSignal->currRisingEdgeTS 
-            - PWMSignal->lastRisingEdgeTS);
+        PWMSignal->frequency = SysCtlClockGet() / (edgeTimestamps->currRisingEdge
+            - edgeTimestamps->lastRisingEdge);
     }
 
-    // Currently no timer overflow protection - NEED TO IMPLEMENT
-    PWMSignal->duty = 100 * (PWMSignal->currFallingEdgeTS - PWMSignal->lastRisingEdgeTS) /
-        (PWMSignal->currRisingEdgeTS - PWMSignal->lastRisingEdgeTS);
+    // Currently no timer overflow protection - TASK
+    PWMSignal->duty = 100 * (edgeTimestamps->currFallingEdge - edgeTimestamps->lastRisingEdge) /
+        (edgeTimestamps->currRisingEdge - edgeTimestamps->lastRisingEdge);
 }
 
 /**
  * @brief Returns the PWM Input signal list
+ * @param id String identifier for desired signal
  * @return Structure of PWM signals
  */
-PWMInputSignals_t
-getPWMInputSignals (void)
+PWMSignal_t
+getPWMInputSignals (char* id)
 {
-    return PWMInputSignals;
+    for (int i = 0; i < PWMInputSignals.count; i++)
+    {
+        if (strcmp(PWMInputSignals.signals[0].id, id) == 0)
+        {
+            return PWMInputSignals.signals[0];
+        }
+    }
+
+    // TASK - what if the incorrect id is input? 
 }

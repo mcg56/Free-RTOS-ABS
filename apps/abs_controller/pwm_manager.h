@@ -3,44 +3,33 @@
 
 #include <stdint.h>
 
+#define ID_LEN 20
+
 //*************************************************************
 // Type Definitions
 //*************************************************************
 /**
  * @brief Information regarding any one PWM signal.
+ * @param id - String identifier for the signal
  * @param gpioPort - GPIO port base the PWM signal is attached to
  * @param gpioPin - GPIO pin the PWM signal is attached to
  * @param duty - Duty cycle of the frequency [%]
  * @param frequency - Frequency of the signal [Hz]
- * @param currRisingEdgeTS - Timestamp of the most recent rising edge
- * @param lastRisingEdgeTS - Timestamp of the previous rising edge
- * @param currFallingEdgeTS - Timestamp of the most recent falling edge
  */
 typedef struct {
+    char id[ID_LEN];
     uint32_t gpioPort;
     uint32_t gpioPin;
     uint32_t duty;
     uint32_t frequency;
-    uint32_t currRisingEdgeTS;
-    uint32_t lastRisingEdgeTS;
-    uint32_t currFallingEdgeTS;
-    void (*InterruptHandler)(void);
 } PWMSignal_t;
-
-/**
- * @brief Collection of all input PWM signals
- * @param FLWheel - Front left wheel PWM
- */
-typedef struct {
-    PWMSignal_t FLWheel;
-} PWMInputSignals_t;
-
 
 //*************************************************************
 // Function handles
 //*************************************************************
 extern void initPWMManager (void);
+extern int trackPWMSignal (PWMSignal_t newSignal);
 extern void updateAllPWMInfo (void);
-extern PWMInputSignals_t getPWMInputSignals (void);
+extern PWMSignal_t getPWMInputSignals (char* id);
 
 #endif
