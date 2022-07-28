@@ -59,10 +59,17 @@ int main (void)
 
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
+    PWMSignal_t testPWM = {.id = "testPWM", .gpioPin = GPIO_PIN_0};
+    trackPWMSignal(testPWM);
+
+    PWMSignal_t testPWM2 = {.id = "testPWM2", .gpioPin = GPIO_PIN_1};
+    trackPWMSignal(testPWM2);
+
     setPWM(69, 96);
 
+
     char str[100];
-    PWMInputSignals_t PWMInputSignals;
+    PWMSignal_t signal;
     UARTSend("\n\rWaiting for press...\r\n");
     while (true)
     {
@@ -72,10 +79,18 @@ int main (void)
         {
             updateAllPWMInfo();
             
-            PWMInputSignals = getPWMInputSignals();
-            sprintf(str, "Frequency = %ld Hz\r\n", PWMInputSignals.FLWheel.frequency);
+            // Details of first PWM
+            signal = getPWMInputSignals("testPWM");
+            sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
             UARTSend(str);
-            sprintf(str, "Duty : %ld\r\n", PWMInputSignals.FLWheel.duty);
+            sprintf(str, "Duty : %ld\r\n", signal.duty);
+            UARTSend(str);
+
+            // Details of second PWM
+            signal = getPWMInputSignals("testPWM2");
+            sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
+            UARTSend(str);
+            sprintf(str, "Duty : %ld\r\n", signal.duty);
             UARTSend(str);
         }
     }
