@@ -40,7 +40,7 @@ TaskHandle_t updatePWMTaskHandle;
  * @brief Struture for storing input data and passing between tasks 
  * through queues
  * @param steeringWheelDuty Car steering wheel duty (%)
- * @param alpha             Turn angle (degrees)
+ * @param speed             Car speed
  */
 typedef struct {
     uint8_t speed; //m
