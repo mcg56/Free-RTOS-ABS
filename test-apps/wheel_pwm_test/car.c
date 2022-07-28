@@ -73,7 +73,7 @@ typedef struct {
 QueueHandle_t inputDataQueue = NULL;
 QueueHandle_t OLEDDisplayQueue = NULL;
 QueueHandle_t UARTDisplayQueue = NULL;
-extern QueueHandle_t updatePWMQueue;
+
 
 /**
  * @brief Creates instances of all queues
@@ -293,7 +293,7 @@ void updateWheelInfoTask(void* args)
 
             /* Sending wheel pwms 1 at a time may cause issues as it updates them one at a time so abs
             controller might think its slipping whne it just hasnt updated all wheels yet*/
-            pwmSignal leftFrontPWM = {WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, PWM_MAIN_BASE, PWM_MAIN_GEN, PWM_MAIN_OUTNUM};
+            pwmSignal leftFrontPWM = {WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, PWMHardwareDetailsLF.base, PWMHardwareDetailsLF.gen, PWMHardwareDetailsLF.outnum};
             xQueueSendToBack(updatePWMQueue, &leftFrontPWM, 0);
         }else continue;
     }
@@ -348,21 +348,20 @@ void readButtonsTask(void* args)
 
 int main(void) {
     SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
-    initDisplay ();
+    
+    initializeCarPWM();
+    OLEDInitialise ();
+
+    // Setup red LED on PF1
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1);
 
-    // Set the PWM clock rate (using the prescaler)
-    SysCtlPWMClockSet(PWM_DIVIDER_CODE);
-    SysCtlPeripheralReset (PWM_MAIN_PERIPH_GPIO); // Used for PWM output
-    SysCtlPeripheralReset (PWM_MAIN_PERIPH_PWM);  // Main Rotor PWM
-    
-    initialisePWM ();
     initButtons();
     initialiseUSB_UART ();
 
-    // Initialisation is complete, so turn on the output.
-    PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
+    
+    turnOnAllCarPWM();
+
     createQueues();
     xTaskCreate(&blink, "blink", 256, NULL, 0, &blinkHandle);
     xTaskCreate(&readButtonsTask, "read buttons", 256, NULL, 0, &readButtonsHandle);
