@@ -43,6 +43,9 @@
 #define VT100_ESC 0x1B
 #define VT100_HOME "[H"
 #define VT100_CLS "[2J"
+#define VT100_CLR "[K"
+#define VT100_BOLD "[1m"
+#define VT100_NORMAL "[m"
 #define VT100_ONE_DOWN "[1B"
 #define VT100_TWO_DOWN "[2B"
 #define VT100_THREE_DOWN "[3B"
