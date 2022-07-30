@@ -1,6 +1,6 @@
 /**********************************************************
  *
- * pwm_manager.c - Main controlling file for the 
+ * ap_pwm_input.c - Main controlling file for the 
  *      PWM information.
  *
  * IMPORTANT - This assumes all signals are on port B
@@ -8,17 +8,6 @@
  * T.R Peterson, M.C Gardyne
  * Last modified:  24.7.22
  **********************************************************/
-
-/**
- * This will contain:
- * 
- * 1. The PWM structs and current information
- * 2. The interrupt management for when to read information
- * 3. Any output stuff required for the output brake signal
- * 
- * This will be the point of contact with ap_pwm.c
- * 
- */
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -28,25 +17,32 @@
 #include <inc/hw_types.h>
 #include <driverlib/sysctl.h>
 #include <driverlib/gpio.h>
-#include <driverlib/watchdog.h>
-
-#include <FreeRTOS.h>
-#include <task.h>
 
 #include "driverlib/timer.h"
 
-#include "libs/lib_pwm/ap_pwm.h"
-#include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
-
 #include "pwm_manager.h"
 
+//*************************************************************
+// Constant Definitions
+//*************************************************************
+
 #define LEN(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
-#define MAX_NUM_SIGNALS 6
-#define TIMEOUT_RATE 20 // Hz
+#define MAX_NUM_SIGNALS             6
 
-// TASK - change all the timer stuff to defines
+#define EDGE_TIMER_PERIPH       SYSCTL_PERIPH_TIMER0
+#define EDGE_TIMER_BASE         TIMER0_BASE
+#define EDGE_TIMER              TIMER_A
+#define EDGE_TIMER_CONFIG       TIMER_CFG_A_PERIODIC_UP
 
-// TASK - add a function to read a specific PWM
+#define TIMEOUT_TIMER_PERIPH    SYSCTL_PERIPH_TIMER1
+#define TIMEOUT_TIMER_BASE      TIMER1_BASE
+#define TIMEOUT_TIMER           TIMER_A
+#define TIMEOUT_TIMER_CONFIG    TIMER_CFG_A_PERIODIC
+#define TIMEOUT_TIMER_INT_FLAG  TIMER_TIMA_TIMEOUT
+#define TIMEOUT_RATE            20 // [Hz]
+
+#define PWM_GPIO_BASE           GPIO_PORTB_BASE
+#define PWM_GPIO_PERIPH         SYSCTL_PERIPH_GPIOB
 
 //*************************************************************
 // Type Definitions
@@ -55,7 +51,7 @@
 /**
  * @brief Identifies the number of edges found in an update
  */
-static enum PWMEdgesFound {NONE, ONE_EDGE, TWO_EDGES};
+enum PWMEdgesFound {NONE, ONE_EDGE, TWO_EDGES};
 
 /**
  * @brief Collection of all input PWM signals
@@ -84,10 +80,11 @@ typedef struct {
 //*************************************************************
 // Function handles
 //*************************************************************
-static void PWMIntHandler (void);
+static void PWMEdgeIntHandler (void);
 static void PWMTimeoutHandler (void);
-static void calculatePWMProperties (PWMSignal_t* PWMSignal, edgeTimestamps_t* edgeTimestamps);
+static void calculatePWMProperties (PWMSignal_t* PWMSignal);
 static bool updatePWMInfo(PWMSignal_t* PWMSignal);
+static PWMSignal_t* findPWMInput(char* id);
 
 //*************************************************************
 // Global variables
@@ -98,25 +95,43 @@ static volatile edgeTimestamps_t edgeTimestamps;
 static volatile bool PWMReadTimeout = false;
 
 /**
- * @brief Initialise the primary timer
+ * @brief Initialise the timer used for edge tracking
  * @return None
  */
 static void
-initTimer (void)
+initPWMEdgeTimer (void)
 {
-    // The Timer0 peripheral must be enabled for use.
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+    SysCtlPeripheralEnable(EDGE_TIMER_PERIPH);
 
-    TimerDisable(TIMER0_BASE, TIMER_A);
+    TimerDisable(EDGE_TIMER_BASE, EDGE_TIMER);
 
-    // Configure Timer0B as a 16-bit periodic timer.
-    TimerConfigure(TIMER0_BASE, TIMER_CFG_A_PERIODIC_UP);
+    TimerConfigure(EDGE_TIMER_BASE, EDGE_TIMER_CONFIG);
 
-    // Set timer value
-    TimerLoadSet(TIMER0_BASE, TIMER_A, SysCtlClockGet());
+    TimerLoadSet(EDGE_TIMER_BASE, EDGE_TIMER, SysCtlClockGet());
 
-    // Enable timer
-    TimerEnable(TIMER0_BASE, TIMER_A);
+    TimerEnable(EDGE_TIMER_BASE, EDGE_TIMER);
+}
+
+/**
+ * @brief Initialise the timer for PWM edge timeout
+ * @return None
+ */
+static void
+initPWMTimeoutTimer (void)
+{
+    SysCtlPeripheralEnable(TIMEOUT_TIMER_PERIPH);
+
+    TimerDisable(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);
+
+    TimerConfigure(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER_CONFIG);
+
+    TimerIntRegister(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER, PWMTimeoutHandler);
+
+    TimerLoadSet(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER, SysCtlClockGet() / TIMEOUT_RATE);
+
+    TimerIntEnable(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER_INT_FLAG);
+
+    TimerDisable(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);
 }
 
 /**
@@ -127,70 +142,36 @@ initTimer (void)
 static void
 initPWMInput (PWMSignal_t inputSignal)
 {
-    // Enable port peripheral
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
-    // Set pin 0,1 and 4 as input
-    GPIOPinTypeGPIOInput(GPIO_PORTB_BASE, inputSignal.gpioPin);
+    SysCtlPeripheralEnable(PWM_GPIO_PERIPH);
 
-    // Set what pin interrupt conditions
-    GPIOIntTypeSet(GPIO_PORTB_BASE, inputSignal.gpioPin, GPIO_BOTH_EDGES);
+    GPIOPinTypeGPIOInput(PWM_GPIO_BASE, inputSignal.gpioPin);
 
-    // Register interrupt
-    GPIOIntRegister(GPIO_PORTB_BASE, PWMIntHandler);
+    GPIOIntTypeSet(PWM_GPIO_BASE, inputSignal.gpioPin, GPIO_BOTH_EDGES);
 
-    // Enable pins
-    GPIOIntDisable(GPIO_PORTB_BASE, inputSignal.gpioPin);
+    GPIOIntRegister(PWM_GPIO_BASE, PWMEdgeIntHandler);
+
+    GPIOIntDisable(PWM_GPIO_BASE, inputSignal.gpioPin);
 }
 
 /**
- * @brief Timer for reading PWM edges timeout
- * 
- */
-static void
-initPWMTimeoutTimer (void)
-{
-    // The Timer0 peripheral must be enabled for use.
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
-
-    TimerDisable(TIMER1_BASE, TIMER_A);
-
-    // Configure Timer0B as a 16-bit periodic timer.
-    TimerConfigure(TIMER1_BASE, TIMER_CFG_A_PERIODIC);
-
-    // Register interrupt handler
-    TimerIntRegister(TIMER1_BASE, TIMER_A, PWMTimeoutHandler);
-
-    // Set prescaler
-    TimerPrescaleSet(TIMER1_BASE, TIMER_A, 1);
-
-    // Set timer value
-    TimerLoadSet(TIMER1_BASE, TIMER_A, SysCtlClockGet() / TIMEOUT_RATE);
-
-    // Enable interrupt
-    TimerIntEnable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
-
-    // Enable timer
-    TimerDisable(TIMER1_BASE, TIMER_A);
-}
-
-/**
- * @brief Initialise the PWM Manager module
+ * @brief Initialise the PWM input manager module
  * @return None
  */
 void
-initPWMManager (void)
+initPWMInputManager (void)
 {
-    initTimer();
+    initPWMEdgeTimer();
+
     initPWMTimeoutTimer();
 }
 
 /**
- * @brief Add a PWM signal to the list of tracked input signals
+ * @brief Add a PWM signal to the list of registered input signals
  * @param newSignal - PWM signal to be added
  * @return Bool - true if successful, false if failed
  */
 int
-trackPWMSignal (PWMSignal_t newSignal)
+registerPWMSignal (PWMSignal_t newSignal)
 {
     if (PWMInputSignals.count == MAX_NUM_SIGNALS)
     {
@@ -210,89 +191,104 @@ trackPWMSignal (PWMSignal_t newSignal)
  * @return None
  */
 static void
-PWMIntHandler (void)
+PWMEdgeIntHandler (void)
 {
-    if (GPIOPinRead (GPIO_PORTB_BASE, GPIOIntStatus(GPIO_PORTB_BASE, true)))
+    if (GPIOPinRead (PWM_GPIO_BASE, GPIOIntStatus(PWM_GPIO_BASE, true)))
     {
         edgeTimestamps.lastRisingEdge = edgeTimestamps.currRisingEdge;
-        edgeTimestamps.currRisingEdge = TimerValueGet(TIMER0_BASE, TIMER_A);
+        edgeTimestamps.currRisingEdge = TimerValueGet(EDGE_TIMER_BASE, EDGE_TIMER);
 
         risingEdgeCount++;
     }
     else
     {
-        edgeTimestamps.currFallingEdge = TimerValueGet(TIMER0_BASE, TIMER_A);
+        edgeTimestamps.currFallingEdge = TimerValueGet(EDGE_TIMER_BASE, EDGE_TIMER);
     }
 
-    // Clean up, clearing the interrupt
-    GPIOIntClear(GPIO_PORTB_BASE, PWMInputSignals.pins);
+    GPIOIntClear(PWM_GPIO_BASE, PWMInputSignals.pins);
 }
 
 /**
- * @brief PWM read watchdog timeout handler
- * 
+ * @brief Interrupt handler for PWM reading timeout
+ * @return None
  */
 static void
 PWMTimeoutHandler (void)
 {
-    TimerIntClear(TIMER1_BASE, TIMER_A);
+    TimerIntClear(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);
 
     PWMReadTimeout = true;
 }
 
 /**
- * @brief Reset timeout
- * 
+ * @brief Reset PWM timeout
+ * @return None
  */
 static void
 resetTimeout (void)
 {
-    TimerIntClear(TIMER0_BASE, TIMER_A);
-    TimerLoadSet(TIMER1_BASE, TIMER_A, SysCtlClockGet() / TIMEOUT_RATE);
+    TimerIntClear(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);
+
+    TimerLoadSet(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER, SysCtlClockGet() / TIMEOUT_RATE);
 
     PWMReadTimeout = false;
 }
 
 /**
  * @brief Updates all PWM signal information
- * @return None
+ * @return Count off failed PWM signal updates
  */
-void 
-updateAllPWMInfo(void)
+int 
+updateAllPWMInputs(void)
 {
+    int failedUpdates = 0;
+
     for (int i = 0; i < PWMInputSignals.count; i++)
     {
-        updatePWMInfo(&PWMInputSignals.signals[i]);
-    }   
+        failedUpdates += updatePWMInfo(&PWMInputSignals.signals[i]);
+    }  
+
+    return failedUpdates; 
+}
+
+/**
+ * @brief Updates specific PWM signal information
+ * @return Count off failed PWM signal updates
+ */
+int 
+updatePWMInput(char* id)
+{
+    return updatePWMInfo(findPWMInput(id));
 }
 
 /**
  * @brief Enable and update the duty and frequency of a given PWM signal
  * @param PWMSignal - PWM signal to update
- * @return Bool - Boolean representing whether the update was successful
+ * @return Bool - Boolean representing whether there was an error
  */
 static bool 
 updatePWMInfo(PWMSignal_t* PWMSignal)
 {
     risingEdgeCount = NONE; // May need to be specific to PWM signal - not sure yet
 
-    GPIOIntClear(GPIO_PORTB_BASE, PWMInputSignals.pins);
+    GPIOIntClear(PWM_GPIO_BASE, PWMInputSignals.pins);
+
     resetTimeout();
 
-    TimerEnable(TIMER1_BASE, TIMER_A);
-    GPIOIntEnable(GPIO_PORTB_BASE, PWMSignal->gpioPin);
+    TimerEnable(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);
+    GPIOIntEnable(PWM_GPIO_BASE, PWMSignal->gpioPin);
     while (risingEdgeCount != TWO_EDGES && !PWMReadTimeout);
-    GPIOIntDisable(GPIO_PORTB_BASE, PWMSignal->gpioPin);
-    TimerDisable(TIMER1_BASE, TIMER_A);
+    GPIOIntDisable(PWM_GPIO_BASE, PWMSignal->gpioPin);
+    TimerDisable(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);
 
     if (!PWMReadTimeout)
     {
-        calculatePWMProperties(PWMSignal, &edgeTimestamps);
+        calculatePWMProperties(PWMSignal);
 
-        return true;
+        return false;
     }
 
-    return false;
+    return true;
 }
 
 /**
@@ -302,40 +298,51 @@ updatePWMInfo(PWMSignal_t* PWMSignal)
  * @return None
  */
 static void
-calculatePWMProperties(PWMSignal_t* PWMSignal, edgeTimestamps_t* edgeTimestamps)
+calculatePWMProperties(PWMSignal_t* PWMSignal)
 {
     // Account for overflow of the timer
-    if (edgeTimestamps->currRisingEdge < edgeTimestamps->lastRisingEdge)
+    if (edgeTimestamps.currRisingEdge < edgeTimestamps.lastRisingEdge)
     {
-        PWMSignal->frequency = SysCtlClockGet() / (edgeTimestamps->currRisingEdge
-            + SysCtlClockGet() - edgeTimestamps->lastRisingEdge);
+        PWMSignal->frequency = SysCtlClockGet() / (edgeTimestamps.currRisingEdge
+            + SysCtlClockGet() - edgeTimestamps.lastRisingEdge);
     }
     else
     {
-        PWMSignal->frequency = SysCtlClockGet() / (edgeTimestamps->currRisingEdge
-            - edgeTimestamps->lastRisingEdge);
+        PWMSignal->frequency = SysCtlClockGet() / (edgeTimestamps.currRisingEdge
+            - edgeTimestamps.lastRisingEdge);
     }
 
     // Currently no timer overflow protection - TASK
-    PWMSignal->duty = 100 * (edgeTimestamps->currFallingEdge - edgeTimestamps->lastRisingEdge) /
-        (edgeTimestamps->currRisingEdge - edgeTimestamps->lastRisingEdge);
+    PWMSignal->duty = 100 * (edgeTimestamps.currFallingEdge - edgeTimestamps.lastRisingEdge) /
+        (edgeTimestamps.currRisingEdge - edgeTimestamps.lastRisingEdge);
 }
 
 /**
- * @brief Returns the PWM Input signal list
+ * @brief Locates the address of a desired PWM signal
  * @param id String identifier for desired signal
- * @return Structure of PWM signals
+ * @return Pointer of desired PWM signal. Return NULL if not found
  */
-PWMSignal_t
-getPWMInputSignals (char* id)
+static PWMSignal_t*
+findPWMInput(char* id)
 {
     for (int i = 0; i < PWMInputSignals.count; i++)
     {
         if (strcmp(PWMInputSignals.signals[0].id, id) == 0)
         {
-            return PWMInputSignals.signals[0];
+            return &PWMInputSignals.signals[0];
         }
     }
 
-    // TASK - what if the incorrect id is input? 
+    return NULL;
+}
+
+/**
+ * @brief Returns the identified PWM Input signal
+ * @param id String identifier for desired signal
+ * @return Structure of PWM signal
+ */
+PWMSignal_t
+getPWMInputSignal (char* id)
+{
+    return *findPWMInput(id);
 }

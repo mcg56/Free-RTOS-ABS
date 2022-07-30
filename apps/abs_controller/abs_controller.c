@@ -53,14 +53,14 @@ int main (void)
     SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 
     initButtons ();
-    initPWMManager ();
+    initPWMInputManager ();
     initialiseUSB_UART ();
     initialisePWM();
 
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
     PWMSignal_t testPWM = {.id = "testPWM", .gpioPin = GPIO_PIN_0};
-    trackPWMSignal(testPWM);
+    registerPWMSignal(testPWM);
 
     // PWMSignal_t testPWM2 = {.id = "testPWM2", .gpioPin = GPIO_PIN_1};
     // trackPWMSignal(testPWM2);
@@ -77,10 +77,10 @@ int main (void)
 
         if (checkButton(LEFT) == PUSHED)
         {
-            updateAllPWMInfo();
+            updatePWMInput("testPWM");
             
             // Details of first PWM
-            signal = getPWMInputSignals("testPWM");
+            signal = getPWMInputSignal("testPWM");
             sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
             UARTSend(str);
             sprintf(str, "Duty : %ld\r\n", signal.duty);

@@ -27,9 +27,38 @@ typedef struct {
 //*************************************************************
 // Function handles
 //*************************************************************
-extern void initPWMManager (void);
-extern int trackPWMSignal (PWMSignal_t newSignal);
-extern void updateAllPWMInfo (void);
-extern PWMSignal_t getPWMInputSignals (char* id);
+
+/**
+ * @brief Initialise the PWM input manager module
+ * @return None
+ */
+extern void initPWMInputManager (void);
+
+/**
+ * @brief Add a PWM signal to the list of registered input signals
+ * @param newSignal - PWM signal to be added
+ * @return Bool - true if successful, false if failed
+ */
+extern int registerPWMSignal (PWMSignal_t newSignal);
+
+/**
+ * @brief Updates all PWM signal information
+ * @return Count off failed PWM signal updates
+ */
+extern int updateAllPWMInputs (void);
+
+/**
+ * @brief Updates specific PWM signal information
+ * @return Count off failed PWM signal updates
+ */
+int 
+updatePWMInput(char* id);
+
+/**
+ * @brief Returns the identified PWM Input signal
+ * @param id String identifier for desired signal
+ * @return Structure of PWM signal
+ */
+extern PWMSignal_t getPWMInputSignal (char* id);
 
 #endif
