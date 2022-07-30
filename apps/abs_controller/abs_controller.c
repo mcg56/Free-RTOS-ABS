@@ -62,10 +62,10 @@ int main (void)
     PWMSignal_t testPWM = {.id = "testPWM", .gpioPin = GPIO_PIN_0};
     trackPWMSignal(testPWM);
 
-    PWMSignal_t testPWM2 = {.id = "testPWM2", .gpioPin = GPIO_PIN_1};
-    trackPWMSignal(testPWM2);
+    // PWMSignal_t testPWM2 = {.id = "testPWM2", .gpioPin = GPIO_PIN_1};
+    // trackPWMSignal(testPWM2);
 
-    setPWM(69, 96);
+    setPWM(41, 96);
 
 
     char str[100];
@@ -75,7 +75,7 @@ int main (void)
     {
         updateButtons();
 
-        if (checkButton(UP) == PUSHED)
+        if (checkButton(LEFT) == PUSHED)
         {
             updateAllPWMInfo();
             
@@ -86,12 +86,12 @@ int main (void)
             sprintf(str, "Duty : %ld\r\n", signal.duty);
             UARTSend(str);
 
-            // Details of second PWM
-            signal = getPWMInputSignals("testPWM2");
-            sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
-            UARTSend(str);
-            sprintf(str, "Duty : %ld\r\n", signal.duty);
-            UARTSend(str);
+            // // Details of second PWM
+            // signal = getPWMInputSignals("testPWM2");
+            // sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
+            // UARTSend(str);
+            // sprintf(str, "Duty : %ld\r\n", signal.duty);
+            // UARTSend(str);
         }
     }
 
