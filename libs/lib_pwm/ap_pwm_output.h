@@ -2,8 +2,8 @@
  * pwm.h
  */
 
-#ifndef PWM_H_
-#define PWM_H_
+#ifndef PWM_OUTPUT_H_
+#define PWM_OUTPUT_H_
 
 #include <stdint.h>
 #include <FreeRTOS.h>

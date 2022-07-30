@@ -41,12 +41,10 @@
 #include "driverlib/timer.h"
 
 #include "libs/lib_buttons/ap_buttons.h"
-#include "libs/lib_pwm/ap_pwm.h"
-#include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 #include "libs/lib_uart/ap_uart.h"
 #include "libs/lib_system/ap_system.h"
-
-#include "pwm_manager.h"
+#include "libs/lib_pwm/ap_pwm_input.h"
+#include "libs/lib_pwm/ap_pwm_output.h"
 
 int main (void)
 {
