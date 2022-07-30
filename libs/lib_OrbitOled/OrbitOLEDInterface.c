@@ -14,6 +14,7 @@
 //TivaWare Standard Type Definitions:
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 
 //Defines and includes for Orbit OLED:
 #include "OrbitOled.h"

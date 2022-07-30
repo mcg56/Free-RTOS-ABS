@@ -8,6 +8,7 @@
  * @arg None
  * @return None
  */
+void
 initClock (void)
 {
     // Set the clock rate to 80 MHz

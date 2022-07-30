@@ -1,3 +1,6 @@
+#pragma GCC diagnostic error "-Wunused-but-set-variable"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 /************************************************************************/
 /*																		*/
 /*	OrbitOledGrph.c	--	OLED Display Graphics Routines					*/
@@ -23,6 +26,7 @@
 /*				Include File Definitions						*/
 /* ------------------------------------------------------------ */
 
+#include <stdlib.h>
 #include "FillPat.h"
 #include "LaunchPad.h"
 #include "OrbitBoosterPackDefs.h"
@@ -815,7 +819,7 @@ void
 OrbitOledDrawChar(char ch)
 	{
 	char *	pbFont;
-	char *	pbBmp;
+	// char *	pbBmp;
 
 	if ((ch & 0x80) != 0) {
 		return;
@@ -828,7 +832,7 @@ OrbitOledDrawChar(char ch)
 		pbFont = pbOledFontCur + (ch-chOledUserMax) * cbOledChar;
 	}
 
-	pbBmp = pbOledCur;
+	// pbBmp = pbOledCur;
 
 	OrbitOledPutBmp(dxcoOledFontCur, dycoOledFontCur, pbFont);
 
