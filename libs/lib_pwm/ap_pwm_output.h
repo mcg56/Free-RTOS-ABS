@@ -33,8 +33,10 @@
 #define PWM_MAIN_GPIO_BASE   GPIO_PORTC_BASE
 #define PWM_MAIN_GPIO_CONFIG GPIO_PC5_M0PWM7
 #define PWM_MAIN_GPIO_PIN    GPIO_PIN_5
-#define WHEEL_FIXED_DUTY     50
 
+
+#define PWM_WHEEL_FIXED_DUTY    50
+#define PWM_WHEEL_START_HZ      0
 
 // Left front wheel output PWM hardware details M0PWM0 (gen 0)
 #define PWM_LF_BASE	        PWM0_BASE
@@ -80,6 +82,19 @@
 #define PWM_RR_GPIO_CONFIG  GPIO_PC4_M0PWM6
 #define PWM_RR_GPIO_PIN     GPIO_PIN_4
 
+//Brake level output PWM hardware details M1PWM1 (gen 0)
+#define PWM_BRAKE_BASE	        PWM1_BASE
+#define PWM_BRAKE_GEN           PWM_GEN_0
+#define PWM_BRAKE_OUTNUM        PWM_OUT_1
+#define PWM_BRAKE_OUTBIT        PWM_OUT_1_BIT
+#define PWM_BRAKE_PERIPH_PWM	SYSCTL_PERIPH_PWM1
+#define PWM_BRAKE_PERIPH_GPIO   SYSCTL_PERIPH_GPIOD
+#define PWM_BRAKE_GPIO_BASE     GPIO_PORTD_BASE
+#define PWM_BRAKE_GPIO_CONFIG   GPIO_PD1_M1PWM1
+#define PWM_BRAKE_GPIO_PIN      GPIO_PIN_1
+#define PWM_BRAKE_FIXED_HZ      100
+#define PWM_BRAKE_START_DUTY    0
+
 //Steering wheel output PWM hardware details M1PWM2 (gen 1)
 #define PWM_STEER_BASE	        PWM1_BASE
 #define PWM_STEER_GEN           PWM_GEN_1
@@ -90,17 +105,10 @@
 #define PWM_STEER_GPIO_BASE     GPIO_PORTA_BASE
 #define PWM_STEER_GPIO_CONFIG   GPIO_PA6_M1PWM2
 #define PWM_STEER_GPIO_PIN      GPIO_PIN_6
+#define PWM_STEERING_FIXED_HZ   200
+#define PWM_STEERING_START_DUTY 50
 
-//Brake level output PWM hardware details M1PWM4 (gen 2)
-#define PWM_BRAKE_BASE	        PWM1_BASE
-#define PWM_BRAKE_GEN           PWM_GEN_2
-#define PWM_BRAKE_OUTNUM        PWM_OUT_4
-#define PWM_BRAKE_OUTBIT        PWM_OUT_4_BIT
-#define PWM_BRAKE_PERIPH_PWM	SYSCTL_PERIPH_PWM1
-#define PWM_BRAKE_PERIPH_GPIO   SYSCTL_PERIPH_GPIOF
-#define PWM_BRAKE_GPIO_BASE     GPIO_PORTF_BASE
-#define PWM_BRAKE_GPIO_CONFIG   GPIO_PF0_M1PWM4
-#define PWM_BRAKE_GPIO_PIN      GPIO_PIN_0
+
 
 
 /**
@@ -157,7 +165,6 @@ void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, uint32_t base, uint32_t
 void initialisePWM (void);
 void updatePWMTask(void* args);
 void initializeCarPWM(void);
-void turnOnAllCarPWM(void);
 
 
 #endif

@@ -162,28 +162,27 @@ void initializePWMGeneral(PWMHardwareDetails PWM, uint32_t startHz, uint32_t sta
     PWMOutputState(PWM.base, PWM.outbit, false);
 }
 
+
+/**
+ * @brief Function to initialise then turn on all car output PWM signals
+ * off the output.
+ * @return None
+ */
 void initializeCarPWM(void)
 {
-    initializePWMGeneral(PWMHardwareDetailsMAIN, PWM_START_RATE_HZ, 67);
+    initializePWMGeneral(PWMHardwareDetailsLF, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
+    initializePWMGeneral(PWMHardwareDetailsLR, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
+    initializePWMGeneral(PWMHardwareDetailsRF, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
+    initializePWMGeneral(PWMHardwareDetailsRR, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
+    initializePWMGeneral(PWMHardwareDetailsSteering, PWM_STEERING_FIXED_HZ, PWM_STEERING_START_DUTY); // Need to check the nominal freq/duty of this
+    initializePWMGeneral(PWMHardwareDetailsBrake, PWM_BRAKE_FIXED_HZ, PWM_BRAKE_START_DUTY); // Need to check the nominal freq/duty of this
     
-    initializePWMGeneral(PWMHardwareDetailsLF, PWM_START_RATE_HZ, 67);
-    initializePWMGeneral(PWMHardwareDetailsLR, PWM_START_RATE_HZ, 67);
-    initializePWMGeneral(PWMHardwareDetailsRF, PWM_START_RATE_HZ, 67);
-    initializePWMGeneral(PWMHardwareDetailsRR, PWM_START_RATE_HZ, 67);
-    initializePWMGeneral(PWMHardwareDetailsSteering, PWM_START_RATE_HZ, 67); // Need to check the nominal freq/duty of this
-    initializePWMGeneral(PWMHardwareDetailsBrake, PWM_START_RATE_HZ, 67); // Need to check the nominal freq/duty of this
-    
-}
-
-void turnOnAllCarPWM(void)
-{
     // Initialisation is complete, so turn on the pwm output.
-    PWMOutputState(PWMHardwareDetailsMAIN.base, PWMHardwareDetailsMAIN.outbit, true);
     PWMOutputState(PWMHardwareDetailsLF.base, PWMHardwareDetailsLF.outbit, true);
     PWMOutputState(PWMHardwareDetailsLR.base, PWMHardwareDetailsLR.outbit, true);
     PWMOutputState(PWMHardwareDetailsRF.base, PWMHardwareDetailsRF.outbit, true);
     PWMOutputState(PWMHardwareDetailsRR.base, PWMHardwareDetailsRR.outbit, true);
     PWMOutputState(PWMHardwareDetailsSteering.base, PWMHardwareDetailsSteering.outbit, true);
     PWMOutputState(PWMHardwareDetailsBrake.base, PWMHardwareDetailsBrake.outbit, true);
-    
 }
+

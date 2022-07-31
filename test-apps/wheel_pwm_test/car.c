@@ -1,10 +1,3 @@
-/*To do:
-    -Read potentiometer as steering wheel and create steering PWM output accordingly
-    -Generate four wheel speed output PWM signals, that vary in speed based on steering
-        wheel position
-    -UART/USB user interface? text based VT100 examples?
-*/
-
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
@@ -293,8 +286,18 @@ void updateWheelInfoTask(void* args)
 
             /* Sending wheel pwms 1 at a time may cause issues as it updates them one at a time so abs
             controller might think its slipping whne it just hasnt updated all wheels yet*/
-            pwmSignal leftFrontPWM = {WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, PWMHardwareDetailsLF.base, PWMHardwareDetailsLF.gen, PWMHardwareDetailsLF.outnum};
+            pwmSignal leftFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, PWMHardwareDetailsLF.base, PWMHardwareDetailsLF.gen, PWMHardwareDetailsLF.outnum};
             xQueueSendToBack(updatePWMQueue, &leftFrontPWM, 0);
+
+            pwmSignal leftRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftRear.pulseHz, PWMHardwareDetailsLR.base, PWMHardwareDetailsLR.gen, PWMHardwareDetailsLR.outnum};
+            xQueueSendToBack(updatePWMQueue, &leftRearPWM, 0);
+
+            pwmSignal rightFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightFront.pulseHz, PWMHardwareDetailsRF.base, PWMHardwareDetailsRF.gen, PWMHardwareDetailsRF.outnum};
+            xQueueSendToBack(updatePWMQueue, &rightFrontPWM, 0);
+
+            pwmSignal rightRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightRear.pulseHz, PWMHardwareDetailsRR.base, PWMHardwareDetailsRR.gen, PWMHardwareDetailsRR.outnum};
+            xQueueSendToBack(updatePWMQueue, &rightRearPWM, 0);
+
         }else continue;
     }
 }
@@ -340,6 +343,10 @@ void readButtonsTask(void* args)
             InputData updatedInput = {currentInput.speed, currentInput.steeringWheelDuty};
             // Add to queue so wheel update task to run
             xQueueSendToBack(inputDataQueue, &updatedInput, 0);
+
+            // Update PWM steering duty
+            pwmSignal steeringPWM = {currentInput.steeringWheelDuty, PWM_STEERING_FIXED_HZ, PWMHardwareDetailsSteering.base, PWMHardwareDetailsSteering.gen, PWMHardwareDetailsSteering.outnum};
+            xQueueSendToBack(updatePWMQueue, &steeringPWM, 0);
         }
         taskYIELD(); // Not sure if this is needed or not
         vTaskDelay(xDelay);
@@ -349,7 +356,6 @@ void readButtonsTask(void* args)
 int main(void) {
     SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
     
-    initializeCarPWM();
     OLEDInitialise ();
 
     // Setup red LED on PF1
@@ -358,9 +364,7 @@ int main(void) {
 
     initButtons();
     initialiseUSB_UART ();
-
-    
-    turnOnAllCarPWM();
+    initializeCarPWM();
 
     createQueues();
     xTaskCreate(&blink, "blink", 256, NULL, 0, &blinkHandle);
