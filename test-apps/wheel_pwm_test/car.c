@@ -24,7 +24,7 @@
 #include "driverlib/pwm.h"
 #include "wheels.h"
 #include <queue.h>
-#include "libs/lib_pwm/ap_pwm.h"
+#include "libs/lib_pwm/ap_pwm_output.h"
 #include "libs/lib_system/ap_system.h"
 #include "libs/lib_uart/ap_uart.h"
 

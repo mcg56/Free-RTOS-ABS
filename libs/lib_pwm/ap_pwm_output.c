@@ -87,8 +87,9 @@ setPWM (uint32_t ui32Freq, uint32_t ui32Duty)
  * @brief Set the frequency and duty cycle of any PWM signal
  * @param ui32Freq Desired PWM frequency (Hz)
  * @param ui32Duty Desired PWM duty cycle (%)
- * @param base Base of PWM signal to change
- * @param gen PWM generator to change
+ * @param base Base of PWM signal
+ * @param gen PWM generator
+ * @param outnum PWM output num
  * @return No return
  */
 void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, uint32_t base, uint32_t gen, uint32_t outnum)
@@ -152,7 +153,7 @@ void initializePWMGeneral(PWMHardwareDetails PWM, uint32_t startHz, uint32_t sta
     SysCtlPWMClockSet(PWM_DIVIDER_CODE);
     
     // Set the initial PWM parameters
-    setPWM (startHz, startDuty);
+    setPWMGeneral (startHz, startDuty, PWM.base, PWM.gen, PWM.outnum);
 
     // Enable timer/counter
     PWMGenEnable(PWM.base, PWM.gen);

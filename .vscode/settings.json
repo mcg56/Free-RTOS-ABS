@@ -23,6 +23,8 @@
         "tm4c123gh6pm.h": "c",
         "buttons4.h": "c",
         "ap_system.h": "c",
-        "ap_pwm_input.h": "c"
+        "ap_pwm_input.h": "c",
+        "ap_pwm_output.h": "c",
+        "ap_buttons.h": "c"
     }
 }
