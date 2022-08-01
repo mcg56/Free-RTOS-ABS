@@ -36,11 +36,14 @@ TaskHandle_t updatePWMTaskHandle;
  * through queues
  * @param steeringWheelDuty Car steering wheel duty (%)
  * @param speed             Car speed
+ * @param condition         Road Condition
  */
 typedef struct {
     uint8_t speed; //m
     uint8_t steeringWheelDuty; //km/h
+    uint8_t condition;
 } InputData;
+
 
 
 /**
@@ -53,6 +56,7 @@ typedef struct {
  * @param speed             Car speed (km/h)
  * @param steeringWheelDuty Car steering wheel duty (%)
  * @param alpha             Turn angle (degrees)
+ * @param condition         Road Condition
  */
 typedef struct {
     Wheel LF;
@@ -62,6 +66,8 @@ typedef struct {
     uint8_t speed; //m
     uint8_t steeringWheelDuty; //km/h
     float alpha;
+    uint8_t condition;
+    bool 
 } DisplayInfo;
 
 
@@ -212,6 +218,9 @@ void updateUARTTask(void* args)
             vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
 
             vt100_print_brake_pressure();
+
+            vt100_print_condition(updatedDisplayInfo.condition);
+
         }else continue;
         
         
@@ -264,9 +273,10 @@ void updateWheelInfoTask(void* args)
                 calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed);
             }
             calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
+            bool wheelslip = detectWheelSlip(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed,updatedInput.condition);
             // Wheel info updated, signal display tasks to run via queues
 
-            DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty, alpha};
+            DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty, alpha,updatedInput.condition, wheelslip};
             xQueueSendToBack(UARTDisplayQueue, &updatedDisplayInfo, 0);
             xQueueSendToBack(OLEDDisplayQueue, &updatedDisplayInfo, 0);
 
@@ -297,7 +307,7 @@ void readButtonsTask(void* args)
 {
     (void)args; // unused
     const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
-    static InputData currentInput = {0, 50};
+    static InputData currentInput = {0, 50, 0};
     while (true) 
     {
         updateButtons();
@@ -337,9 +347,23 @@ void readButtonsTask(void* args)
             currentInput.steeringWheelDuty += 5;
             change = true;
         }
+
+
+        if (c == 'r')
+        
+        {
+            currentInput.condition += 1;
+            if  (currentInput.condition >= 3)
+            {
+                currentInput.condition = 0;
+            }
+            change = true;
+        }
+
+
         //Check if any buttons changed
         if (change){
-            InputData updatedInput = {currentInput.speed, currentInput.steeringWheelDuty};
+            InputData updatedInput = {currentInput.speed, currentInput.steeringWheelDuty, currentInput.condition};
             // Add to queue so wheel update task to run
             xQueueSendToBack(inputDataQueue, &updatedInput, 0);
 

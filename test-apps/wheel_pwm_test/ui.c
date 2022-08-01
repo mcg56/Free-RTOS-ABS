@@ -5,6 +5,7 @@
 #include "stdlib.h"
 #include <stdio.h>
 #include "libs/lib_uart/ap_uart.h"
+#include "wheels.h"
 
 
 void vt100_set_yellow(void) {
@@ -35,10 +36,9 @@ void vt100_clear(void) {
 void vt100_set_line_number(int line) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     char buf[6] = {0};
-    int num;
     sprintf(ANSIString, "%c%s", VT100_ESC, VT100_HOME);
     UARTSend (ANSIString);
-    num = sprintf(buf, "[%dB", line);
+    sprintf(buf, "[%dB", line);
     // buf[num] = 0; // null termination
     sprintf(ANSIString, "%c%s", VT100_ESC, buf);
     UARTSend (ANSIString);
@@ -58,9 +58,12 @@ void vt100_print_text(void) {
     vt100_set_line_number(8);
     UARTSend ("Wheel PRR (Hz):");
     vt100_set_line_number(10);
-    UARTSend ("Wheel radii (0.4m - 0.9m) -> (4, 5, 6, 7, 8, 9):");
+    UARTSend ("Wheel radii (m)");
     vt100_set_line_number(12);
     UARTSend ("Brake pressure %% -> ([, ]):");
+    vt100_set_line_number(14);
+    UARTSend ("Road Condition -> (r):");
+
 }
 
 void vt100_print_steering_angle(uint8_t duty, char alphaStr[6]) {
@@ -119,6 +122,30 @@ void vt100_print_brake_pressure(void) {
     vt100_set_yellow();
 }
 
+void vt100_print_condition(uint8_t condition) {
+    char ANSIString[MAX_STR_LEN + 1]; // For uart message
+    vt100_set_line_number(15);
+    vt100_set_white();
+    sprintf(ANSIString, "%s", get_condition(condition));
+    UARTSend (ANSIString);
+    vt100_set_yellow();
+}
+
 int32_t get_pressure(void){
     return 69;
+}
+
+const char* get_condition(uint8_t condition){
+    
+    if (condition == 0)
+    {
+        return "DRY";
+    }
+    else if (condition == 1)
+    {
+        return "WET";
+    }
+    else{
+        return "ICY";
+    }
 }

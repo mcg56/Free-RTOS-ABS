@@ -24,6 +24,8 @@ typedef struct {
     float pulseHz; //Hz
 } Wheel;
 
+
+
 /**
  * @brief function to calculate the steering angle
  * @param steeringWheelDuty Steering wheel pwm duty
