@@ -109,6 +109,9 @@
 #define PWM_STEERING_START_DUTY 50
 
 
+/************************************************************************************
+***************************** PUBLIC STRUCT DEFINITIONS *****************************
+************************************************************************************/
 
 
 /**
@@ -151,6 +154,10 @@ uint32_t gen;
 uint32_t outnum;
 }pwmSignal;
 
+
+/************************************************************************************
+**********************************GLOBAL VARIABLES**********************************
+************************************************************************************/
 extern QueueHandle_t updatePWMQueue;
 extern PWMHardwareDetails PWMHardwareDetailsLF;
 extern PWMHardwareDetails PWMHardwareDetailsLR;
@@ -160,10 +167,45 @@ extern PWMHardwareDetails PWMHardwareDetailsSteering;
 extern PWMHardwareDetails PWMHardwareDetailsBrake;
 
 
+/************************************************************************************
+*****************************PUBLIC FUNCTION PROTOTYPES*****************************
+************************************************************************************/
+
+/********************************************************
+ * Function to set the freq, duty cycle of M0PWM7
+ ********************************************************/
 void setPWM (uint32_t ui32Freq, uint32_t ui32Duty);
+
+/**
+ * @brief Set the frequency and duty cycle of any PWM signal
+ * @param ui32Freq Desired PWM frequency (Hz)
+ * @param ui32Duty Desired PWM duty cycle (%)
+ * @param base Base of PWM signal
+ * @param gen PWM generator
+ * @param outnum PWM output num
+ * @return No return
+ */
 void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, uint32_t base, uint32_t gen, uint32_t outnum);
+
+/*********************************************************
+ * initialisePWM
+ * M0PWM7 (J4-05, PC5) is used
+ *********************************************************/
 void initialisePWM (void);
+
+
+/**
+ * @brief Task that changes PWM output
+ * @param args Unused
+ * @return None
+ */
 void updatePWMTask(void* args);
+
+/**
+ * @brief Function to initialise then turn on all car output PWM signals
+ * off the output.
+ * @return None
+ */
 void initializeCarPWM(void);
 
 

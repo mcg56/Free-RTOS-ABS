@@ -20,6 +20,8 @@
 #include "libs/lib_pwm/ap_pwm_output.h"
 #include "libs/lib_system/ap_system.h"
 #include "libs/lib_uart/ap_uart.h"
+#include "ui.h"
+#include "driverlib/uart.h"
 
 //Task handles
 TaskHandle_t updateWheelInfoHandle;
@@ -135,6 +137,7 @@ void updateOLEDTask(void* args)
     }
 }
 
+
 /**
  * @brief Update the UART terminal with data about the car.
  * @param args Unused
@@ -143,35 +146,20 @@ void updateOLEDTask(void* args)
 void updateUARTTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+    TickType_t wake_time = xTaskGetTickCount();
 
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
+    
+    // // Create empty ine array to clear lines
+    // char empytLine[MAX_STR_LEN + 1];
+    // for(int i = 0; i < MAX_STR_LEN; i++)
+    // {
+    //     empytLine[i] = ' ';
+    // }
+    // empytLine[sizeof(empytLine)/sizeof(empytLine[0]) - 1] = '\r'; // Put last index as carridge return
 
-    // Create empty ine array to clear lines
-    char empytLine[MAX_STR_LEN + 1];
-    for(int i = 0; i < MAX_STR_LEN; i++)
-    {
-        empytLine[i] = ' ';
-    }
-    empytLine[sizeof(empytLine)/sizeof(empytLine[0]) - 1] = '\r'; // Put last index as carridge return
+    vt100_print_text();
+    vt100_set_white();
 
-    //First write static text in yellow
-    sprintf (ANSIString, "%c%s", VT100_ESC, VT100_CLS);
-    UARTSend (ANSIString);
-    sprintf (ANSIString, "%c%s", VT100_ESC, VT100_HOME);
-    UARTSend (ANSIString);
-    sprintf (ANSIString, "%c%s", VT100_ESC, VT100_FG_YELLOW);
-    UARTSend (ANSIString);
-    UARTSend ("~~~~~~~Angus Anton Car sim outputs~~~~~~~\r\n\n");
-    UARTSend ("Steering\r\n\n");
-    UARTSend ("Car speed (km/h)\r\n\n");
-    UARTSend ("Wheel turn radii (m)\r\n\n");
-    UARTSend ("Wheel speed (km/h)\r\n\n");
-    UARTSend ("Wheel PRR (Hz)\r\n\n");
-    UARTSend ("Brake pressure\r\n\n");
-
-    sprintf (ANSIString, "%c%s", VT100_ESC, VT100_FG_WHITE);
-    UARTSend (ANSIString);
     while(true)
     {
         // Wait until a new message is to be written, as its added to queue
@@ -179,36 +167,23 @@ void updateUARTTask(void* args)
         portBASE_TYPE status = xQueueReceive(UARTDisplayQueue, &updatedDisplayInfo, 100);
         if (status == pdPASS)
         {
-            sprintf (ANSIString, "%c%s", VT100_ESC, VT100_HOME);
-            UARTSend (ANSIString);
 
             //Steering line
-            sprintf (ANSIString, "%c%s", VT100_ESC, VT100_THREE_DOWN);
-            UARTSend (ANSIString);
-
+            
             char alphaStr[6];
+            
             gcvt (updatedDisplayInfo.alpha, 4, &alphaStr);
-            sprintf (ANSIString, "Duty: %2d%%    Angle: %5s degrees\r\n\n", updatedDisplayInfo.steeringWheelDuty, alphaStr);
-            UARTSend (ANSIString);
+            vt100_print_steering_angle(updatedDisplayInfo.steeringWheelDuty, alphaStr);
+
 
             // Car speed line
-            sprintf (ANSIString, "%2d km/h\r\n\n", updatedDisplayInfo.speed);
-            UARTSend (ANSIString);
-
-            // Wheel turn radii line
-            //First, convert floats to strings
+            vt100_print_car_speed(updatedDisplayInfo.speed);
+        
+            
             char LFbuff[6];
             char LRbuff[6]; 
             char RFbuff[6]; 
             char RRbuff[6];
-            gcvt (updatedDisplayInfo.LF.turnRadius, 4, &LFbuff);
-            gcvt (updatedDisplayInfo.LR.turnRadius, 4, &LRbuff);
-            gcvt (updatedDisplayInfo.RF.turnRadius, 4, &RFbuff);
-            gcvt (updatedDisplayInfo.RR.turnRadius, 4, &RRbuff);
-
-            sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LFbuff, LRbuff, RFbuff, RRbuff);
-            UARTSend (ANSIString);
-
             // Wheel speed line
             //First, convert floats to strings
             gcvt (updatedDisplayInfo.LF.speed, 4, &LFbuff);
@@ -216,9 +191,17 @@ void updateUARTTask(void* args)
             gcvt (updatedDisplayInfo.RF.speed, 4, &RFbuff);
             gcvt (updatedDisplayInfo.RR.speed, 4, &RRbuff);
 
-            sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LFbuff, LRbuff, RFbuff, RRbuff);
-            UARTSend (ANSIString);
+            vt100_print_wheel_speed(LFbuff, LRbuff, RFbuff, RRbuff);
 
+            // Wheel turn radii line
+            //First, convert floats to strings
+            gcvt (updatedDisplayInfo.LF.turnRadius, 4, &LFbuff);
+            gcvt (updatedDisplayInfo.LR.turnRadius, 4, &LRbuff);
+            gcvt (updatedDisplayInfo.RF.turnRadius, 4, &RFbuff);
+            gcvt (updatedDisplayInfo.RR.turnRadius, 4, &RRbuff);
+
+            vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
+            
             //Wheel PRR line
             //First, convert floats to strings
             gcvt (updatedDisplayInfo.LF.pulseHz, 4, &LFbuff);
@@ -226,15 +209,18 @@ void updateUARTTask(void* args)
             gcvt (updatedDisplayInfo.RF.pulseHz, 4, &RFbuff);
             gcvt (updatedDisplayInfo.RR.pulseHz, 4, &RRbuff);
 
-            sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LFbuff, LRbuff, RFbuff, RRbuff);
-            UARTSend (ANSIString);
+            vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
 
-        }
-        vTaskDelay(xDelay);
+            vt100_print_brake_pressure();
+        }else continue;
+        
+        
+        vTaskDelayUntil(&wake_time, 100);
     }
 }
+
 /**
- * @brief Task to update the UART terminal with data about the car.
+ * @brief Task to update the wheel information and signal to PWM generators to update the frequencies
  * @param args Unused
  * @return No return
  */
@@ -316,24 +302,37 @@ void readButtonsTask(void* args)
     {
         updateButtons();
         
+        char string[17]; // Display fits 16 characters wide.
+        
+        int32_t c = UARTCharGetNonBlocking(UART_USB_BASE);
+        
+        char letter = c;
+        
+        sprintf(string, "Key: %c", letter);
+        OLEDStringDraw ("    ",0,3);
+        OLEDStringDraw (string, 0, 3);
+
+
         // Update values accodingly. No checks for value max/min limits yet
         bool change = false;
-        if (checkButton(UP) == PUSHED)
+        if (checkButton(UP) == PUSHED || c == 'w')
         {
             currentInput.speed += 5;
             change = true;            
         }
-        if (checkButton(DOWN) == PUSHED)
+        if (checkButton(DOWN) == PUSHED || c == 'q')
         {
             currentInput.speed -= 5;
             change = true;
         }
-        if (checkButton(LEFT) == PUSHED)
+        if (checkButton(LEFT) == PUSHED || c == '1')
+        
         {
             currentInput.steeringWheelDuty -= 5;
             change = true;
         }
-        if (checkButton(RIGHT) == PUSHED)
+        if (checkButton(RIGHT) == PUSHED|| c == '2')
+        
         {
             currentInput.steeringWheelDuty += 5;
             change = true;
@@ -344,10 +343,11 @@ void readButtonsTask(void* args)
             // Add to queue so wheel update task to run
             xQueueSendToBack(inputDataQueue, &updatedInput, 0);
 
-            // Update PWM steering duty
             pwmSignal steeringPWM = {currentInput.steeringWheelDuty, PWM_STEERING_FIXED_HZ, PWMHardwareDetailsSteering.base, PWMHardwareDetailsSteering.gen, PWMHardwareDetailsSteering.outnum};
             xQueueSendToBack(updatePWMQueue, &steeringPWM, 0);
         }
+
+
         taskYIELD(); // Not sure if this is needed or not
         vTaskDelay(xDelay);
     }

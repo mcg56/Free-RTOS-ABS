@@ -7,9 +7,9 @@
 #include "stdlib.h"
 #include "utils/ustdlib.h"
 
-#define PULSES_PER_REV 20     // (#)
+#define PULSES_PER_REV 20.0     // (#)
 #define WHEEL_DIAMETER 0.5    // (m)
-#define KPH_TO_MS_SCALE_FACTOR (1000/3600)
+#define KPH_TO_MS_SCALE_FACTOR (1000.0/3600.0)
 #define PI (3.141592653589793)
 
 /**
@@ -24,9 +24,48 @@ typedef struct {
     float pulseHz; //Hz
 } Wheel;
 
+/**
+ * @brief function to calculate the steering angle
+ * @param steeringWheelDuty Steering wheel pwm duty
+ * @return alpha steering angle
+ */
 float calculateSteeringAngle(float steeringWheelDuty);
+
+/**
+ * @brief function to calculate the turn radius of each wheel
+ * @param innerRear Inner rear wheel
+ * @param innerFront Inner front wheel
+ * @param outerRear Outer rear wheel
+ * @param outerFront Outer front wheel
+ * @param alpha steering angle
+ * @return None
+ */
 void calculateWheelRadii(Wheel* innerRear, Wheel* innerFront, Wheel* outerRear, Wheel* outerFront, float alpha);
+
+/**
+ * @brief function to calculate the turn radius of each wheel based on turn radius and speed.
+ * Calculates cars angular velocity while turning at centre of read axle (half of two rear radii).
+ * This method is different to what phillip did and results in slightly different output (might
+ * be wrong).
+ * @param leftFront Left front wheel struct
+ * @param leftRear Left rear wheel struct                
+ * @param rightFront Right front wheel struct
+ * @param rightRear Right rear wheel struct
+ * @param carSpeed car speed
+ * @return None
+ */
 void calculateWheelSpeedsFromRadii(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear, float carSpeed);
+
+/**
+ * @brief Function to calculate the pwm pulse frequency of each wheel based on wheel speed. I think it should
+ * divide by 2*pi as this is how many radians are in a circle, but the formula in the
+ * specification says to only divide by pi.
+ * @param leftFront Left front wheel struct
+ * @param leftRear Left rear wheel struct                
+ * @param rightFront Right front wheel struct
+ * @param rightRear Right rear wheel struct
+ * @return None
+ */
 void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear);
 
 #endif

@@ -338,6 +338,8 @@ void readButtonsTask(void* args)
             InputData updatedInput = {currentInput.speed, currentInput.steeringWheelDuty};
             // Add to queue so wheel update task to run
             xQueueSendToBack(inputDataQueue, &updatedInput, 0);
+
+            
         }
 
         

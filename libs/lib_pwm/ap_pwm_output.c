@@ -26,11 +26,24 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 
+/************************************************************************************
+*****************************PRIVATE FUNCTION PROTOTYPES*****************************
+************************************************************************************/
 
+/**
+ * @brief Function to initialise a given PWM. Sets a start Hz and duty but turns
+ * off the output.
+ * @param PWM Hardware details of the PWM to initialize
+ * @param startHz Starting Hz
+ * @param startDuty Starting duty
+ * @return None
+ */
 void initializePWMGeneral(PWMHardwareDetails PWM, uint32_t startHz, uint32_t startDuty);
 
 
-
+/************************************************************************************
+**********************************GLOBAL VARIABLES**********************************
+************************************************************************************/
 QueueHandle_t updatePWMQueue = NULL;
 PWMHardwareDetails PWMHardwareDetailsMAIN = {PWM_MAIN_BASE, PWM_MAIN_GEN, PWM_MAIN_OUTNUM, PWM_MAIN_OUTBIT, PWM_MAIN_PERIPH_PWM, PWM_MAIN_PERIPH_GPIO, PWM_MAIN_GPIO_BASE, PWM_MAIN_GPIO_CONFIG, PWM_MAIN_GPIO_PIN};
 PWMHardwareDetails PWMHardwareDetailsLF = {PWM_LF_BASE, PWM_LF_GEN, PWM_LF_OUTNUM, PWM_LF_OUTBIT, PWM_LF_PERIPH_PWM, PWM_LF_PERIPH_GPIO, PWM_LF_GPIO_BASE, PWM_LF_GPIO_CONFIG, PWM_LF_GPIO_PIN};
@@ -41,10 +54,12 @@ PWMHardwareDetails PWMHardwareDetailsSteering = {PWM_STEER_BASE, PWM_STEER_GEN, 
 PWMHardwareDetails PWMHardwareDetailsBrake = {PWM_BRAKE_BASE, PWM_BRAKE_GEN, PWM_BRAKE_OUTNUM, PWM_BRAKE_OUTBIT, PWM_BRAKE_PERIPH_PWM, PWM_BRAKE_PERIPH_GPIO, PWM_BRAKE_GPIO_BASE, PWM_BRAKE_GPIO_CONFIG, PWM_BRAKE_GPIO_PIN};
 
 
-/*********************************************************
- * initialisePWM
- * M0PWM7 (J4-05, PC5) is used
- *********************************************************/
+
+/************************************************************************************
+**********************************PUBLIC FUNCTIONS**********************************
+************************************************************************************/
+
+
 void
 initialisePWM (void)
 {
@@ -68,9 +83,7 @@ initialisePWM (void)
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, false);
 }
 
-/********************************************************
- * Function to set the freq, duty cycle of M0PWM7
- ********************************************************/
+
 void
 setPWM (uint32_t ui32Freq, uint32_t ui32Duty)
 {
@@ -83,15 +96,6 @@ setPWM (uint32_t ui32Freq, uint32_t ui32Duty)
         ui32Period * ui32Duty / 100);
 }
 
-/**
- * @brief Set the frequency and duty cycle of any PWM signal
- * @param ui32Freq Desired PWM frequency (Hz)
- * @param ui32Duty Desired PWM duty cycle (%)
- * @param base Base of PWM signal
- * @param gen PWM generator
- * @param outnum PWM output num
- * @return No return
- */
 void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, uint32_t base, uint32_t gen, uint32_t outnum)
 {
     // Calculate the PWM period corresponding to the freq.
@@ -100,12 +104,6 @@ void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, uint32_t base, uint32_t
     PWMPulseWidthSet(base, outnum, ui32Period * ui32Duty / 100);
 }
 
-
-/**
- * @brief Task that changes PWM output
- * @param args Unused
- * @return None
- */
 void updatePWMTask(void* args) 
 {
     (void)args; // unused
@@ -122,14 +120,7 @@ void updatePWMTask(void* args)
 }
 
 
-/**
- * @brief Function to initialise a given PWM. Sets a start Hz and duty but turns
- * off the output.
- * @param PWM Hardware details of the PWM to initialize
- * @param startHz Starting Hz
- * @param startDuty Starting duty
- * @return None
- */
+
 void initializePWMGeneral(PWMHardwareDetails PWM, uint32_t startHz, uint32_t startDuty)
 {
     // Reset peripherals before enabling them. DO WE BEED TO RESET WHOLE PERIPHERAL?
@@ -163,11 +154,7 @@ void initializePWMGeneral(PWMHardwareDetails PWM, uint32_t startHz, uint32_t sta
 }
 
 
-/**
- * @brief Function to initialise then turn on all car output PWM signals
- * off the output.
- * @return None
- */
+
 void initializeCarPWM(void)
 {
     initializePWMGeneral(PWMHardwareDetailsLF, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
