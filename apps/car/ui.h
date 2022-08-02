@@ -17,9 +17,10 @@ void vt100_print_car_speed(uint8_t speed);
 void vt100_print_wheel_speed(char LF[6],char LR[6],char RF[6],char RR[6]);
 void vt100_print_radii(char LF[6],char LR[6],char RF[6],char RR[6]);
 void vt100_print_prr(char LF[6],char LR[6],char RF[6],char RR[6]);
-void vt100_print_brake_pressure(void);
-
-int32_t get_pressure(void);
+void vt100_print_brake_pressure(uint8_t pressure);
+void vt100_print_pedal(bool pedal);
+void vt100_print_condition(uint8_t condition);
+const char* get_condition(uint8_t condition);
 
 #endif
 

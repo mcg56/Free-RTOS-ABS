@@ -43,3 +43,22 @@ void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront,
     rightFront->pulseHz = PULSES_PER_REV*rightFront->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(1.0*PI);
     rightRear->pulseHz = PULSES_PER_REV*rightRear->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(1.0*PI);
 }
+
+bool detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear, float carSpeed, uint8_t condition, bool pedal, uint8_t pressure)
+{
+    uint8_t speed = carSpeed;
+    return 1;
+}
+
+uint8_t updateSpeed(uint8_t speed, bool pedal, uint8_t brakePressure)
+{
+    uint8_t updatedSpeed;
+    if (pedal)
+    {
+        updatedSpeed = speed - 2;//speed*(brakePressure/100);
+    } else {
+        updatedSpeed = speed;
+    }
+    return updatedSpeed;
+
+}

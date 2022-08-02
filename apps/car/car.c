@@ -36,10 +36,16 @@ TaskHandle_t updatePWMTaskHandle;
  * through queues
  * @param steeringWheelDuty Car steering wheel duty (%)
  * @param speed             Car speed
+ * @param condition         Road Condition
+ * @param pedal             Brake pedal toggle
+ * @param brakePressure     Brake pressure (%)
  */
 typedef struct {
     uint8_t speed; //m
     uint8_t steeringWheelDuty; //km/h
+    uint8_t condition; 
+    bool pedal; 
+    uint8_t brakePressure;
 } InputData;
 
 
@@ -53,6 +59,9 @@ typedef struct {
  * @param speed             Car speed (km/h)
  * @param steeringWheelDuty Car steering wheel duty (%)
  * @param alpha             Turn angle (degrees)
+ * @param condition         Road Condition
+ * @param pedal             Brake pedal toggle
+ * @param brakePressure     Brake pressure (%)
  */
 typedef struct {
     Wheel LF;
@@ -62,6 +71,9 @@ typedef struct {
     uint8_t speed; //m
     uint8_t steeringWheelDuty; //km/h
     float alpha;
+    uint8_t condition;
+    bool pedal;
+    uint8_t brakePressure; 
 } DisplayInfo;
 
 
@@ -211,7 +223,12 @@ void updateUARTTask(void* args)
 
             vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
 
-            vt100_print_brake_pressure();
+            vt100_print_brake_pressure(updatedDisplayInfo.brakePressure);
+
+            vt100_print_condition(updatedDisplayInfo.condition);
+
+            vt100_print_pedal(updatedDisplayInfo.pedal);
+
         }else continue;
         
         
@@ -231,6 +248,7 @@ void updateWheelInfoTask(void* args)
     static Wheel leftRear   = {0, 0, 0};
     static Wheel rightFront = {0, 0, 0};
     static Wheel rightRear  = {0, 0, 0};
+    bool wheelSlip = 0;
     while(true) {
         // Wait until driving inputs change, indicated by a new value on the queue
         InputData updatedInput;
@@ -264,11 +282,15 @@ void updateWheelInfoTask(void* args)
                 calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed);
             }
             calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
-            // Wheel info updated, signal display tasks to run via queues
+            wheelSlip = detectWheelSlip(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed, updatedInput.condition, updatedInput.pedal,updatedInput.brakePressure);
 
-            DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty, alpha};
+            // Wheel info updated, signal display tasks to run via queues
+            
+            DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty, alpha, updatedInput.condition, updatedInput.pedal, updatedInput.brakePressure};
             xQueueSendToBack(UARTDisplayQueue, &updatedDisplayInfo, 0);
             xQueueSendToBack(OLEDDisplayQueue, &updatedDisplayInfo, 0);
+            
+            
 
             /* Sending wheel pwms 1 at a time may cause issues as it updates them one at a time so abs
             controller might think its slipping whne it just hasnt updated all wheels yet*/
@@ -297,7 +319,7 @@ void readButtonsTask(void* args)
 {
     (void)args; // unused
     const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
-    static InputData currentInput = {0, 50};
+    static InputData currentInput = {0, 50, 0, 0, 0};
     while (true) 
     {
         updateButtons();
@@ -326,20 +348,52 @@ void readButtonsTask(void* args)
             change = true;
         }
         if (checkButton(LEFT) == PUSHED || c == '1')
-        
         {
             currentInput.steeringWheelDuty -= 5;
             change = true;
         }
         if (checkButton(RIGHT) == PUSHED|| c == '2')
-        
         {
             currentInput.steeringWheelDuty += 5;
             change = true;
         }
+        if (c == '[')
+        {
+            currentInput.brakePressure -= 5;
+            change = true;
+        }
+        if (c == ']')
+        {
+            currentInput.brakePressure += 5;
+            change = true;
+        }
+        if (c == 'r')
+        {
+            currentInput.condition += 1;
+            if  (currentInput.condition >= 3)
+            {
+                currentInput.condition = 0;
+            }
+            change = true;
+        }
+        if (c == 'b')
+        
+        {
+            if  (currentInput.pedal == 0)
+            {
+                currentInput.pedal = 1;
+            } else {
+                currentInput.pedal = 0;
+            }
+            change = true;
+        }
+
         //Check if any buttons changed
         if (change){
-            InputData updatedInput = {currentInput.speed, currentInput.steeringWheelDuty};
+
+            //Update speed of car dependant if the brake pedal is activated or not NEED TO CHANGE TO RECIEVED BRAKE PRESSURE
+            currentInput.speed = updateSpeed( currentInput.speed, currentInput.pedal, currentInput.brakePressure);
+            InputData updatedInput = {currentInput.speed, currentInput.steeringWheelDuty, currentInput.condition, currentInput.pedal, currentInput.brakePressure};
             // Add to queue so wheel update task to run
             xQueueSendToBack(inputDataQueue, &updatedInput, 0);
 
