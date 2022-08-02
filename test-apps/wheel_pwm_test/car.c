@@ -67,7 +67,6 @@ typedef struct {
     uint8_t steeringWheelDuty; //km/h
     float alpha;
     uint8_t condition;
-    bool 
 } DisplayInfo;
 
 
@@ -276,7 +275,7 @@ void updateWheelInfoTask(void* args)
             bool wheelslip = detectWheelSlip(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed,updatedInput.condition);
             // Wheel info updated, signal display tasks to run via queues
 
-            DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty, alpha,updatedInput.condition, wheelslip};
+            DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty, alpha,updatedInput.condition};
             xQueueSendToBack(UARTDisplayQueue, &updatedDisplayInfo, 0);
             xQueueSendToBack(OLEDDisplayQueue, &updatedDisplayInfo, 0);
 

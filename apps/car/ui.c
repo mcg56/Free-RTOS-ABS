@@ -35,11 +35,9 @@ void vt100_clear(void) {
 void vt100_set_line_number(int line) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     char buf[6] = {0};
-    int num;
     sprintf(ANSIString, "%c%s", VT100_ESC, VT100_HOME);
     UARTSend (ANSIString);
-    num = sprintf(buf, "[%dB", line);
-    // buf[num] = 0; // null termination
+    sprintf(buf, "[%dB", line);
     sprintf(ANSIString, "%c%s", VT100_ESC, buf);
     UARTSend (ANSIString);
     sprintf(ANSIString, "%c%s", VT100_ESC, VT100_CLR);
@@ -58,9 +56,14 @@ void vt100_print_text(void) {
     vt100_set_line_number(8);
     UARTSend ("Wheel PRR (Hz):");
     vt100_set_line_number(10);
-    UARTSend ("Wheel radii (0.4m - 0.9m) -> (4, 5, 6, 7, 8, 9):");
+    UARTSend ("Wheel radii (m)");
     vt100_set_line_number(12);
-    UARTSend ("Brake pressure %% -> ([, ]):");
+    UARTSend ("Brake pressure -> ([, ]):");
+    vt100_set_line_number(14);
+    UARTSend ("Brake pedal push/release -> (b):");
+    vt100_set_line_number(16);
+    UARTSend ("Road Condition -> (r):");
+    
 }
 
 void vt100_print_steering_angle(uint8_t duty, char alphaStr[6]) {
@@ -110,15 +113,50 @@ void vt100_print_prr(char LF[6],char LR[6],char RF[6],char RR[6]) {
 
 
 
-void vt100_print_brake_pressure(void) {
+void vt100_print_brake_pressure(uint8_t pressure) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(13);
     vt100_set_white();
-    sprintf(ANSIString, "%3ld", get_pressure());
+    sprintf(ANSIString, "%d %%", pressure);
     UARTSend (ANSIString);
     vt100_set_yellow();
 }
 
-int32_t get_pressure(void){
-    return 69;
+
+void vt100_print_pedal(bool pedal) {
+    vt100_set_line_number(15);
+    vt100_set_white();
+    if (pedal == 1)
+    {
+        UARTSend ("ON");
+    }
+    else{
+        UARTSend ("OFF");
+    }
+    
+    vt100_set_yellow();
+}
+
+void vt100_print_condition(uint8_t condition) {
+    char ANSIString[MAX_STR_LEN + 1]; // For uart message
+    vt100_set_line_number(17);
+    vt100_set_white();
+    sprintf(ANSIString, "%s", get_condition(condition));
+    UARTSend (ANSIString);
+    vt100_set_yellow();
+}
+
+const char* get_condition(uint8_t condition){
+    
+    if (condition == 0)
+    {
+        return "DRY";
+    }
+    else if (condition == 1)
+    {
+        return "WET";
+    }
+    else{
+        return "ICY";
+    }
 }
