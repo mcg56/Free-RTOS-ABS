@@ -46,28 +46,30 @@
 #include "libs/lib_pwm/ap_pwm_input.h"
 #include "libs/lib_pwm/ap_pwm_output.h"
 
-int main (void)
+TaskHandle_t updateButtonsHandle;
+TaskHandle_t updateAllPWMInputsHandle;
+TaskHandle_t calculatePWMPropertiesHandle;
+
+void
+printPWM(char* id)
 {
-    SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
-
-    initButtons ();
-    initPWMInputManager ();
-    initialiseUSB_UART ();
-    initialisePWM();
-
-    PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
-
-    PWMSignal_t testPWM = {.id = "testPWM", .gpioPin = GPIO_PIN_0};
-    registerPWMSignal(testPWM);
-
-    // PWMSignal_t testPWM2 = {.id = "testPWM2", .gpioPin = GPIO_PIN_1};
-    // trackPWMSignal(testPWM2);
-
-    setPWM(41, 96);
-
-
     char str[100];
     PWMSignal_t signal;
+    // Details of first PWM
+    signal = getPWMInputSignal(id);
+    sprintf(str, "Signal ID = %s\r\n", id);
+    UARTSend(str);
+    sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
+    UARTSend(str);
+    sprintf(str, "Duty : %ld\r\n\n", signal.duty);
+    UARTSend(str);
+}
+
+void updateButtonsTask(void* args)
+{
+    (void)args;
+    const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
+
     UARTSend("\n\rWaiting for press...\r\n");
     while (true)
     {
@@ -75,23 +77,46 @@ int main (void)
 
         if (checkButton(LEFT) == PUSHED)
         {
-            updatePWMInput("testPWM");
-            
-            // Details of first PWM
-            signal = getPWMInputSignal("testPWM");
-            sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
-            UARTSend(str);
-            sprintf(str, "Duty : %ld\r\n", signal.duty);
-            UARTSend(str);
-
-            // // Details of second PWM
-            // signal = getPWMInputSignals("testPWM2");
-            // sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
-            // UARTSend(str);
-            // sprintf(str, "Duty : %ld\r\n", signal.duty);
-            // UARTSend(str);
+            printPWM("LF");
+            printPWM("RF");
+            printPWM("LR");
+            printPWM("RR");
         }
+
+        vTaskDelay(xDelay);
     }
+}
+
+int main (void)
+{
+    SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
+
+    initButtons ();
+    initPWMInputManager ();
+    initialiseUSB_UART ();
+    initialisePWM ();
+
+    PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
+
+    PWMSignal_t testPWM1 = {.id = "LF", .gpioPin = GPIO_PIN_0};
+    registerPWMSignal(testPWM1);
+
+    PWMSignal_t testPWM2 = {.id = "RF", .gpioPin = GPIO_PIN_1};
+    registerPWMSignal(testPWM2);
+
+    PWMSignal_t testPWM3 = {.id = "LR", .gpioPin = GPIO_PIN_2};
+    registerPWMSignal(testPWM3);
+
+    PWMSignal_t testPWM4 = {.id = "RR", .gpioPin = GPIO_PIN_4};
+    registerPWMSignal(testPWM4);  
+
+    xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);
+    xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, &updateAllPWMInputsHandle);
+    xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 256, NULL, 0, &calculatePWMPropertiesHandle);  
+
+    // vTaskPrioritySet(calculatePWMPropertiesHandle, 3);
+    // vTaskPrioritySet(updateButtonsHandle, 4);
+
 
     vTaskStartScheduler();
 

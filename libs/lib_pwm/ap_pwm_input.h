@@ -1,5 +1,5 @@
-#ifndef PWM_MANAGER_H_
-#define PWM_MANAGER_H_
+#ifndef PWM_INPUTS_H_
+#define PWM_INPUTS_H_
 
 #include <stdint.h>
 
@@ -42,17 +42,22 @@ extern void initPWMInputManager (void);
 extern int registerPWMSignal (PWMSignal_t newSignal);
 
 /**
- * @brief Updates all PWM signal information
- * @return Count off failed PWM signal updates
+ * @brief Regularly scheduled task for updating all PWM signals
+ * @return None
  */
-extern int updateAllPWMInputs (void);
+extern void updateAllPWMInputsTask(void* args);
 
 /**
  * @brief Updates specific PWM signal information
  * @return Count off failed PWM signal updates
  */
-int 
-updatePWMInput(char* id);
+extern int updatePWMInput(char* id);
+
+/**
+ * @brief Tasks for managing the PWM signal update queue
+ * @param args Task arguments
+ */
+extern void calculatePWMPropertiesTask(void* args);
 
 /**
  * @brief Returns the identified PWM Input signal

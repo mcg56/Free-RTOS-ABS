@@ -18,6 +18,9 @@
 #include <driverlib/sysctl.h>
 #include <driverlib/gpio.h>
 
+#include <FreeRTOS.h>
+#include <queue.h>
+
 #include "driverlib/timer.h"
 
 #include "ap_pwm_input.h"
@@ -27,7 +30,7 @@
 //*************************************************************
 
 #define LEN(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
-#define MAX_NUM_SIGNALS             6
+#define MAX_NUM_SIGNALS         6
 
 #define EDGE_TIMER_PERIPH       SYSCTL_PERIPH_TIMER0
 #define EDGE_TIMER_BASE         TIMER0_BASE
@@ -39,7 +42,7 @@
 #define TIMEOUT_TIMER           TIMER_A
 #define TIMEOUT_TIMER_CONFIG    TIMER_CFG_A_PERIODIC
 #define TIMEOUT_TIMER_INT_FLAG  TIMER_TIMA_TIMEOUT
-#define TIMEOUT_RATE            20 // [Hz]
+#define TIMEOUT_RATE            35 // [Hz]
 
 #define PWM_GPIO_BASE           GPIO_PORTB_BASE
 #define PWM_GPIO_PERIPH         SYSCTL_PERIPH_GPIOB
@@ -78,13 +81,20 @@ typedef struct {
 } edgeTimestamps_t;
 
 //*************************************************************
-// Function handles
+// Function prototype
 //*************************************************************
 static void PWMEdgeIntHandler (void);
 static void PWMTimeoutHandler (void);
 static void calculatePWMProperties (PWMSignal_t* PWMSignal);
+static int updateAllPWMInputs(void);
 static bool updatePWMInfo(PWMSignal_t* PWMSignal);
+static void calculatePWMProperties(PWMSignal_t* PWMSignal);
 static PWMSignal_t* findPWMInput(char* id);
+
+//*************************************************************
+// FreeRTOS handles
+//*************************************************************
+QueueHandle_t PWMSignalQueue = NULL;
 
 //*************************************************************
 // Global variables
@@ -205,6 +215,9 @@ PWMEdgeIntHandler (void)
         edgeTimestamps.currFallingEdge = TimerValueGet(EDGE_TIMER_BASE, EDGE_TIMER);
     }
 
+    // if edge is two edges then queue edgeTimestamps
+
+
     GPIOIntClear(PWM_GPIO_BASE, PWMInputSignals.pins);
 }
 
@@ -235,10 +248,29 @@ resetTimeout (void)
 }
 
 /**
+ * @brief Regularly scheduled task for updating all PWM signals
+ * @return None
+ */
+void updateAllPWMInputsTask(void* args)
+{
+    (void)args;
+    const TickType_t xDelay = 200 / portTICK_PERIOD_MS;
+
+    PWMSignalQueue = xQueueCreate(8, sizeof(PWMSignal_t*));
+
+    while (true) 
+    {
+        updateAllPWMInputs();
+
+        vTaskDelay(xDelay);
+    }   
+}
+
+/**
  * @brief Updates all PWM signal information
  * @return Count off failed PWM signal updates
  */
-int 
+static int 
 updateAllPWMInputs(void)
 {
     int failedUpdates = 0;
@@ -275,6 +307,7 @@ updatePWMInfo(PWMSignal_t* PWMSignal)
 
     resetTimeout();
 
+    // TASK - disable anything that might interrupt this section
     TimerEnable(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);
     GPIOIntEnable(PWM_GPIO_BASE, PWMSignal->gpioPin);
     while (risingEdgeCount != TWO_EDGES && !PWMReadTimeout);
@@ -283,12 +316,43 @@ updatePWMInfo(PWMSignal_t* PWMSignal)
 
     if (!PWMReadTimeout)
     {
-        calculatePWMProperties(PWMSignal);
+        // calculatePWMProperties(PWMSignal);
+        xQueueSendToBack(PWMSignalQueue, &PWMSignal, portMAX_DELAY);
 
         return false;
     }
 
+    PWMSignal->frequency = 0;
+    PWMSignal->duty = 0;
     return true;
+}
+
+/**
+ * @brief Tasks for managing the PWM signal update queue
+ * @param args Task arguments
+ */
+void
+calculatePWMPropertiesTask(void* args)
+{
+    (void)args;
+    const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
+    
+    PWMSignal_t *PWMSignal;
+    while (true) 
+    {
+        if (xQueueReceive(PWMSignalQueue, &PWMSignal, portMAX_DELAY) == pdPASS)
+        {
+            // char str[100];
+            // sprintf(str, "ID : %d\r\n\n", PWMSignal->duty);
+            // UARTSend(str);
+
+            calculatePWMProperties(PWMSignal);
+        }
+        
+        // TASK - wasn't dealing with timeout very well. Need to be able to do that
+
+        vTaskDelay(xDelay);
+    }  
 }
 
 /**
@@ -315,6 +379,8 @@ calculatePWMProperties(PWMSignal_t* PWMSignal)
     // Currently no timer overflow protection - TASK
     PWMSignal->duty = 100 * (edgeTimestamps.currFallingEdge - edgeTimestamps.lastRisingEdge) /
         (edgeTimestamps.currRisingEdge - edgeTimestamps.lastRisingEdge);
+
+    // TASK - if freq not zero and duty zero, then the duty is wrong
 }
 
 /**
@@ -327,9 +393,9 @@ findPWMInput(char* id)
 {
     for (int i = 0; i < PWMInputSignals.count; i++)
     {
-        if (strcmp(PWMInputSignals.signals[0].id, id) == 0)
+        if (strcmp(PWMInputSignals.signals[i].id, id) == 0)
         {
-            return &PWMInputSignals.signals[0];
+            return &PWMInputSignals.signals[i];
         }
     }
 
