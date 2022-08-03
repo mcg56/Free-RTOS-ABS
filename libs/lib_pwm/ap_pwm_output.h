@@ -206,7 +206,7 @@ void updatePWMOutputsTask(void* args);
  * off the output.
  * @return None
  */
-void initializeCarPWM(void);
+void initializeCarPWMOutputs(void);
 
 
 #endif

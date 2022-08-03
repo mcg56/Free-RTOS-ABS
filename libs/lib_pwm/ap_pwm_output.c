@@ -25,6 +25,8 @@
 #include "ap_pwm_output.h"
 #include <FreeRTOS.h>
 #include <queue.h>
+#include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
+#include <stdio.h>
 
 /************************************************************************************
 *****************************PRIVATE FUNCTION PROTOTYPES*****************************
@@ -116,6 +118,7 @@ void updatePWMOutputsTask(void* args)
         {
             setPWMGeneral(requestedPWM.freq, requestedPWM.duty, requestedPWM.base, requestedPWM.gen, requestedPWM.outnum);
         } else continue;
+        
     }
 }
 
@@ -155,7 +158,7 @@ void initializePWMGeneral(PWMHardwareDetails PWM, uint32_t startHz, uint32_t sta
 
 
 
-void initializeCarPWM(void)
+void initializeCarPWMOutputs(void)
 {
     initializePWMGeneral(PWMHardwareDetailsLF, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
     initializePWMGeneral(PWMHardwareDetailsLR, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);

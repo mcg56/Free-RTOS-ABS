@@ -31,6 +31,7 @@ TaskHandle_t blinkHandle;
 TaskHandle_t updateOLEDHandle;
 TaskHandle_t updateUARTHandle;
 TaskHandle_t updatePWMOutputsTaskHandle;
+TaskHandle_t updateAllPWMInputsHandle;
 
 //TO DO: Move to ui.h
 /**
@@ -106,10 +107,13 @@ void blink(void* args) {
     (void)args; // unused
 
     TickType_t wake_time = xTaskGetTickCount();
+    
 
     while (true) {
         GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
         vTaskDelayUntil(&wake_time, 100);
+
+        
 
         // configASSERT(wake_time < 1000);  // Runs vAssertCalBled() if false
     }
@@ -234,9 +238,7 @@ void updateUARTTask(void* args)
             vt100_print_pedal(updatedDisplayInfo.pedal);
 
         }else continue;
-        
-        
-        vTaskDelayUntil(&wake_time, 100);
+  
     }
 }
 
@@ -330,15 +332,15 @@ void readButtonsTask(void* args)
     {
         updateButtons();
         
-        char string[17]; // Display fits 16 characters wide.
+        //char string[17]; // Display fits 16 characters wide.
         
         int32_t c = UARTCharGetNonBlocking(UART_USB_BASE);
         
         char letter = c;
         
-        sprintf(string, "Key: %c", letter);
+        /*sprintf(string, "Key: %c", letter);
         OLEDStringDraw ("    ",0,3);
-        OLEDStringDraw (string, 0, 3);
+        OLEDStringDraw (string, 0, 3);*/
 
 
         // Update values accodingly. No checks for value max/min limits yet
@@ -407,11 +409,31 @@ void readButtonsTask(void* args)
             xQueueSendToBack(updatePWMQueue, &steeringPWM, 0);
         }
 
+        
 
         taskYIELD(); // Not sure if this is needed or not
         vTaskDelay(xDelay);
     }
 }
+
+
+void processABSInputTask(void* args)
+{
+    (void)args; // unused
+    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+    while(1)
+    {
+        PWMSignal_t pwmDetails = getPWMInputSignal(ABSPWM_ID);
+
+        char string[17]; // Display fits 16 characters wide.
+        sprintf(string, "D: %ld F: %ld", pwmDetails.duty, pwmDetails.frequency);
+        OLEDStringDraw ("                 ",0,3);
+        OLEDStringDraw (string, 0, 3);
+
+        vTaskDelay(xDelay);
+    }
+}
+
 
 int main(void) {
     SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
@@ -421,20 +443,35 @@ int main(void) {
     // Setup red LED on PF1
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1);
+    // Setup Blue LED on PF2
+    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_2);
 
     initButtons();
+    initPWMInputManager ();
+
     initialiseUSB_UART ();
-    initializeCarPWM();
+    initializeCarPWMOutputs();
+
+
+    PWMSignal_t ABSPWM = {.id = ABSPWM_ID, .gpioPin = GPIO_PIN_0};
+    registerPWMSignal(ABSPWM);
+
 
 
     createQueues();
-    xTaskCreate(&blink, "blink", 256, NULL, 0, &blinkHandle);
-    xTaskCreate(&readButtonsTask, "read buttons", 256, NULL, 0, &readButtonsHandle);
+    xTaskCreate(&blink, "blink", 150, NULL, 0, &blinkHandle);
+    xTaskCreate(&readButtonsTask, "read buttons", 150, NULL, 0, &readButtonsHandle);
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
-    xTaskCreate(&updateOLEDTask, "update OLED", 256, NULL, 0, &updateOLEDHandle);
+    //xTaskCreate(&updateOLEDTask, "update OLED", 256, NULL, 0, &updateOLEDHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
+    xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, &updateAllPWMInputsHandle);
+    xTaskCreate(&processABSInputTask, "process abs input", 256, NULL, 0, NULL);
 
+
+    // Toggle blue
+    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
+    
 
     vTaskStartScheduler();
 
