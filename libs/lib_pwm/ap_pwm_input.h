@@ -6,7 +6,7 @@
 #define ID_LEN 20
 #define ABSPWM_ID "ABS"
 #define ABS_TIMEOUT_RATE        18 // [Hz]
-#define CAR_TIMEOUT_RATE        18 // [Hz]
+#define CAR_TIMEOUT_RATE        50 // [Hz]
 
 //*************************************************************
 // Type Definitions

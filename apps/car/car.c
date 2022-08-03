@@ -410,88 +410,39 @@ void readButtonsTask(void* args)
             pwmSignal steeringPWM = {currentInput.steeringWheelDuty, PWM_STEERING_FIXED_HZ, PWMHardwareDetailsSteering.base, PWMHardwareDetailsSteering.gen, PWMHardwareDetailsSteering.outnum};
             xQueueSendToBack(updatePWMQueue, &steeringPWM, 0);
         }
-
-        
-
         taskYIELD(); // Not sure if this is needed or not
         vTaskDelay(xDelay);
     }
 }
 
 
-void processABSInputTask(void* args)
-{
-    (void)args; // unused
-    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
-    while(1)
-    {
-        PWMSignal_t pwmDetails = getPWMInputSignal(ABSPWM_ID);
-        if((pwmDetails.frequency <= 490) || (pwmDetails.frequency >= 510)) // ABS on
-        {
-            // Toggle blue
-            //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
-        }
-        
-
-        char string[17]; // Display fits 16 characters wide.
-        sprintf(string, "D: %02ld F: %03ld", pwmDetails.duty, pwmDetails.frequency);
-        OLEDStringDraw (string, 0, 3);
-
-        vTaskDelay(xDelay);
-    }
-}
-
-/*void detectABSOnTask(void* args)
-{
-    (void)args; // unused
-    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
-
-    bool timeoutOccurred = false;
-    bool diffFreq = false;
-    while(1)
-    {
-        for (int i = 0; i < 10; i++) //Sample 10 times to try find large gap indicating ABS on
-        {
-            PWMSignal_t pwmDetails = getPWMInputSignal(ABSPWM_ID);
-            if(updatePWMInfo(&pwmDetails))
-            {
-                timeoutOccurred = true;
-            }
-
-            PWMSignal_t newPWMDetails = getPWMInputSignal(ABSPWM_ID);
-            if((pwmDetails.frequency <= 490) || (pwmDetails.frequency >= 510))
-            {
-                diffFreq = true;
-            }
-        }  
-
-        if (diffFreq || timeoutOccurred) // we have detected ABS
-        {
-            // Toggle blue
-            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
-    
-        }
-    }
-}*/
-
-
-
-void updateABSPWMInputTask(void* args)
+void processABSPWMInputTask(void* args)
 {
     (void)args;
     const TickType_t xDelay = 330 / portTICK_PERIOD_MS;
+    PWMSignal_t pwmDetails;
 
     while (true) 
     {
+        bool ABSOn = false;
         for (int i = 0; i<10; i++)
         {
-            if(updatePWMInput(ABSPWM_ID), CAR_TIMEOUT_RATE) // Timeout occured, ABS must be on
+            if(updatePWMInput(ABSPWM_ID, CAR_TIMEOUT_RATE)) // Timeout occured, ABS must be on
             {
-                // Toggle blue
-                GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
+                ABSOn = true;
+            } else{
+                pwmDetails = getPWMInputSignal(ABSPWM_ID);
             }
 
         }
+        if (ABSOn)
+        {
+            // Toggle blue
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
+        }
+        char string[17]; // Display fits 16 characters wide.
+        sprintf(string, "D: %02ld F: %03ld", pwmDetails.duty, pwmDetails.frequency);
+        OLEDStringDraw (string, 0, 3);
 
         vTaskDelay(xDelay);
     }   
@@ -509,7 +460,7 @@ int main(void) {
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_2);
 
     initButtons();
-    initPWMInputManager ();
+    initPWMInputManager (CAR_TIMEOUT_RATE);
 
     initialiseUSB_UART ();
     initialisePWM (); // FOR TESTING ABS ONLY, DELETE
@@ -530,12 +481,8 @@ int main(void) {
     //xTaskCreate(&updateOLEDTask, "update OLED", 256, NULL, 0, &updateOLEDHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
-    xTaskCreate(&updateABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
-    xTaskCreate(&processABSInputTask, "process abs input", 256, NULL, 0, NULL);
-    //xTaskCreate(&detectABSOnTask, "Detect abs input", 150, NULL, 0, NULL);
-
-
-    
+    xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
+       
 
     vTaskStartScheduler();
 
