@@ -230,6 +230,7 @@ PWMTimeoutHandler (void)
 {
     TimerIntClear(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER_INT_FLAG);
 
+    // TESTING
     // char str[30];
     // static int hitCount = 0;
     // sprintf(str, "Hit count = %d\r\n", hitCount++);
@@ -284,7 +285,7 @@ updateAllPWMInputs(void)
     {
         failedUpdates += updatePWMInfo(&PWMInputSignals.signals[i]);
 
-        printPWM(PWMInputSignals.signals[i].id);
+        // printPWM(PWMInputSignals.signals[i].id); // TESTING
     }  
 
     return failedUpdates; 
@@ -420,17 +421,18 @@ getPWMInputSignal (char* id)
     return *findPWMInput(id);
 }
 
-void
-printPWM(char* id)
-{
-    char str[100];
-    PWMSignal_t signal;
-    // Details of first PWM
-    signal = getPWMInputSignal(id);
-    sprintf(str, "Signal ID = %s\r\n", id);
-    UARTSend(str);
-    sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
-    UARTSend(str);
-    sprintf(str, "Duty : %ld\r\n\n", signal.duty);
-    UARTSend(str);
-}
+// TESTING
+// void
+// printPWM(char* id)
+// {
+//     char str[100];
+//     PWMSignal_t signal;
+//     // Details of first PWM
+//     signal = getPWMInputSignal(id);
+//     sprintf(str, "Signal ID = %s\r\n", id);
+//     UARTSend(str);
+//     sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
+//     UARTSend(str);
+//     sprintf(str, "Duty : %ld\r\n\n", signal.duty);
+//     UARTSend(str);
+// }
