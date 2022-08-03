@@ -104,7 +104,7 @@ void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, uint32_t base, uint32_t
     PWMPulseWidthSet(base, outnum, ui32Period * ui32Duty / 100);
 }
 
-void updatePWMTask(void* args) 
+void updatePWMOutputsTask(void* args) 
 {
     (void)args; // unused
     while(true)

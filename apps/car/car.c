@@ -17,6 +17,7 @@
 #include "driverlib/pwm.h"
 #include "wheels.h"
 #include <queue.h>
+#include "libs/lib_pwm/ap_pwm_input.h"
 #include "libs/lib_pwm/ap_pwm_output.h"
 #include "libs/lib_system/ap_system.h"
 #include "libs/lib_uart/ap_uart.h"
@@ -29,8 +30,9 @@ TaskHandle_t readButtonsHandle;
 TaskHandle_t blinkHandle;
 TaskHandle_t updateOLEDHandle;
 TaskHandle_t updateUARTHandle;
-TaskHandle_t updatePWMTaskHandle;
+TaskHandle_t updatePWMOutputsTaskHandle;
 
+//TO DO: Move to ui.h
 /**
  * @brief Struture for storing input data and passing between tasks 
  * through queues
@@ -48,7 +50,7 @@ typedef struct {
     uint8_t brakePressure;
 } InputData;
 
-
+//TO DO: Move to ui.h
 /**
  * @brief Struture for storing display data and passing display information 
  * between tasks through queues
@@ -112,6 +114,8 @@ void blink(void* args) {
         // configASSERT(wake_time < 1000);  // Runs vAssertCalBled() if false
     }
 }
+
+
 /**
  * @brief Task that updates the OLED with current car information.
  * Mostly used just for debugging at the moment
@@ -236,6 +240,7 @@ void updateUARTTask(void* args)
     }
 }
 
+//TO DO: Maybe move to wheels.c?
 /**
  * @brief Task to update the wheel information and signal to PWM generators to update the frequencies
  * @param args Unused
@@ -310,6 +315,7 @@ void updateWheelInfoTask(void* args)
     }
 }
 
+// TO DO: change to read uart task? and move to ui.c
 /**
  * @brief Reads the buttons and changes inputs accordingly
  * @param args Unused
@@ -420,13 +426,15 @@ int main(void) {
     initialiseUSB_UART ();
     initializeCarPWM();
 
+
     createQueues();
     xTaskCreate(&blink, "blink", 256, NULL, 0, &blinkHandle);
     xTaskCreate(&readButtonsTask, "read buttons", 256, NULL, 0, &readButtonsHandle);
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
     xTaskCreate(&updateOLEDTask, "update OLED", 256, NULL, 0, &updateOLEDHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
-    xTaskCreate(&updatePWMTask, "update PWM", 256, NULL, 0, &updatePWMTaskHandle);
+    xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
+
 
     vTaskStartScheduler();
 

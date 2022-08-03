@@ -199,7 +199,7 @@ void initialisePWM (void);
  * @param args Unused
  * @return None
  */
-void updatePWMTask(void* args);
+void updatePWMOutputsTask(void* args);
 
 /**
  * @brief Function to initialise then turn on all car output PWM signals
