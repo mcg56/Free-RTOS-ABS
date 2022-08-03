@@ -45,25 +45,26 @@
 #include "libs/lib_system/ap_system.h"
 #include "libs/lib_pwm/ap_pwm_input.h"
 #include "libs/lib_pwm/ap_pwm_output.h"
+#include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 
 TaskHandle_t updateButtonsHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 TaskHandle_t calculatePWMPropertiesHandle;
 
-void
-printPWM(char* id)
-{
-    char str[100];
-    PWMSignal_t signal;
-    // Details of first PWM
-    signal = getPWMInputSignal(id);
-    sprintf(str, "Signal ID = %s\r\n", id);
-    UARTSend(str);
-    sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
-    UARTSend(str);
-    sprintf(str, "Duty : %ld\r\n\n", signal.duty);
-    UARTSend(str);
-}
+// void
+// printPWM(char* id)
+// {
+//     char str[100];
+//     PWMSignal_t signal;
+//     // Details of first PWM
+//     signal = getPWMInputSignal(id);
+//     sprintf(str, "Signal ID = %s\r\n", id);
+//     UARTSend(str);
+//     sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
+//     UARTSend(str);
+//     sprintf(str, "Duty : %ld\r\n\n", signal.duty);
+//     UARTSend(str);
+// }
 
 void updateButtonsTask(void* args)
 {
@@ -81,6 +82,8 @@ void updateButtonsTask(void* args)
             printPWM("RF");
             printPWM("LR");
             printPWM("RR");
+            printPWM("Steering");
+            printPWM("BrakePedal");
         }
 
         vTaskDelay(xDelay);
@@ -98,25 +101,27 @@ int main (void)
 
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
-    PWMSignal_t testPWM1 = {.id = "LF", .gpioPin = GPIO_PIN_0};
-    registerPWMSignal(testPWM1);
+    PWMSignal_t LFPWM = {.id = "LF", .gpioPin = GPIO_PIN_0};
+    registerPWMSignal(LFPWM);
 
-    PWMSignal_t testPWM2 = {.id = "RF", .gpioPin = GPIO_PIN_1};
-    registerPWMSignal(testPWM2);
+    PWMSignal_t RFPWM = {.id = "RF", .gpioPin = GPIO_PIN_1};
+    registerPWMSignal(RFPWM);
 
-    PWMSignal_t testPWM3 = {.id = "LR", .gpioPin = GPIO_PIN_2};
-    registerPWMSignal(testPWM3);
+    PWMSignal_t LRPWM = {.id = "LR", .gpioPin = GPIO_PIN_2};
+    registerPWMSignal(LRPWM);
 
-    PWMSignal_t testPWM4 = {.id = "RR", .gpioPin = GPIO_PIN_4};
-    registerPWMSignal(testPWM4);  
+    PWMSignal_t RRPWM = {.id = "RR", .gpioPin = GPIO_PIN_4};
+    registerPWMSignal(RRPWM);  
 
-    xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);
+    PWMSignal_t SteeringPWM = {.id = "Steering", .gpioPin = GPIO_PIN_5};
+    registerPWMSignal(SteeringPWM);
+
+    PWMSignal_t BrakePedalPWM = {.id = "BrakePedal", .gpioPin = GPIO_PIN_6};
+    registerPWMSignal(BrakePedalPWM); 
+
+    // xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);
     xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, &updateAllPWMInputsHandle);
-    xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 256, NULL, 0, &calculatePWMPropertiesHandle);  
-
-    // vTaskPrioritySet(calculatePWMPropertiesHandle, 3);
-    // vTaskPrioritySet(updateButtonsHandle, 4);
-
+    // xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 256, NULL, 0, &calculatePWMPropertiesHandle);  
 
     vTaskStartScheduler();
 

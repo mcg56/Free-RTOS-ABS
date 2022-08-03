@@ -37,12 +37,12 @@
 #define EDGE_TIMER              TIMER_A
 #define EDGE_TIMER_CONFIG       TIMER_CFG_A_PERIODIC_UP
 
-#define TIMEOUT_TIMER_PERIPH    SYSCTL_PERIPH_TIMER1
-#define TIMEOUT_TIMER_BASE      TIMER1_BASE
+#define TIMEOUT_TIMER_PERIPH    SYSCTL_PERIPH_TIMER2
+#define TIMEOUT_TIMER_BASE      TIMER2_BASE
 #define TIMEOUT_TIMER           TIMER_A
 #define TIMEOUT_TIMER_CONFIG    TIMER_CFG_A_PERIODIC
 #define TIMEOUT_TIMER_INT_FLAG  TIMER_TIMA_TIMEOUT
-#define TIMEOUT_RATE            35 // [Hz]
+#define TIMEOUT_RATE            18 // [Hz]
 
 #define PWM_GPIO_BASE           GPIO_PORTB_BASE
 #define PWM_GPIO_PERIPH         SYSCTL_PERIPH_GPIOB
@@ -228,7 +228,12 @@ PWMEdgeIntHandler (void)
 static void
 PWMTimeoutHandler (void)
 {
-    TimerIntClear(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);
+    TimerIntClear(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER_INT_FLAG);
+
+    // char str[30];
+    // static int hitCount = 0;
+    // sprintf(str, "Hit count = %d\r\n", hitCount++);
+    // UARTSend(str);
 
     PWMReadTimeout = true;
 }
@@ -240,7 +245,7 @@ PWMTimeoutHandler (void)
 static void
 resetTimeout (void)
 {
-    TimerIntClear(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);
+    TimerIntClear(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER_INT_FLAG);
 
     TimerLoadSet(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER, SysCtlClockGet() / TIMEOUT_RATE);
 
@@ -254,9 +259,9 @@ resetTimeout (void)
 void updateAllPWMInputsTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 200 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 330 / portTICK_PERIOD_MS;
 
-    PWMSignalQueue = xQueueCreate(8, sizeof(PWMSignal_t*));
+    // PWMSignalQueue = xQueueCreate(8, sizeof(PWMSignal_t*));
 
     while (true) 
     {
@@ -278,6 +283,8 @@ updateAllPWMInputs(void)
     for (int i = 0; i < PWMInputSignals.count; i++)
     {
         failedUpdates += updatePWMInfo(&PWMInputSignals.signals[i]);
+
+        printPWM(PWMInputSignals.signals[i].id);
     }  
 
     return failedUpdates; 
@@ -316,8 +323,8 @@ updatePWMInfo(PWMSignal_t* PWMSignal)
 
     if (!PWMReadTimeout)
     {
-        // calculatePWMProperties(PWMSignal);
-        xQueueSendToBack(PWMSignalQueue, &PWMSignal, portMAX_DELAY);
+        calculatePWMProperties(PWMSignal);
+        // xQueueSendToBack(PWMSignalQueue, &PWMSignal, portMAX_DELAY);
 
         return false;
     }
@@ -411,4 +418,19 @@ PWMSignal_t
 getPWMInputSignal (char* id)
 {
     return *findPWMInput(id);
+}
+
+void
+printPWM(char* id)
+{
+    char str[100];
+    PWMSignal_t signal;
+    // Details of first PWM
+    signal = getPWMInputSignal(id);
+    sprintf(str, "Signal ID = %s\r\n", id);
+    UARTSend(str);
+    sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
+    UARTSend(str);
+    sprintf(str, "Duty : %ld\r\n\n", signal.duty);
+    UARTSend(str);
 }
