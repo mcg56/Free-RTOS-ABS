@@ -63,22 +63,31 @@ void updateABS (void* args)
     (void)args; 
     const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
 
+    static bool pulseOn = true;
+    TickType_t wake_time = xTaskGetTickCount(); 
+
     while (true)
     {
-        // Wait until a task has notified it to run
-        ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
-
         switch (absState)
         {
             case ABS_ON:
-                vTaskResume(pulseABSHandle);
+                if (pulseOn)
+                {
+                    setPWM (500, 30);
+                    pulseOn = false;
+                }
+                else
+                {
+                    setPWM (0, 0);
+                    pulseOn = true;
+                }
+
+                vTaskDelayUntil(&wake_time, 50);
                 break;
             case ABS_OFF:
-                vTaskSuspend(pulseABSHandle);
                 setPWM(500, 30);
                 break;
         }
-
 
         vTaskDelay(xDelay);
     }

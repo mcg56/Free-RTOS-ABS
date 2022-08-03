@@ -26,6 +26,7 @@
         "ap_pwm_input.h": "c",
         "ap_pwm_output.h": "c",
         "ap_buttons.h": "c",
-        "ap_uart.h": "c"
+        "ap_uart.h": "c",
+        "abs_control.h": "c"
     }
 }

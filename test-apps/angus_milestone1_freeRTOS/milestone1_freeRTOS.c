@@ -53,10 +53,6 @@ void updateStatusButton (void* args)
         if (checkButton(UP) == PUSHED)
         {
             toggleABSState();
-
-            // Tell the abs controller to update its status
-            xTaskNotifyGiveIndexed( updateABSHandle, 0 );
-
             // Tell the OLED update task to write a new line with new abs state
             xTaskNotifyGiveIndexed( updateOLEDHandle, 0 );
         }
@@ -116,8 +112,7 @@ int main(void) {
 
     xTaskCreate(&blink, "blink", 256, NULL, 0, &blinkHandle);
     xTaskCreate(&updateStatusButton, "updateStatusButton", 256, NULL, 0, &updateStatusButtonHandle);
-    xTaskCreate(&updateABS, "updateABS", 80, NULL, 0, &updateABSHandle);
-    xTaskCreate(&pulseABS, "pulseABS", 80, NULL, 0, &pulseABSHandle);
+    xTaskCreate(&updateABS, "updateABS", 256, NULL, 0, &updateABSHandle);
     xTaskCreate(&updateOLED, "updateOLED", 256, NULL, 0, &updateOLEDHandle);
 
     vTaskSuspend(pulseABSHandle);

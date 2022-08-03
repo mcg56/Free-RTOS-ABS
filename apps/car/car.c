@@ -23,6 +23,8 @@
 #include "libs/lib_uart/ap_uart.h"
 #include "ui.h"
 #include "driverlib/uart.h"
+#include "abs_control.h"
+
 
 //Task handles
 TaskHandle_t updateWheelInfoHandle;
@@ -32,6 +34,9 @@ TaskHandle_t updateOLEDHandle;
 TaskHandle_t updateUARTHandle;
 TaskHandle_t updatePWMOutputsTaskHandle;
 TaskHandle_t updateAllPWMInputsHandle;
+
+TaskHandle_t updateABSHandle;
+TaskHandle_t pulseABSHandle;
 
 //TO DO: Move to ui.h
 /**
@@ -347,8 +352,12 @@ void readButtonsTask(void* args)
         bool change = false;
         if (checkButton(UP) == PUSHED || c == 'w')
         {
-            currentInput.speed += 5;
-            change = true;            
+            //currentInput.speed += 5;
+            //change = true;  
+            toggleABSState();
+
+            // Tell the abs controller to update its status
+            xTaskNotifyGiveIndexed( updateABSHandle, 0 );          
         }
         if (checkButton(DOWN) == PUSHED || c == 'q')
         {
@@ -450,8 +459,11 @@ int main(void) {
     initPWMInputManager ();
 
     initialiseUSB_UART ();
+    initialisePWM (); // FOR TESTING ABS ONLY, DELETE
     initializeCarPWMOutputs();
 
+    // Initialisation is complete, so turn on the output.
+    PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
     PWMSignal_t ABSPWM = {.id = ABSPWM_ID, .gpioPin = GPIO_PIN_0};
     registerPWMSignal(ABSPWM);
@@ -459,7 +471,7 @@ int main(void) {
 
 
     createQueues();
-    xTaskCreate(&blink, "blink", 150, NULL, 0, &blinkHandle);
+    //xTaskCreate(&blink, "blink", 150, NULL, 0, &blinkHandle);
     xTaskCreate(&readButtonsTask, "read buttons", 150, NULL, 0, &readButtonsHandle);
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
     //xTaskCreate(&updateOLEDTask, "update OLED", 256, NULL, 0, &updateOLEDHandle);
@@ -467,7 +479,9 @@ int main(void) {
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
     xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, &updateAllPWMInputsHandle);
     xTaskCreate(&processABSInputTask, "process abs input", 256, NULL, 0, NULL);
-
+    
+    //xTaskCreate(&updateABS, "updateABS", 80, NULL, 0, &updateABSHandle);
+    //xTaskCreate(&pulseABS, "pulseABS", 80, NULL, 0, &pulseABSHandle);
 
     // Toggle blue
     GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
