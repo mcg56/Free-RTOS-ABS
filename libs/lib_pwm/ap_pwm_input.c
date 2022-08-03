@@ -42,7 +42,8 @@
 #define TIMEOUT_TIMER           TIMER_A
 #define TIMEOUT_TIMER_CONFIG    TIMER_CFG_A_PERIODIC
 #define TIMEOUT_TIMER_INT_FLAG  TIMER_TIMA_TIMEOUT
-#define TIMEOUT_RATE            18 // [Hz]
+
+
 
 #define PWM_GPIO_BASE           GPIO_PORTB_BASE
 #define PWM_GPIO_PERIPH         SYSCTL_PERIPH_GPIOB
@@ -87,7 +88,7 @@ static void PWMEdgeIntHandler (void);
 static void PWMTimeoutHandler (void);
 static void calculatePWMProperties (PWMSignal_t* PWMSignal);
 static int updateAllPWMInputs(void);
-static bool updatePWMInfo(PWMSignal_t* PWMSignal);
+static bool updatePWMInfo(PWMSignal_t* PWMSignal, uint8_t timeoutRate);
 static void calculatePWMProperties(PWMSignal_t* PWMSignal);
 static PWMSignal_t* findPWMInput(char* id);
 
@@ -127,7 +128,7 @@ initPWMEdgeTimer (void)
  * @return None
  */
 static void
-initPWMTimeoutTimer (void)
+initPWMTimeoutTimer (uint8_t timeoutRate)
 {
     SysCtlPeripheralEnable(TIMEOUT_TIMER_PERIPH);
 
@@ -137,7 +138,7 @@ initPWMTimeoutTimer (void)
 
     TimerIntRegister(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER, PWMTimeoutHandler);
 
-    TimerLoadSet(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER, SysCtlClockGet() / TIMEOUT_RATE);
+    TimerLoadSet(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER, SysCtlClockGet() / timeoutRate);
 
     TimerIntEnable(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER_INT_FLAG);
 
@@ -168,11 +169,11 @@ initPWMInput (PWMSignal_t inputSignal)
  * @return None
  */
 void
-initPWMInputManager (void)
+initPWMInputManager (uint8_t timeoutRate)
 {
     initPWMEdgeTimer();
 
-    initPWMTimeoutTimer();
+    initPWMTimeoutTimer(timeoutRate);
 }
 
 /**
@@ -244,11 +245,11 @@ PWMTimeoutHandler (void)
  * @return None
  */
 static void
-resetTimeout (void)
+resetTimeout (uint8_t timeoutRate)
 {
     TimerIntClear(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER_INT_FLAG);
 
-    TimerLoadSet(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER, SysCtlClockGet() / TIMEOUT_RATE);
+    TimerLoadSet(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER, SysCtlClockGet() / timeoutRate);
 
     PWMReadTimeout = false;
 }
@@ -283,7 +284,7 @@ updateAllPWMInputs(void)
 
     for (int i = 0; i < PWMInputSignals.count; i++)
     {
-        failedUpdates += updatePWMInfo(&PWMInputSignals.signals[i]);
+        failedUpdates += updatePWMInfo(&PWMInputSignals.signals[i], ABS_TIMEOUT_RATE);
 
         // printPWM(PWMInputSignals.signals[i].id); // TESTING
     }  
@@ -296,9 +297,9 @@ updateAllPWMInputs(void)
  * @return Count off failed PWM signal updates
  */
 int 
-updatePWMInput(char* id)
+updatePWMInput(char* id, uint8_t timeoutRate)
 {
-    return updatePWMInfo(findPWMInput(id));
+    return updatePWMInfo(findPWMInput(id), timeoutRate);
 }
 
 /**
@@ -307,13 +308,13 @@ updatePWMInput(char* id)
  * @return Bool - Boolean representing whether there was an error
  */
 static bool 
-updatePWMInfo(PWMSignal_t* PWMSignal)
+updatePWMInfo(PWMSignal_t* PWMSignal, uint8_t timeoutRate)
 {
     risingEdgeCount = NONE; // May need to be specific to PWM signal - not sure yet
 
     GPIOIntClear(PWM_GPIO_BASE, PWMInputSignals.pins);
 
-    resetTimeout();
+    resetTimeout(timeoutRate);
 
     // TASK - disable anything that might interrupt this section
     TimerEnable(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);

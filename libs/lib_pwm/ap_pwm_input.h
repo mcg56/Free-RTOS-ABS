@@ -4,8 +4,9 @@
 #include <stdint.h>
 
 #define ID_LEN 20
-
 #define ABSPWM_ID "ABS"
+#define ABS_TIMEOUT_RATE        18 // [Hz]
+#define CAR_TIMEOUT_RATE        18 // [Hz]
 
 //*************************************************************
 // Type Definitions
@@ -34,7 +35,7 @@ typedef struct {
  * @brief Initialise the PWM input manager module
  * @return None
  */
-extern void initPWMInputManager (void);
+extern void initPWMInputManager (uint8_t timeoutRate);
 
 /**
  * @brief Add a PWM signal to the list of registered input signals
@@ -53,7 +54,7 @@ extern void updateAllPWMInputsTask(void* args);
  * @brief Updates specific PWM signal information
  * @return Count off failed PWM signal updates
  */
-extern int updatePWMInput(char* id);
+extern int updatePWMInput(char* id, uint8_t timeoutRate);
 
 /**
  * @brief Tasks for managing the PWM signal update queue

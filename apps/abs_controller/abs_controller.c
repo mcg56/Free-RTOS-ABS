@@ -51,20 +51,20 @@ TaskHandle_t updateButtonsHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 TaskHandle_t calculatePWMPropertiesHandle;
 
-// void
-// printPWM(char* id)
-// {
-//     char str[100];
-//     PWMSignal_t signal;
-//     // Details of first PWM
-//     signal = getPWMInputSignal(id);
-//     sprintf(str, "Signal ID = %s\r\n", id);
-//     UARTSend(str);
-//     sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
-//     UARTSend(str);
-//     sprintf(str, "Duty : %ld\r\n\n", signal.duty);
-//     UARTSend(str);
-// }
+void
+printPWM(char* id)
+{
+    char str[100];
+    PWMSignal_t signal;
+    // Details of first PWM
+    signal = getPWMInputSignal(id);
+    sprintf(str, "Signal ID = %s\r\n", id);
+    UARTSend(str);
+    sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
+    UARTSend(str);
+    sprintf(str, "Duty : %ld\r\n\n", signal.duty);
+    UARTSend(str);
+}
 
 void updateButtonsTask(void* args)
 {
@@ -95,7 +95,7 @@ int main (void)
     SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
 
     initButtons ();
-    initPWMInputManager ();
+    initPWMInputManager (ABS_TIMEOUT_RATE);
     initialiseUSB_UART ();
     initialisePWM ();
 
@@ -119,7 +119,7 @@ int main (void)
     PWMSignal_t BrakePedalPWM = {.id = "BrakePedal", .gpioPin = GPIO_PIN_6};
     registerPWMSignal(BrakePedalPWM); 
 
-    // xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);
+    xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);
     xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, &updateAllPWMInputsHandle);
     // xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 256, NULL, 0, &calculatePWMPropertiesHandle);  
 

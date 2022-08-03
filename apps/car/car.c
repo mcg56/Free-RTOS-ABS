@@ -23,7 +23,6 @@
 #include "libs/lib_uart/ap_uart.h"
 #include "ui.h"
 #include "driverlib/uart.h"
-#include "abs_control.h"
 
 
 //Task handles
@@ -35,8 +34,6 @@ TaskHandle_t updateUARTHandle;
 TaskHandle_t updatePWMOutputsTaskHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 
-TaskHandle_t updateABSHandle;
-TaskHandle_t pulseABSHandle;
 
 //TO DO: Move to ui.h
 /**
@@ -352,12 +349,8 @@ void readButtonsTask(void* args)
         bool change = false;
         if (checkButton(UP) == PUSHED || c == 'w')
         {
-            //currentInput.speed += 5;
-            //change = true;  
-            toggleABSState();
-
-            // Tell the abs controller to update its status
-            xTaskNotifyGiveIndexed( updateABSHandle, 0 );          
+            currentInput.speed += 5;
+            change = true;        
         }
         if (checkButton(DOWN) == PUSHED || c == 'q')
         {
@@ -433,16 +426,76 @@ void processABSInputTask(void* args)
     while(1)
     {
         PWMSignal_t pwmDetails = getPWMInputSignal(ABSPWM_ID);
+        if((pwmDetails.frequency <= 490) || (pwmDetails.frequency >= 510)) // ABS on
+        {
+            // Toggle blue
+            //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
+        }
+        
 
         char string[17]; // Display fits 16 characters wide.
-        sprintf(string, "D: %ld F: %ld", pwmDetails.duty, pwmDetails.frequency);
-        OLEDStringDraw ("                 ",0,3);
+        sprintf(string, "D: %02ld F: %03ld", pwmDetails.duty, pwmDetails.frequency);
         OLEDStringDraw (string, 0, 3);
 
         vTaskDelay(xDelay);
     }
 }
 
+/*void detectABSOnTask(void* args)
+{
+    (void)args; // unused
+    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+
+    bool timeoutOccurred = false;
+    bool diffFreq = false;
+    while(1)
+    {
+        for (int i = 0; i < 10; i++) //Sample 10 times to try find large gap indicating ABS on
+        {
+            PWMSignal_t pwmDetails = getPWMInputSignal(ABSPWM_ID);
+            if(updatePWMInfo(&pwmDetails))
+            {
+                timeoutOccurred = true;
+            }
+
+            PWMSignal_t newPWMDetails = getPWMInputSignal(ABSPWM_ID);
+            if((pwmDetails.frequency <= 490) || (pwmDetails.frequency >= 510))
+            {
+                diffFreq = true;
+            }
+        }  
+
+        if (diffFreq || timeoutOccurred) // we have detected ABS
+        {
+            // Toggle blue
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
+    
+        }
+    }
+}*/
+
+
+
+void updateABSPWMInputTask(void* args)
+{
+    (void)args;
+    const TickType_t xDelay = 330 / portTICK_PERIOD_MS;
+
+    while (true) 
+    {
+        for (int i = 0; i<10; i++)
+        {
+            if(updatePWMInput(ABSPWM_ID), CAR_TIMEOUT_RATE) // Timeout occured, ABS must be on
+            {
+                // Toggle blue
+                GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
+            }
+
+        }
+
+        vTaskDelay(xDelay);
+    }   
+}
 
 int main(void) {
     SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
@@ -477,14 +530,11 @@ int main(void) {
     //xTaskCreate(&updateOLEDTask, "update OLED", 256, NULL, 0, &updateOLEDHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
-    xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, &updateAllPWMInputsHandle);
+    xTaskCreate(&updateABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
     xTaskCreate(&processABSInputTask, "process abs input", 256, NULL, 0, NULL);
-    
-    //xTaskCreate(&updateABS, "updateABS", 80, NULL, 0, &updateABSHandle);
-    //xTaskCreate(&pulseABS, "pulseABS", 80, NULL, 0, &pulseABSHandle);
+    //xTaskCreate(&detectABSOnTask, "Detect abs input", 150, NULL, 0, NULL);
 
-    // Toggle blue
-    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
+
     
 
     vTaskStartScheduler();
