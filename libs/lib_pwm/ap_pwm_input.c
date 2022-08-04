@@ -24,8 +24,6 @@
 #include "driverlib/timer.h"
 
 #include "ap_pwm_input.h"
-#include <stdio.h>
-#include "libs/lib_uart/ap_uart.h"
 
 //*************************************************************
 // Constant Definitions
@@ -79,7 +77,7 @@ typedef struct {
 } edgeTimestamps_t;
 
 //*************************************************************
-// Function prototype
+// Function prototypes
 //*************************************************************
 static void setPWMTimeout (uint16_t timeoutRate);
 static void PWMEdgeIntHandler (void);
@@ -90,7 +88,6 @@ static bool refreshPWMDetails(PWMSignal_t* PWMSignal);
 static void calculatePWMProperties(PWMSignal_t* PWMSignal);
 static PWMSignal_t* findPWMInput(char* id);
 
-static void printPWM(char* id);
 //*************************************************************
 // FreeRTOS handles
 //*************************************************************
@@ -318,7 +315,7 @@ updateAllPWMInputs(void)
     {
         failedUpdates += refreshPWMDetails(&PWMInputSignals.signals[i]);
 
-        printPWM(PWMInputSignals.signals[i].id); // TESTING
+        // printPWM(PWMInputSignals.signals[i].id); // TESTING
     }  
 
     return failedUpdates; 
@@ -457,17 +454,17 @@ getPWMInputSignal (char* id)
 }
 
 // TESTING
-void
-printPWM(char* id)
-{
-    char str[100];
-    PWMSignal_t signal;
-    // Details of first PWM
-    signal = getPWMInputSignal(id);
-    sprintf(str, "Signal ID = %s\r\n", id);
-    UARTSend(str);
-    sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
-    UARTSend(str);
-    sprintf(str, "Duty : %ld\r\n\n", signal.duty);
-    UARTSend(str);
-}
+// void
+// printPWM(char* id)
+// {
+//     char str[100];
+//     PWMSignal_t signal;
+//     // Details of first PWM
+//     signal = getPWMInputSignal(id);
+//     sprintf(str, "Signal ID = %s\r\n", id);
+//     UARTSend(str);
+//     sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
+//     UARTSend(str);
+//     sprintf(str, "Duty : %ld\r\n\n", signal.duty);
+//     UARTSend(str);
+// }

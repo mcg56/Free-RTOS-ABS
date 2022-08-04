@@ -47,6 +47,8 @@
 #include "libs/lib_pwm/ap_pwm_output.h"
 #include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 
+#include "brake_output.h"
+
 TaskHandle_t updateButtonsHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 TaskHandle_t calculatePWMPropertiesHandle;
@@ -76,14 +78,19 @@ void updateButtonsTask(void* args)
     {
         updateButtons();
 
-        if (checkButton(LEFT) == PUSHED)
+        // if (checkButton(LEFT) == PUSHED)
+        // {
+        //     printPWM("LF");
+        //     printPWM("RF");
+        //     printPWM("LR");
+        //     printPWM("RR");
+        //     printPWM("Steering");
+        //     printPWM("BrakePedal");
+        // }
+
+        if (checkButton(RIGHT) == PUSHED)
         {
-            printPWM("LF");
-            printPWM("RF");
-            printPWM("LR");
-            printPWM("RR");
-            printPWM("Steering");
-            printPWM("BrakePedal");
+            toggleABS();
         }
 
         vTaskDelay(xDelay);
@@ -97,7 +104,7 @@ int main (void)
     initButtons ();
     initPWMInputManager (ABS_PWM_MIN_FREQ);
     initialiseUSB_UART ();
-    initialisePWM ();
+    initBrakeOutput ();
 
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
@@ -119,7 +126,7 @@ int main (void)
     PWMSignal_t BrakePedalPWM = {.id = "BrakePedal", .gpioPin = GPIO_PIN_6};
     registerPWMSignal(BrakePedalPWM); 
 
-    // xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);
+    xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);
     xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, &updateAllPWMInputsHandle);
     // xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 256, NULL, 0, &calculatePWMPropertiesHandle);  
 
