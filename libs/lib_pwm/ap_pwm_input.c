@@ -24,6 +24,8 @@
 #include "driverlib/timer.h"
 
 #include "ap_pwm_input.h"
+#include <stdio.h>
+#include "libs/lib_uart/ap_uart.h"
 
 //*************************************************************
 // Constant Definitions
@@ -88,6 +90,7 @@ static bool refreshPWMDetails(PWMSignal_t* PWMSignal);
 static void calculatePWMProperties(PWMSignal_t* PWMSignal);
 static PWMSignal_t* findPWMInput(char* id);
 
+static void printPWM(char* id);
 //*************************************************************
 // FreeRTOS handles
 //*************************************************************

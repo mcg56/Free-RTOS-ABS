@@ -4,8 +4,13 @@
 #include <stdbool.h>
 #include "stdlib.h"
 #include <stdio.h>
+#include <FreeRTOS.h>
+#include <task.h>
+#include <queue.h>
 #include "libs/lib_uart/ap_uart.h"
 
+QueueHandle_t OLEDDisplayQueue = NULL;
+QueueHandle_t UARTDisplayQueue = NULL;
 
 void vt100_set_yellow(void) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
@@ -163,7 +168,8 @@ const char* get_condition(uint8_t condition){
     }
 }
 
-void vt100_print_slipage(bool slipArray[4]) {
+void vt100_print_slipage(bool slipArray[4]) 
+{
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(19);
     vt100_set_white();
