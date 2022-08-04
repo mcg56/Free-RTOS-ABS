@@ -28,5 +28,6 @@
         "ap_buttons.h": "c",
         "ap_uart.h": "c",
         "abs_control.h": "c"
-    }
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
 }

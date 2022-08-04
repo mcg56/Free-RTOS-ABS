@@ -21,6 +21,7 @@ void vt100_print_brake_pressure(uint8_t pressure);
 void vt100_print_pedal(bool pedal);
 void vt100_print_condition(uint8_t condition);
 const char* get_condition(uint8_t condition);
+void vt100_print_slipage(bool slipArray[4]);
 
 #endif
 

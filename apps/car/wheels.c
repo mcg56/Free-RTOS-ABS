@@ -44,21 +44,43 @@ void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront,
     rightRear->pulseHz = PULSES_PER_REV*rightRear->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(1.0*PI);
 }
 
-bool detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear, float carSpeed, uint8_t condition, bool pedal, uint8_t pressure)
+void detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear, char *slipArray, uint8_t condition, bool pedal, uint8_t pressure)
 {
-    uint8_t speed = carSpeed;
-    return 1;
-}
+    int8_t m = -1;
+    int8_t c;
+    int8_t y = pressure;
+    int8_t x;
+    uint8_t minspeed = 10;
+    if (pedal){
+        if (condition == 0) {
+            c = 120;
+        } else if (condition == 1){
+            c = 100;
+        } else if (condition == 2){
+            c = 80;
+        }
 
-uint8_t updateSpeed(uint8_t speed, bool pedal, uint8_t brakePressure)
-{
-    uint8_t updatedSpeed;
-    if (pedal)
-    {
-        updatedSpeed = speed - 2;//speed*(brakePressure/100);
+        for (int8_t i = 0; i < 4; i++){
+            if (i == 0) {
+                x = leftFront->speed;
+            } else if (i == 1){
+                 x = leftRear->speed;
+            } else if (i == 2){
+                 x = rightFront->speed;
+            } else if (i == 3){
+                 x = rightRear->speed;
+            }
+            if ((x >= minspeed) && (y >= m*x + c) ){
+                slipArray[i] = 1;
+            } else {
+                slipArray[i] = 0;
+            }
+        }
     } else {
-        updatedSpeed = speed;
+        slipArray[0] = 0;
+        slipArray[1] = 0;
+        slipArray[2] = 0;
+        slipArray[3] = 0;
     }
-    return updatedSpeed;
-
 }
+

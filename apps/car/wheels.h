@@ -80,17 +80,10 @@ void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront,
  * @param condition     Condition of the road
  * @return Bool         Wheel slip condition
  */
-bool detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear, float carSpeed, uint8_t condition, bool pedal, uint8_t pressure);
+void detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear,char *slipArray, uint8_t condition, bool pedal, uint8_t pressure);
 
-/**
- * @brief Function to calculate whether or not any wheel is slipping
- * specification says to only divide by pi.
- * @param speed         Car speed input
- * @param pedal         Brake on or off                
- * @param brakePressure Brake pressure
- * @return uint8_t      Updated car speed
- */
-uint8_t updateSpeed(uint8_t speed, bool pedal, uint8_t brakePressure);
+
+
 
 
 #endif

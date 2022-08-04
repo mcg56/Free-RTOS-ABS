@@ -63,6 +63,8 @@ void vt100_print_text(void) {
     UARTSend ("Brake pedal push/release -> (b):");
     vt100_set_line_number(16);
     UARTSend ("Road Condition -> (r):");
+    vt100_set_line_number(18);
+    UARTSend ("Wheel Slip -> (LF LR RF RR):");
     
 }
 
@@ -159,4 +161,13 @@ const char* get_condition(uint8_t condition){
     else{
         return "ICY";
     }
+}
+
+void vt100_print_slipage(bool slipArray[4]) {
+    char ANSIString[MAX_STR_LEN + 1]; // For uart message
+    vt100_set_line_number(19);
+    vt100_set_white();
+    sprintf(ANSIString, "%d %d %d %d", slipArray[0], slipArray[1],slipArray[2],slipArray[3]);
+    UARTSend (ANSIString);
+    vt100_set_yellow();
 }

@@ -261,6 +261,7 @@ void updateWheelInfoTask(void* args)
     static Wheel rightFront = {0, 0, 0};
     static Wheel rightRear  = {0, 0, 0};
     bool wheelSlip = 0;
+    bool slipArray[4] = {0,0,0,0};
     while(true) {
         // Wait until driving inputs change, indicated by a new value on the queue
         InputData updatedInput;
@@ -294,8 +295,8 @@ void updateWheelInfoTask(void* args)
                 calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed);
             }
             calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
-            wheelSlip = detectWheelSlip(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed, updatedInput.condition, updatedInput.pedal,updatedInput.brakePressure);
-
+            detectWheelSlip(&leftFront, &leftRear, &rightFront, &rightRear, slipArray, updatedInput.condition, updatedInput.pedal,updatedInput.brakePressure);
+            vt100_print_slipage(slipArray);
             // Wheel info updated, signal display tasks to run via queues
             
             DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty, alpha, updatedInput.condition, updatedInput.pedal, updatedInput.brakePressure};
@@ -331,7 +332,7 @@ void updateWheelInfoTask(void* args)
 void readButtonsTask(void* args)
 {
     (void)args; // unused
-    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
     static InputData currentInput = {0, 50, 0, 0, 0};
     bool decelFlag = 0;
     while (true) 
@@ -354,31 +355,49 @@ void readButtonsTask(void* args)
             if (checkButton(UP) == PUSHED || c == 'w')
             {
                 currentInput.speed += 5;
+                if (currentInput.speed >= 100) {
+                    currentInput.speed = 100;
+                }
                 change = true;            
             }
             if (checkButton(DOWN) == PUSHED || c == 'q')
             {
                 currentInput.speed -= 5;
+                if (currentInput.speed >= 200) {
+                    currentInput.speed = 0;
+                }
                 change = true;
             }
             if (checkButton(LEFT) == PUSHED || c == '1')
             {
                 currentInput.steeringWheelDuty -= 5;
+                if (currentInput.steeringWheelDuty >= 230) {
+                    currentInput.steeringWheelDuty = 5;
+                }
                 change = true;
             }
             if (checkButton(RIGHT) == PUSHED|| c == '2')
             {
                 currentInput.steeringWheelDuty += 5;
+                if (currentInput.steeringWheelDuty >= 95) {
+                    currentInput.steeringWheelDuty = 95;
+                }
                 change = true;
             }
             if (c == '[')
             {
                 currentInput.brakePressure -= 5;
+                if (currentInput.brakePressure >= 200) {
+                    currentInput.brakePressure = 0;
+                }
                 change = true;
             }
             if (c == ']')
             {
                 currentInput.brakePressure += 5;
+                if (currentInput.brakePressure >= 100) {
+                    currentInput.brakePressure = 100;
+                }
                 change = true;
             }
             if (c == 'r')
@@ -478,6 +497,9 @@ void updateDecel (void* args)
             
             // Modify the speed dependant on brake pressure
             currentInput.speed = currentInput.speed - currentInput.brakePressure/5;
+            if (currentInput.speed <= 0) {
+                    currentInput.speed = 0;
+            }
 
             //Send the queue for wheel calculations and display
             xQueueSendToBack(inputDataQueue, &currentInput, 0);
