@@ -147,7 +147,7 @@ void detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel
                 slipArray[i] = 1;
             } else {
                 slipArray[i] = 0;
-            }
+            } //TO DO SET FREQ Here 
         }
     } else {
         slipArray[0] = 0;
