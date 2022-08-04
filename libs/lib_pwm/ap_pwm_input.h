@@ -5,8 +5,8 @@
 
 #define ID_LEN 20
 #define ABSPWM_ID "ABS"
-#define ABS_TIMEOUT_RATE        18 // [Hz]
-#define CAR_TIMEOUT_RATE        50 // [Hz]
+#define ABS_PWM_MIN_FREQ      35 // [Hz]
+#define CAR_PWM_MIN_FREQ      50 // [Hz]
 
 //*************************************************************
 // Type Definitions
@@ -33,9 +33,10 @@ typedef struct {
 
 /**
  * @brief Initialise the PWM input manager module
+ * @param PWMMinFreq - Minimum PWM frequency to be read
  * @return None
  */
-extern void initPWMInputManager (uint8_t timeoutRate);
+extern void initPWMInputManager (uint16_t PWMMinFreq);
 
 /**
  * @brief Add a PWM signal to the list of registered input signals
@@ -44,6 +45,7 @@ extern void initPWMInputManager (uint8_t timeoutRate);
  */
 extern int registerPWMSignal (PWMSignal_t newSignal);
 
+// TO DO: This could be done internally within the module?
 /**
  * @brief Regularly scheduled task for updating all PWM signals
  * @return None
@@ -54,13 +56,14 @@ extern void updateAllPWMInputsTask(void* args);
  * @brief Updates specific PWM signal information
  * @return Count off failed PWM signal updates
  */
-extern int updatePWMInput(char* id, uint8_t timeoutRate);
+extern int updatePWMInput(char* id);
 
 /**
- * @brief Tasks for managing the PWM signal update queue
- * @param args Task arguments
+ * @brief Sets the PWM minimum frequency for the module
+ * @param PWMMinFreq - Minimum PWM frequency
+ * @return None
  */
-extern void calculatePWMPropertiesTask(void* args);
+extern void setPWMMinFeq (uint16_t PWMMinFreq);
 
 /**
  * @brief Returns the identified PWM Input signal
