@@ -425,7 +425,6 @@ void updateDecel (void* args)
     
     while (true)
     {
-<<<<<<< HEAD
             // Get the current input data
             InputData currentInput;
             portBASE_TYPE status = xQueueReceive(updateDecelQueue, &currentInput, 100);
@@ -434,14 +433,6 @@ void updateDecel (void* args)
             currentInput.speed = currentInput.speed - currentInput.brakePressure/5;
             if (currentInput.speed <= 0 || currentInput.speed >= 200) {
                     currentInput.speed = 0;
-=======
-            uint8_t currentSpeed = getCarSpeed();
-            uint8_t currentBrakeDuty = getBrakePressureDuty();
-            // Modify the speed dependant on brake pressure
-            int newSpeed = currentSpeed - currentBrakeDuty/5;
-            if (newSpeed <= 0) {
-                    newSpeed = 0;
->>>>>>> 66fff860e169e3d4a4460ff5410a52f71ccce11a
             }
 
             setCarSpeed((uint8_t)newSpeed);
