@@ -23,6 +23,7 @@
 #include "libs/lib_uart/ap_uart.h"
 #include "ui.h"
 #include "driverlib/uart.h"
+#include "car_state.h"
 
 
 //Task handles
