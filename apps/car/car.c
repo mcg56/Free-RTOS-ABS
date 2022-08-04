@@ -33,6 +33,7 @@ TaskHandle_t updateOLEDHandle;
 TaskHandle_t updateUARTHandle;
 TaskHandle_t updatePWMOutputsTaskHandle;
 TaskHandle_t updateAllPWMInputsHandle;
+TaskHandle_t updateDecelHandle;
 
 
 //TO DO: Move to ui.h
@@ -85,6 +86,7 @@ typedef struct {
 QueueHandle_t inputDataQueue = NULL;
 QueueHandle_t OLEDDisplayQueue = NULL;
 QueueHandle_t UARTDisplayQueue = NULL;
+QueueHandle_t updateDecelQueue = NULL;
 
 
 /**
@@ -97,6 +99,7 @@ void createQueues(void)
     OLEDDisplayQueue = xQueueCreate(5, sizeof(DisplayInfo));
     UARTDisplayQueue = xQueueCreate(5, sizeof(DisplayInfo));
     updatePWMQueue = xQueueCreate(10, sizeof(pwmSignal));
+    updateDecelQueue = xQueueCreate(5, sizeof(InputData));
 }
 
 
@@ -299,7 +302,7 @@ void updateWheelInfoTask(void* args)
             xQueueSendToBack(UARTDisplayQueue, &updatedDisplayInfo, 0);
             xQueueSendToBack(OLEDDisplayQueue, &updatedDisplayInfo, 0);
             
-            
+            xQueueSendToBack(updateDecelQueue, &updatedInput, 0);
 
             /* Sending wheel pwms 1 at a time may cause issues as it updates them one at a time so abs
             controller might think its slipping whne it just hasnt updated all wheels yet*/
@@ -330,79 +333,91 @@ void readButtonsTask(void* args)
     (void)args; // unused
     const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
     static InputData currentInput = {0, 50, 0, 0, 0};
+    bool decelFlag = 0;
     while (true) 
     {
+
+        InputData updatedSpeed;
+        portBASE_TYPE status = xQueueReceive(updateDecelQueue, &updatedSpeed, 100);
+
         updateButtons();
         
         //char string[17]; // Display fits 16 characters wide.
         
         int32_t c = UARTCharGetNonBlocking(UART_USB_BASE);
-        
-        char letter = c;
-        
-        /*sprintf(string, "Key: %c", letter);
-        OLEDStringDraw ("    ",0,3);
-        OLEDStringDraw (string, 0, 3);*/
-
 
         // Update values accodingly. No checks for value max/min limits yet
         bool change = false;
-        if (checkButton(UP) == PUSHED || c == 'w')
-        {
-            currentInput.speed += 5;
-            change = true;        
-        }
-        if (checkButton(DOWN) == PUSHED || c == 'q')
-        {
-            currentInput.speed -= 5;
-            change = true;
-        }
-        if (checkButton(LEFT) == PUSHED || c == '1')
-        {
-            currentInput.steeringWheelDuty -= 5;
-            change = true;
-        }
-        if (checkButton(RIGHT) == PUSHED|| c == '2')
-        {
-            currentInput.steeringWheelDuty += 5;
-            change = true;
-        }
-        if (c == '[')
-        {
-            currentInput.brakePressure -= 5;
-            change = true;
-        }
-        if (c == ']')
-        {
-            currentInput.brakePressure += 5;
-            change = true;
-        }
-        if (c == 'r')
-        {
-            currentInput.condition += 1;
-            if  (currentInput.condition >= 3)
+
+        // Can only change values if brake is off
+        if (currentInput.pedal == 0) {
+            if (checkButton(UP) == PUSHED || c == 'w')
             {
-                currentInput.condition = 0;
+                currentInput.speed += 5;
+                change = true;            
             }
-            change = true;
+            if (checkButton(DOWN) == PUSHED || c == 'q')
+            {
+                currentInput.speed -= 5;
+                change = true;
+            }
+            if (checkButton(LEFT) == PUSHED || c == '1')
+            {
+                currentInput.steeringWheelDuty -= 5;
+                change = true;
+            }
+            if (checkButton(RIGHT) == PUSHED|| c == '2')
+            {
+                currentInput.steeringWheelDuty += 5;
+                change = true;
+            }
+            if (c == '[')
+            {
+                currentInput.brakePressure -= 5;
+                change = true;
+            }
+            if (c == ']')
+            {
+                currentInput.brakePressure += 5;
+                change = true;
+            }
+            if (c == 'r')
+            {
+                currentInput.condition += 1;
+                if  (currentInput.condition >= 3)
+                {
+                    currentInput.condition = 0;
+                }
+                change = true;
+            }
         }
+
         if (c == 'b')
         
         {
             if  (currentInput.pedal == 0)
             {
+                 
                 currentInput.pedal = 1;
+                // Start decleration task
+                vTaskResume(updateDecelHandle);
+                // Add to decel queue so that it recieves latest data
+                xQueueSendToBack(updateDecelQueue, &currentInput, 0);
             } else {
+                // Stop deceleration Task
+                vTaskSuspend(updateDecelHandle);
+                // Update the queue in the button task to match the latest speed changes
+                currentInput = updatedSpeed;
                 currentInput.pedal = 0;
+
             }
             change = true;
         }
+        
+       
 
         //Check if any buttons changed
-        if (change){
-
-            //Update speed of car dependant if the brake pedal is activated or not NEED TO CHANGE TO RECIEVED BRAKE PRESSURE
-            currentInput.speed = updateSpeed( currentInput.speed, currentInput.pedal, currentInput.brakePressure);
+        if (change && currentInput.pedal == 0){
             InputData updatedInput = {currentInput.speed, currentInput.steeringWheelDuty, currentInput.condition, currentInput.pedal, currentInput.brakePressure};
             // Add to queue so wheel update task to run
             xQueueSendToBack(inputDataQueue, &updatedInput, 0);
@@ -410,11 +425,12 @@ void readButtonsTask(void* args)
             pwmSignal steeringPWM = {currentInput.steeringWheelDuty, PWM_STEERING_FIXED_HZ, PWMHardwareDetailsSteering.base, PWMHardwareDetailsSteering.gen, PWMHardwareDetailsSteering.outnum};
             xQueueSendToBack(updatePWMQueue, &steeringPWM, 0);
         }
+
+
         taskYIELD(); // Not sure if this is needed or not
         vTaskDelay(xDelay);
     }
 }
-
 
 void processABSPWMInputTask(void* args)
 {
@@ -447,6 +463,29 @@ void processABSPWMInputTask(void* args)
         vTaskDelay(xDelay);
     }   
 }
+
+void updateDecel (void* args)
+{
+    (void)args;
+
+    const TickType_t xDelay = 1000 / portTICK_PERIOD_MS; // Need to match this to the ABS Duty
+    
+    while (true)
+    {
+            // Get the current input data
+            InputData currentInput;
+            portBASE_TYPE status = xQueueReceive(updateDecelQueue, &currentInput, 100);
+            
+            // Modify the speed dependant on brake pressure
+            currentInput.speed = currentInput.speed - currentInput.brakePressure/5;
+
+            //Send the queue for wheel calculations and display
+            xQueueSendToBack(inputDataQueue, &currentInput, 0);
+            
+            vTaskDelay(xDelay);
+    }   
+}
+
 
 int main(void) {
     SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
@@ -482,7 +521,8 @@ int main(void) {
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
     xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
-       
+    xTaskCreate(&updateDecel, "updateDecel", 256, NULL, 0, &updateDecelHandle);
+    vTaskSuspend(updateDecelHandle);
 
     vTaskStartScheduler();
 
