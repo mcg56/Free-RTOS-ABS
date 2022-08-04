@@ -1,6 +1,9 @@
 #ifndef CAR_STATE_H_
 #define CAR_STATE_H_
 
+#include <stdint.h>
+#include <stdbool.h>
+#include "stdlib.h"
 
 uint8_t getCarSpeed(void);
 uint8_t getSteeringDuty(void);

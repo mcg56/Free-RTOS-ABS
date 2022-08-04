@@ -6,7 +6,40 @@
 #include <stdbool.h>
 #include "stdlib.h"
 #include "utils/ustdlib.h"
+#include <FreeRTOS.h>
+#include <task.h>
+#include <queue.h>
+#include "wheels.h"
 
+/**
+ * @brief Struture for storing display data and passing display information 
+ * between tasks through queues
+ * @param LF                Left front wheel struct
+ * @param LR                Left rear wheel struct                
+ * @param RF                Right front wheel struct
+ * @param RR                Right rear wheel struct
+ * @param speed             Car speed (km/h)
+ * @param steeringWheelDuty Car steering wheel duty (%)
+ * @param alpha             Turn angle (degrees)
+ * @param condition         Road Condition
+ * @param pedal             Brake pedal toggle
+ * @param brakePressure     Brake pressure (%)
+ */
+typedef struct {
+    Wheel LF;
+    Wheel LR;
+    Wheel RF;
+    Wheel RR;
+    uint8_t speed; //m
+    uint8_t steeringWheelDuty; //km/h
+    float alpha;
+    uint8_t condition;
+    bool pedal;
+    uint8_t brakePressure; 
+} DisplayInfo;
+
+extern QueueHandle_t OLEDDisplayQueue;
+extern QueueHandle_t UARTDisplayQueue;
 
 void vt100_set_yellow(void);
 void vt100_set_white(void);

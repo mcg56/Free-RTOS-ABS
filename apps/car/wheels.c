@@ -5,8 +5,81 @@
 #include "stdlib.h"
 #include "utils/ustdlib.h"
 #include <stdio.h>
+#include <FreeRTOS.h>
+#include <task.h>
+#include <queue.h>
+#include "car_state.h"
+#include "utils/ustdlib.h"
+#include "libs/lib_pwm/ap_pwm_output.h"
+#include "ui.h"
 
 #define ALPHA_MAX 29.1
+#define PULSES_PER_REV 20.0     // (#)
+#define WHEEL_DIAMETER 0.5    // (m)
+#define KPH_TO_MS_SCALE_FACTOR (1000.0/3600.0)
+#define PI (3.141592653589793)
+
+//**********************Local function prototypes******************************
+
+
+/**
+ * @brief function to calculate the steering angle
+ * @param steeringWheelDuty Steering wheel pwm duty
+ * @return alpha steering angle
+ */
+float calculateSteeringAngle(float steeringWheelDuty);
+
+/**
+ * @brief function to calculate the turn radius of each wheel
+ * @param innerRear Inner rear wheel
+ * @param innerFront Inner front wheel
+ * @param outerRear Outer rear wheel
+ * @param outerFront Outer front wheel
+ * @param alpha steering angle
+ * @return None
+ */
+void calculateWheelRadii(Wheel* innerRear, Wheel* innerFront, Wheel* outerRear, Wheel* outerFront, float alpha);
+
+/**
+ * @brief function to calculate the turn radius of each wheel based on turn radius and speed.
+ * Calculates cars angular velocity while turning at centre of read axle (half of two rear radii).
+ * This method is different to what phillip did and results in slightly different output (might
+ * be wrong).
+ * @param leftFront Left front wheel struct
+ * @param leftRear Left rear wheel struct                
+ * @param rightFront Right front wheel struct
+ * @param rightRear Right rear wheel struct
+ * @param carSpeed car speed
+ * @return None
+ */
+void calculateWheelSpeedsFromRadii(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear, float carSpeed);
+
+/**
+ * @brief Function to calculate the pwm pulse frequency of each wheel based on wheel speed. I think it should
+ * divide by 2*pi as this is how many radians are in a circle, but the formula in the
+ * specification says to only divide by pi.
+ * @param leftFront Left front wheel struct
+ * @param leftRear Left rear wheel struct                
+ * @param rightFront Right front wheel struct
+ * @param rightRear Right rear wheel struct
+ * @return None
+ */
+void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear);
+
+
+/**
+ * @brief Function to calculate whether or not any wheel is slipping
+ * specification says to only divide by pi.
+ * @param leftFront     Left front wheel struct
+ * @param leftRear      Left rear wheel struct                
+ * @param rightFront    Right front wheel struct
+ * @param rightRear     Right rear wheel struct
+ * @param carSpeed      Speed of the vehicle
+ * @param condition     Condition of the road
+ * @return Bool         Wheel slip condition
+ */
+void detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear,char *slipArray, uint8_t condition, bool pedal, uint8_t pressure);
+
 
 
 float calculateSteeringAngle(float steeringWheelDuty)
@@ -84,3 +157,83 @@ void detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel
     }
 }
 
+
+
+/**
+ * @brief Task to update the wheel information and signal to PWM generators to update the frequencies
+ * @param args Unused
+ * @return No return
+ */
+void updateWheelInfoTask(void* args)
+{
+    (void)args; // unused
+    static Wheel leftFront  = {0, 0, 0};
+    static Wheel leftRear   = {0, 0, 0};
+    static Wheel rightFront = {0, 0, 0};
+    static Wheel rightRear  = {0, 0, 0};
+    bool wheelSlip = 0;
+    bool slipArray[4] = {0,0,0,0};
+    while(true) {
+        // Wait until a task has notified it to run, when a new message is to be written
+        ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+
+        // Get the new car state info
+        uint8_t carSpeed = getCarSpeed();
+        uint8_t steeringDuty = getSteeringDuty();
+        uint8_t roadCondition = getRoadCondition();
+        bool pedalState = getPedalState();
+        uint8_t brakeDuty = getBrakePressureDuty();
+
+        float alpha = calculateSteeringAngle((float)steeringDuty);
+        if (alpha == 0) // Driving straight
+        {
+            leftFront.speed = carSpeed;
+            leftFront.turnRadius = 0;
+
+            leftRear.speed = carSpeed;
+            leftRear.turnRadius = 0;
+
+            rightFront.speed = carSpeed;
+            rightFront.turnRadius = 0;
+
+            rightRear.speed = carSpeed;
+            rightRear.turnRadius = 0;
+            
+        } 
+        else if (alpha < 0.0) //Turning left
+        {
+            calculateWheelRadii(&leftRear, &leftFront, &rightRear, &rightFront, alpha);
+            calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, carSpeed);
+        }
+        else if (alpha > 0.0) //Turning right
+        {
+            calculateWheelRadii(&rightRear, &rightFront, &leftRear, &leftFront, alpha);
+            calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, carSpeed);
+        }
+        calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
+        detectWheelSlip(&leftFront, &leftRear, &rightFront, &rightRear, slipArray, roadCondition, pedalState, brakeDuty);
+        vt100_print_slipage(slipArray);
+
+        // Wheel info updated, signal display tasks to run via queues
+        
+        DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, carSpeed, steeringDuty, alpha, roadCondition, pedalState, brakeDuty};
+        xQueueSendToBack(UARTDisplayQueue, &updatedDisplayInfo, 0);
+        xQueueSendToBack(OLEDDisplayQueue, &updatedDisplayInfo, 0);
+        
+
+        /* Sending wheel pwms 1 at a time may cause issues as it updates them one at a time so abs
+        controller might think its slipping whne it just hasnt updated all wheels yet*/
+        pwmSignal leftFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, PWMHardwareDetailsLF.base, PWMHardwareDetailsLF.gen, PWMHardwareDetailsLF.outnum};
+        xQueueSendToBack(updatePWMQueue, &leftFrontPWM, 0);
+
+        pwmSignal leftRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftRear.pulseHz, PWMHardwareDetailsLR.base, PWMHardwareDetailsLR.gen, PWMHardwareDetailsLR.outnum};
+        xQueueSendToBack(updatePWMQueue, &leftRearPWM, 0);
+
+        pwmSignal rightFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightFront.pulseHz, PWMHardwareDetailsRF.base, PWMHardwareDetailsRF.gen, PWMHardwareDetailsRF.outnum};
+        xQueueSendToBack(updatePWMQueue, &rightFrontPWM, 0);
+
+        pwmSignal rightRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightRear.pulseHz, PWMHardwareDetailsRR.base, PWMHardwareDetailsRR.gen, PWMHardwareDetailsRR.outnum};
+        xQueueSendToBack(updatePWMQueue, &rightRearPWM, 0);
+
+    }
+}

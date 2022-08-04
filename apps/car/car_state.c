@@ -1,4 +1,7 @@
-
+#include "car_state.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include "stdlib.h"
 
 /**
  * @brief Private struture for storing car state
