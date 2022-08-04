@@ -462,7 +462,7 @@ void processABSPWMInputTask(void* args)
         bool ABSOn = false;
         for (int i = 0; i<10; i++)
         {
-            if(updatePWMInput(ABSPWM_ID, CAR_TIMEOUT_RATE)) // Timeout occured, ABS must be on
+            if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS must be on
             {
                 ABSOn = true;
             } else{
@@ -521,7 +521,7 @@ int main(void) {
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_2);
 
     initButtons();
-    initPWMInputManager (CAR_TIMEOUT_RATE);
+    initPWMInputManager (CAR_PWM_MIN_FREQ);
 
     initialiseUSB_UART ();
     initialisePWM (); // FOR TESTING ABS ONLY, DELETE
