@@ -380,7 +380,8 @@ void updateDecel (void* args)
             }
 
             setCarSpeed((uint8_t)newSpeed);
-            vt100_print_car_speed((uint8_t)newSpeed);
+            // Tell the wheel update task to run
+            xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
             vTaskDelay(xDelay);
     }   
 }
@@ -417,6 +418,9 @@ int main(void) {
     xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
     xTaskCreate(&updateDecel, "updateDecel", 256, NULL, 0, &updateDecelHandle);
     vTaskSuspend(updateDecelHandle);
+
+    // Tell the wheel update task to run, which fills out the wheels speeds with starting info
+    xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
 
     vTaskStartScheduler();
 

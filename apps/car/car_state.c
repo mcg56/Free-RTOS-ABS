@@ -20,7 +20,7 @@ typedef struct {
 } Car_t;
 
 // Define local car state object
-static Car_t carState = {0,0,0,0};
+static Car_t carState = {50, 50, 0, 0, 0};
 
 // Getters
 uint8_t getCarSpeed(void)
