@@ -297,6 +297,8 @@ void updateWheelInfoTask(void* args)
             calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
             detectWheelSlip(&leftFront, &leftRear, &rightFront, &rightRear, slipArray, updatedInput.condition, updatedInput.pedal,updatedInput.brakePressure);
             vt100_print_slipage(slipArray);
+
+            // TO DO Lock which ever wheel is slipping
             // Wheel info updated, signal display tasks to run via queues
             
             DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty, alpha, updatedInput.condition, updatedInput.pedal, updatedInput.brakePressure};
@@ -487,17 +489,18 @@ void updateDecel (void* args)
 {
     (void)args;
 
-    const TickType_t xDelay = 1000 / portTICK_PERIOD_MS; // Need to match this to the ABS Duty
+    const TickType_t xDelay = 1000 / portTICK_PERIOD_MS; // Need to couple to thingy //Need to reduce in smaller increment dt*max decel*brakepress
+
     
     while (true)
     {
             // Get the current input data
             InputData currentInput;
             portBASE_TYPE status = xQueueReceive(updateDecelQueue, &currentInput, 100);
-            
+
             // Modify the speed dependant on brake pressure
             currentInput.speed = currentInput.speed - currentInput.brakePressure/5;
-            if (currentInput.speed <= 0) {
+            if (currentInput.speed <= 0 || currentInput.speed >= 200) {
                     currentInput.speed = 0;
             }
 
