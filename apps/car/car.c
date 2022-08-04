@@ -524,16 +524,11 @@ int main(void) {
     initPWMInputManager (CAR_PWM_MIN_FREQ);
 
     initialiseUSB_UART ();
-    initialisePWM (); // FOR TESTING ABS ONLY, DELETE
     initializeCarPWMOutputs();
 
-    // Initialisation is complete, so turn on the output.
-    PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
     PWMSignal_t ABSPWM = {.id = ABSPWM_ID, .gpioPin = GPIO_PIN_0};
     registerPWMSignal(ABSPWM);
-
-
 
     createQueues();
     //xTaskCreate(&blink, "blink", 150, NULL, 0, &blinkHandle);
