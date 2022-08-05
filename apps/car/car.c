@@ -219,59 +219,6 @@ void updateUARTTask(void* args)
 }
 
 
-<<<<<<< HEAD
-                leftRear.speed = updatedInput.speed;
-                leftRear.turnRadius = 0;
-
-                rightFront.speed = updatedInput.speed;
-                rightFront.turnRadius = 0;
-
-                rightRear.speed = updatedInput.speed;
-                rightRear.turnRadius = 0;
-                
-            } 
-            else if (alpha < 0.0) //Turning left
-            {
-                calculateWheelRadii(&leftRear, &leftFront, &rightRear, &rightFront, alpha);
-                calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed);
-            }
-            else if (alpha > 0.0) //Turning right
-            {
-                calculateWheelRadii(&rightRear, &rightFront, &leftRear, &leftFront, alpha);
-                calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, updatedInput.speed);
-            }
-            calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
-            detectWheelSlip(&leftFront, &leftRear, &rightFront, &rightRear, slipArray, updatedInput.condition, updatedInput.pedal,updatedInput.brakePressure);
-            vt100_print_slipage(slipArray);
-
-            // TO DO Lock which ever wheel is slipping
-            // Wheel info updated, signal display tasks to run via queues
-            
-            DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, updatedInput.speed, updatedInput.steeringWheelDuty, alpha, updatedInput.condition, updatedInput.pedal, updatedInput.brakePressure};
-            xQueueSendToBack(UARTDisplayQueue, &updatedDisplayInfo, 0);
-            xQueueSendToBack(OLEDDisplayQueue, &updatedDisplayInfo, 0);
-            
-            xQueueSendToBack(updateDecelQueue, &updatedInput, 0);
-
-            /* Sending wheel pwms 1 at a time may cause issues as it updates them one at a time so abs
-            controller might think its slipping whne it just hasnt updated all wheels yet*/
-            pwmSignal leftFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, PWMHardwareDetailsLF.base, PWMHardwareDetailsLF.gen, PWMHardwareDetailsLF.outnum};
-            xQueueSendToBack(updatePWMQueue, &leftFrontPWM, 0);
-
-            pwmSignal leftRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftRear.pulseHz, PWMHardwareDetailsLR.base, PWMHardwareDetailsLR.gen, PWMHardwareDetailsLR.outnum};
-            xQueueSendToBack(updatePWMQueue, &leftRearPWM, 0);
-
-            pwmSignal rightFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightFront.pulseHz, PWMHardwareDetailsRF.base, PWMHardwareDetailsRF.gen, PWMHardwareDetailsRF.outnum};
-            xQueueSendToBack(updatePWMQueue, &rightFrontPWM, 0);
-
-            pwmSignal rightRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightRear.pulseHz, PWMHardwareDetailsRR.base, PWMHardwareDetailsRR.gen, PWMHardwareDetailsRR.outnum};
-            xQueueSendToBack(updatePWMQueue, &rightRearPWM, 0);
-
-        }else continue;
-    }
-}
-=======
->>>>>>> 66fff860e169e3d4a4460ff5410a52f71ccce11a
 
 // TO DO: change to read uart task? and move to ui.c
 /**
@@ -420,19 +367,16 @@ void updateDecel (void* args)
 {
     (void)args;
 
-    const TickType_t xDelay = 1000 / portTICK_PERIOD_MS; // Need to couple to thingy //Need to reduce in smaller increment dt*max decel*brakepress
-
+    const TickType_t xDelay = 1000 / portTICK_PERIOD_MS; // Need to match this to the ABS Duty
     
     while (true)
     {
-            // Get the current input data
-            InputData currentInput;
-            portBASE_TYPE status = xQueueReceive(updateDecelQueue, &currentInput, 100);
-
+            uint8_t currentSpeed = getCarSpeed();
+            uint8_t currentBrakeDuty = getBrakePressureDuty();
             // Modify the speed dependant on brake pressure
-            currentInput.speed = currentInput.speed - currentInput.brakePressure/5;
-            if (currentInput.speed <= 0 || currentInput.speed >= 200) {
-                    currentInput.speed = 0;
+            int newSpeed = currentSpeed - currentBrakeDuty/5;
+            if (newSpeed <= 0) {
+                    newSpeed = 0;
             }
 
             setCarSpeed((uint8_t)newSpeed);
