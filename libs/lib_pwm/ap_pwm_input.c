@@ -94,7 +94,7 @@ static PWMSignal_t* findPWMInput(char* id);
 QueueHandle_t PWMSignalQueue = NULL;
 
 //*************************************************************
-// Global variables
+// Static variables
 //*************************************************************
 static PWMInputSignals_t PWMInputSignals;
 static volatile int risingEdgeCount;

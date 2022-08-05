@@ -59,6 +59,8 @@ initBrakeOutput (void)
 
     xTaskCreate(&updateABSTask, "updateABS", 256, NULL, 0, &updateABSHandle);
     xTaskCreate(&pulseABSTask, "pulseABS", 256, NULL, 0, &pulseABSHandle);
+
+    updateABS();
 }
 
 /**

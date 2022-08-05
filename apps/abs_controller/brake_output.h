@@ -14,8 +14,6 @@ enum absStates {ABS_OFF = 0, ABS_ON};
 // Function handles
 //*************************************************************
 
-//TO DO: Add headers
-
 /**
  * @brief Initialise brake output module
  * @return None
@@ -43,7 +41,7 @@ toggleABS (void);
  * @return int - 1 if successful, 0 if failed
  */
 int 
-setABSDuty (uint8_t duty)
+setABSDuty (uint8_t duty);
 
 /**
  * @brief Passes the ABS state out of the module

@@ -53,20 +53,20 @@ TaskHandle_t updateButtonsHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 TaskHandle_t calculatePWMPropertiesHandle;
 
-// void
-// printPWM(char* id)
-// {
-//     char str[100];
-//     PWMSignal_t signal;
-//     // Details of first PWM
-//     signal = getPWMInputSignal(id);
-//     sprintf(str, "Signal ID = %s\r\n", id);
-//     UARTSend(str);
-//     sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
-//     UARTSend(str);
-//     sprintf(str, "Duty : %ld\r\n\n", signal.duty);
-//     UARTSend(str);
-// }
+void
+printPWM(char* id)
+{
+    char str[100];
+    PWMSignal_t signal;
+    // Details of first PWM
+    signal = getPWMInputSignal(id);
+    sprintf(str, "Signal ID = %s\r\n", id);
+    UARTSend(str);
+    sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
+    UARTSend(str);
+    sprintf(str, "Duty : %ld\r\n\n", signal.duty);
+    UARTSend(str);
+}
 
 void updateButtonsTask(void* args)
 {
@@ -78,19 +78,28 @@ void updateButtonsTask(void* args)
     {
         updateButtons();
 
-        // if (checkButton(LEFT) == PUSHED)
+        if (checkButton(LEFT) == PUSHED)
+        {
+            printPWM("LF");
+            printPWM("RF");
+            printPWM("LR");
+            printPWM("RR");
+            printPWM("Steering");
+            printPWM("BrakePedal");
+        }
+
+        // if (checkButton(RIGHT) == PUSHED)
         // {
-        //     printPWM("LF");
-        //     printPWM("RF");
-        //     printPWM("LR");
-        //     printPWM("RR");
-        //     printPWM("Steering");
-        //     printPWM("BrakePedal");
+        //     toggleABS();
         // }
 
-        if (checkButton(RIGHT) == PUSHED)
+        if (getPWMInputSignal("RR").frequency < 60)
         {
-            toggleABS();
+            setABS(ABS_ON);
+        }
+        else
+        {
+            setABS(ABS_OFF);
         }
 
         vTaskDelay(xDelay);
