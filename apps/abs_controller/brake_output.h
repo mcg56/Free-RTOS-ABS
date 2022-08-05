@@ -50,5 +50,12 @@ setABSDuty (uint8_t duty);
 enum absStates 
 getABSState (void);
 
+/**
+ * @brief Passes the ABS duty out of the module
+ * @return int ABSDuty - The current ABS duty
+ */
+uint8_t 
+getABSDuty (void);
+
 
 #endif

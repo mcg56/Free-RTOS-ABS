@@ -123,6 +123,8 @@ pulseABSTask (void* args)
     {
         pulseABS();
 
+        setStatusLEDBlinkRate(ABSDuty * 0.08); // TO DO: magic number
+
         vTaskDelay(xDelay);
     }   
 }
@@ -232,4 +234,14 @@ enum absStates
 getABSState (void)
 {
     return absState;
+}
+
+/**
+ * @brief Passes the ABS duty out of the module
+ * @return int ABSDuty - The current ABS duty
+ */
+uint8_t 
+getABSDuty (void)
+{
+    return ABSDuty;
 }

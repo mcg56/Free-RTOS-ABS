@@ -21,6 +21,6 @@ void
 setStatusLEDState (enum statusLEDState state);
 
 extern void 
-setBlinkRate (float rateHz);
+setStatusLEDBlinkRate (float rateHz);
 
 #endif

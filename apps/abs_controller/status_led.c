@@ -113,9 +113,9 @@ blinkTask(void* args)
  * @return None
  */
 void 
-setBlinkRate (float rateHz)
+setStatusLEDBlinkRate (float rateHz)
 {
-    setBlinkTaskDelay((1 / rateHz) / portTICK_PERIOD_MS);
+    setBlinkTaskDelay((1000 / rateHz) / portTICK_PERIOD_MS);
 }
 
 /**

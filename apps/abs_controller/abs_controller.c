@@ -101,6 +101,14 @@ void updateButtonsTask(void* args)
         // {
         //     setABS(ABS_OFF);
         // }
+        if (checkButton(UP) == PUSHED)
+        {
+            setABSDuty(getABSDuty() + 5);
+        }
+        if (checkButton(DOWN) == PUSHED)
+        {
+            setABSDuty(getABSDuty() - 5);
+        }
 
         vTaskDelay(xDelay);
     }
@@ -114,6 +122,7 @@ int main (void)
     initPWMInputManager (ABS_PWM_MIN_FREQ);
     initialiseUSB_UART ();
     initBrakeOutput ();
+    OLEDInitialise ();
 
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
