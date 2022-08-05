@@ -88,19 +88,19 @@ void updateButtonsTask(void* args)
             printPWM("BrakePedal");
         }
 
-        // if (checkButton(RIGHT) == PUSHED)
-        // {
-        //     toggleABS();
-        // }
+        if (checkButton(RIGHT) == PUSHED)
+        {
+            toggleABS();
+        }
 
-        if (getPWMInputSignal("RR").frequency < 60)
-        {
-            setABS(ABS_ON);
-        }
-        else
-        {
-            setABS(ABS_OFF);
-        }
+        // if (getPWMInputSignal("RR").frequency < 60)
+        // {
+        //     setABS(ABS_ON);
+        // }
+        // else
+        // {
+        //     setABS(ABS_OFF);
+        // }
 
         vTaskDelay(xDelay);
     }

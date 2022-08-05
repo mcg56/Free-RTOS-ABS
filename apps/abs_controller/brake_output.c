@@ -21,6 +21,7 @@
 
 #include "libs/lib_pwm/ap_pwm_output.h"
 #include "brake_output.h"
+#include "status_led.h"
 
 //*************************************************************
 // Constant Definitions
@@ -56,6 +57,7 @@ void
 initBrakeOutput (void)
 {
     initialisePWM ();
+    initStatusLED ();
 
     xTaskCreate(&updateABSTask, "updateABS", 256, NULL, 0, &updateABSHandle);
     xTaskCreate(&pulseABSTask, "pulseABS", 256, NULL, 0, &pulseABSHandle);
@@ -96,10 +98,12 @@ updateABS (void)
     {
         case ABS_ON:
             vTaskResume(pulseABSHandle);
+            setStatusLEDState(BLINKING);
             break;
         case ABS_OFF:
             vTaskSuspend(pulseABSHandle);
             setPWM(500, ABSDuty);
+            setStatusLEDState(FIXED_ON);
             break;
     }
 }
