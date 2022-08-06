@@ -54,6 +54,7 @@
 
 /**
  * @brief Collection of all input PWM signals
+ * 
  * @param signals - List of PWM signals
  * @param count - Count of PWM input signal
  * @param pins - Bitmask of the input signal pins
@@ -66,6 +67,7 @@ typedef struct {
 
 /**
  * @brief Record of edge timestamps for PWM calculations
+ * 
  * @param currRisingEdge - Timestamp of the most recent rising edge
  * @param lastRisingEdge - Timestamp of the previous rising edge
  * @param currFallingEdge - Timestamp of the most recent falling edge
@@ -104,6 +106,7 @@ static uint16_t PWMTimeoutRate = TIMEOUT_DEFAULT_RATE;
 
 /**
  * @brief Initialise the timer used for edge tracking
+ * 
  * @return None
  */
 static void
@@ -122,6 +125,7 @@ initPWMEdgeTimer (void)
 
 /**
  * @brief Initialise the timer for PWM edge timeout
+ * 
  * @return None
  */
 static void
@@ -144,6 +148,7 @@ initPWMTimeoutTimer (void)
 
 /**
  * @brief Initialise the pins of a given inputSignal
+ * 
  * @param inputSignal - PWM signal to be initialised
  * @return None
  */
@@ -163,6 +168,7 @@ initPWMInput (PWMSignal_t inputSignal)
 
 /**
  * @brief Initialise the PWM input manager module
+ * 
  * @param PWMMinFreq - Minimum PWM frequency to be read
  * @return None
  */
@@ -179,6 +185,7 @@ initPWMInputManager (uint16_t PWMMinFreq)
 
 /**
  * @brief Sets the PWM minimum frequency
+ * 
  * @param PWMMinFreq - Minimum PWM frequency
  * @return None
  */
@@ -197,6 +204,7 @@ setPWMMinFeq (uint16_t PWMMinFreq)
 
 /**
  * @brief Sets the timeout for the PWM timeout timer
+ * 
  * @param timeoutRate - Frequency of timer timout
  * @return None
  */
@@ -208,6 +216,7 @@ setPWMTimeout (uint16_t timeoutRate)
 
 /**
  * @brief Add a PWM signal to the list of registered input signals
+ * 
  * @param newSignal - PWM signal to be added
  * @return Bool - true if successful, false if failed
  */
@@ -229,6 +238,7 @@ registerPWMSignal (PWMSignal_t newSignal)
 
 /**
  * @brief Record the time stamps for each edge of a wheel PWM
+ * 
  * @return None
  */
 static void
@@ -253,6 +263,7 @@ PWMEdgeIntHandler (void)
 
 /**
  * @brief Interrupt handler for PWM reading timeout
+ * 
  * @return None
  */
 static void
@@ -271,6 +282,7 @@ PWMTimeoutHandler (void)
 
 /**
  * @brief Reset PWM timeout
+ * 
  * @return None
  */
 static void
@@ -285,6 +297,7 @@ resetTimeout (void)
 
 /**
  * @brief Regularly scheduled task for updating all PWM signals
+ * 
  * @return None
  */
 void updateAllPWMInputsTask(void* args)
@@ -304,6 +317,7 @@ void updateAllPWMInputsTask(void* args)
 
 /**
  * @brief Updates all PWM signal information
+ * 
  * @return Count off failed PWM signal updates
  */
 static int 
@@ -323,6 +337,7 @@ updateAllPWMInputs(void)
 
 /**
  * @brief Updates specific PWM signal information
+ * 
  * @return Count off failed PWM signal updates
  */
 int 
@@ -333,6 +348,7 @@ updatePWMInput(char* id)
 
 /**
  * @brief Refresh the duty and frequency of a given PWM signal
+ * 
  * @param PWMSignal - PWM signal to refresh
  * @return Bool - Boolean representing whether there was an error
  */
@@ -369,6 +385,7 @@ refreshPWMDetails(PWMSignal_t* PWMSignal)
 // TO DO: CURRENTLY UNUSED
 /**
  * @brief Tasks for managing the PWM signal update queue
+ * 
  * @param args Task arguments
  */
 void
@@ -397,6 +414,7 @@ calculatePWMPropertiesTask(void* args)
 
 /**
  * @brief Update the duty and frequency given a PWM signal's edge timestamps
+ * 
  * @param PWMSgnal - PWM signal to update
  * @param edgeTimestamps - Timestamps of the required edge points 
  * @return None
@@ -425,6 +443,7 @@ calculatePWMProperties(PWMSignal_t* PWMSignal)
 
 /**
  * @brief Locates the address of a desired PWM signal
+ * 
  * @param id String identifier for desired signal
  * @return Pointer of desired PWM signal. Return NULL if not found
  */
@@ -444,6 +463,7 @@ findPWMInput(char* id)
 
 /**
  * @brief Returns the identified PWM Input signal
+ * 
  * @param id String identifier for desired signal
  * @return Structure of PWM signal
  */
@@ -468,3 +488,31 @@ getPWMInputSignal (char* id)
 //     sprintf(str, "Duty : %ld\r\n\n", signal.duty);
 //     UARTSend(str);
 // }
+
+/**
+ * @brief Returns the number of PWM signals being tracked
+ * 
+ * @return int - Number of signals
+ */
+int 
+getCountPWMInputs (void)
+{
+    return PWMInputSignals.count;
+}
+
+/**
+ * @brief Provides the IDs of all tracking input signals
+ * 
+ * @param ids - An array to fill the IDs with
+ * @param len - The length of the ids list
+ */
+void
+getIDList (char* ids[], size_t len)
+{
+    for (int i = 0; i < PWMInputSignals.count; i++)
+    {
+        if (i == (int)len) return;
+
+        ids[i] = PWMInputSignals.signals[i].id;
+    }
+}

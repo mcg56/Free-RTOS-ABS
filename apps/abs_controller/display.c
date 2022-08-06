@@ -38,10 +38,15 @@
 //*************************************************************
 
 /**
- * @brief Collection of all input PWM signals
- * @param signals - List of PWM signals
- * @param count - Count of PWM input signal
- * @param pins - Bitmask of the input signal pins //UPDATE
+ * @brief Types of information displayed on screen
+ */
+enum screenType {ABS_INFO = 0, PWM_INFO};
+
+/**
+ * @brief ABS display information
+ * 
+ * @param absState - Current ABS State
+ * @param duty - Duty cycle in Hz
  */
 typedef struct {
     enum absStates absState;
@@ -49,26 +54,47 @@ typedef struct {
 } ABSScreen_t;
 
 /**
- * @brief 
+ * @brief PWM display information
  * 
+ * @param pwmSignal - PWM signal
  */
 typedef struct {
     PWMSignal_t pwmSignal;
 } PWMSignalScreen_t;
+
+/**
+ * @brief Display information
+ * 
+ * @param type - Type of information on the screen
+ * @param content - Contents of the screen
+ */
+typedef struct {
+    enum screenType type;
+    union ScreenContent {
+        ABSScreen_t absScreen;
+        PWMSignalScreen_t pwmScreen;
+    } content;
+} Screen_t;
 
 //*************************************************************
 // Function prototype
 //*************************************************************
 static void updateDisplayTask (void* args);
 static void updateDisplay (void);
-static void updateCurrentScreen (void);
-static void OLEDDrawScreen (void);
+static void updateSelectedScreen (void);
+static void updateScreenIndex (void);
+static void updateScreen (void);
+static void OLEDDrawABSScreen (void);
+static void OLEDDrawPWMScreen (void);
+static void clearScreen (void);
 static char* getABSStateName (enum absStates state);
+static PWMSignal_t getSelectedPWM (void);
 
 //*****************************************************************************
 // Global variables
 //*****************************************************************************
-static ABSScreen_t absScreen;
+static Screen_t screen; 
+static int screenIndex = 0;
 
 /**
  * @brief Initialise the display module
@@ -77,17 +103,23 @@ static ABSScreen_t absScreen;
 void
 initDisplay (void)
 {
+    initButtons ();
     OLEDInitialise ();
 
     xTaskCreate(&updateDisplayTask, "updateDisplay", 256, NULL, 0, NULL);
 }
 
+/**
+ * @brief Task used to update the display module
+ * 
+ * @return None
+ */
 static void
 updateDisplayTask (void* args)
 {
     (void)args;
 
-    const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 200 / portTICK_PERIOD_MS;
 
     while (true)
     {
@@ -97,33 +129,163 @@ updateDisplayTask (void* args)
     }   
 }
 
+/**
+ * @brief Update the OLED display information
+ * 
+ * @return None
+ */
 static void 
 updateDisplay (void)
 {
-    updateCurrentScreen ();
+    updateSelectedScreen ();
+
+    updateScreen ();
 }
 
-
+/**
+ * @brief Update what screen has been selected by the user
+ * 
+ * @return None
+ */
 static void
-updateCurrentScreen (void)
+updateSelectedScreen (void)
 {
-    absScreen.absState = getABSState();
-    absScreen.duty = getABSDuty();
+    updateScreenIndex();
 
-    OLEDDrawScreen ();
+    if (screenIndex == 0)
+    {
+        screen.content.absScreen.absState = getABSState();
+        screen.content.absScreen.duty = getABSDuty();
+        screen.type = ABS_INFO;
+    }
+    else
+    {
+        screen.content.pwmScreen.pwmSignal = getSelectedPWM();
+        screen.type = PWM_INFO;
+    }
 }
 
+/**
+ * @brief Get the Selected PWM object at the screen index
+ * 
+ * @return PWMSignal_t - PWM signal
+ */
+static PWMSignal_t
+getSelectedPWM (void)
+{
+    int numOfSignals = getCountPWMInputs();
+    char* pwmIDs[numOfSignals];
+
+    getIDList(pwmIDs, numOfSignals);
+
+    return getPWMInputSignal(pwmIDs[screenIndex - 1]);
+}
+
+/**
+ * @brief Update the screen index
+ * 
+ * @return None
+ */
 static void
-OLEDDrawScreen (void)
+updateScreenIndex (void)
+{
+    updateButtons();
+
+    if (checkButton(LEFT) == PUSHED) // TO DO: Change to up and down
+    {
+        if (screenIndex == getCountPWMInputs())
+        {
+            screenIndex = 0;
+        }
+        else
+        {
+            screenIndex++;
+        }
+    }
+}
+
+/**
+ * @brief Update the displaying screen information
+ * 
+ * @return None
+ */
+static void
+updateScreen (void)
+{
+    // Clear screen if changing types
+    static enum screenType prevScreenType = ABS_INFO;
+    if (screen.type != prevScreenType)
+    {
+        clearScreen ();
+        prevScreenType = screen.type;
+    }
+
+    switch (screen.type)
+    {
+        case ABS_INFO:
+            OLEDDrawABSScreen ();
+            break;
+        case PWM_INFO:
+            OLEDDrawPWMScreen ();
+            break;
+    } 
+}
+
+/**
+ * @brief Updates the screen for an ABS information display
+ * 
+ * @return None
+ */
+static void
+OLEDDrawABSScreen (void)
 {
     char str[17]; // Display fits 16 characters wide.
 	
     usnprintf (str, sizeof(str), "---Brake Info---");
     OLEDStringDraw (str, 0, 0);
-    usnprintf (str, sizeof(str), "ABS State:   %s ", getABSStateName(absScreen.absState));
+    usnprintf (str, sizeof(str), "ABS State:   %s ", getABSStateName(screen.content.absScreen.absState));
     OLEDStringDraw (str, 0, 1);
-    usnprintf (str, sizeof(str), "ABS Duty:    %2d%%", absScreen.duty);
+    usnprintf (str, sizeof(str), "ABS Duty:    %2d%%", screen.content.absScreen.duty);
     OLEDStringDraw (str, 0, 2);
+}
+
+/**
+ * @brief Updates the screen for a PWM information display
+ * 
+ * @return None
+ */
+static void
+OLEDDrawPWMScreen (void)
+{
+    char str[17]; // Display fits 16 characters wide.
+	
+    usnprintf (str, sizeof(str), "----PWM Info----");
+    OLEDStringDraw (str, 0, 0);
+    usnprintf (str, sizeof(str), "ID:", screen.content.pwmScreen.pwmSignal.id);
+    OLEDStringDraw (str, 0, 1);
+    usnprintf (str, sizeof(str), "%s", screen.content.pwmScreen.pwmSignal.id);
+    OLEDStringDraw (str, 16 - strlen(str), 1); // Right align ID
+    usnprintf (str, sizeof(str), "Freq:     %3d Hz", screen.content.pwmScreen.pwmSignal.frequency);
+    OLEDStringDraw (str, 0, 2);
+    usnprintf (str, sizeof(str), "Duty:        %2d%%", screen.content.pwmScreen.pwmSignal.duty);
+    OLEDStringDraw (str, 0, 3);
+}
+
+/**
+ * @brief Clears the OLED screen
+ *  
+ * @return None
+ */
+static void
+clearScreen (void)
+{
+    char str[17]; // Display fits 16 characters wide.
+	
+    usnprintf (str, sizeof(str), "                ");
+    OLEDStringDraw (str, 0, 0);
+    OLEDStringDraw (str, 0, 1);
+    OLEDStringDraw (str, 0, 2);
+    OLEDStringDraw (str, 0, 3);
 }
 
 

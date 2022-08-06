@@ -78,15 +78,15 @@ void updateButtonsTask(void* args)
     {
         updateButtons();
 
-        if (checkButton(LEFT) == PUSHED)
-        {
-            printPWM("LF");
-            printPWM("RF");
-            printPWM("LR");
-            printPWM("RR");
-            printPWM("Steering");
-            printPWM("BrakePedal");
-        }
+        // if (checkButton(LEFT) == PUSHED)
+        // {
+        //     printPWM("LF");
+        //     printPWM("RF");
+        //     printPWM("LR");
+        //     printPWM("RR");
+        //     printPWM("Steering");
+        //     printPWM("BrakePedal");
+        // }
 
         if (checkButton(RIGHT) == PUSHED)
         {
@@ -143,7 +143,7 @@ int main (void)
     PWMSignal_t SteeringPWM = {.id = "Steering", .gpioPin = GPIO_PIN_5};
     registerPWMSignal(SteeringPWM);
 
-    PWMSignal_t BrakePedalPWM = {.id = "BrakePedal", .gpioPin = GPIO_PIN_6};
+    PWMSignal_t BrakePedalPWM = {.id = "BrakePedal", .gpioPin = GPIO_PIN_7g};
     registerPWMSignal(BrakePedalPWM); 
 
     xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);

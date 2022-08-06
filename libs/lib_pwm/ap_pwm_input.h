@@ -33,43 +33,72 @@ typedef struct {
 
 /**
  * @brief Initialise the PWM input manager module
+ * 
  * @param PWMMinFreq - Minimum PWM frequency to be read
  * @return None
  */
-extern void initPWMInputManager (uint16_t PWMMinFreq);
+extern void 
+initPWMInputManager (uint16_t PWMMinFreq);
 
 /**
  * @brief Add a PWM signal to the list of registered input signals
+ * 
  * @param newSignal - PWM signal to be added
  * @return Bool - true if successful, false if failed
  */
-extern int registerPWMSignal (PWMSignal_t newSignal);
+extern int 
+registerPWMSignal (PWMSignal_t newSignal);
 
 // TO DO: This could be done internally within the module?
 /**
  * @brief Regularly scheduled task for updating all PWM signals
+ * 
  * @return None
  */
-extern void updateAllPWMInputsTask(void* args);
+extern void 
+updateAllPWMInputsTask(void* args);
 
 /**
  * @brief Updates specific PWM signal information
+ * 
  * @return Count off failed PWM signal updates
  */
-extern int updatePWMInput(char* id);
+extern int 
+updatePWMInput(char* id);
 
 /**
  * @brief Sets the PWM minimum frequency for the module
+ * 
  * @param PWMMinFreq - Minimum PWM frequency
  * @return None
  */
-extern void setPWMMinFeq (uint16_t PWMMinFreq);
+extern void 
+setPWMMinFeq (uint16_t PWMMinFreq);
 
 /**
  * @brief Returns the identified PWM Input signal
+ * 
  * @param id String identifier for desired signal
  * @return Structure of PWM signal
  */
-extern PWMSignal_t getPWMInputSignal (char* id);
+extern PWMSignal_t 
+getPWMInputSignal (char* id);
+
+/**
+ * @brief Returns the number of PWM signals being tracked
+ * 
+ * @return int - Number of signals
+ */
+int 
+getCountPWMInputs (void);
+
+/**
+ * @brief Provides the IDs of all tracking input signals
+ * 
+ * @param ids - An array to fill the IDs with
+ * @param len - The length of the ids list
+ */
+void
+getIDList (char* ids[], size_t len);
 
 #endif
