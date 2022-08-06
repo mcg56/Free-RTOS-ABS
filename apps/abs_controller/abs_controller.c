@@ -45,9 +45,9 @@
 #include "libs/lib_system/ap_system.h"
 #include "libs/lib_pwm/ap_pwm_input.h"
 #include "libs/lib_pwm/ap_pwm_output.h"
-#include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 
 #include "brake_output.h"
+#include "display.h"
 
 TaskHandle_t updateButtonsHandle;
 TaskHandle_t updateAllPWMInputsHandle;
@@ -122,8 +122,10 @@ int main (void)
     initPWMInputManager (ABS_PWM_MIN_FREQ);
     initialiseUSB_UART ();
     initBrakeOutput ();
-    OLEDInitialise ();
+    initDisplay ();
+    
 
+    // TO DO: Should all this PWM stuff be its own module? pwm_manager?
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
     PWMSignal_t LFPWM = {.id = "LF", .gpioPin = GPIO_PIN_0};
