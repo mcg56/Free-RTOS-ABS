@@ -405,7 +405,7 @@ int main(void) {
     initializeCarPWMOutputs();
 
 
-    PWMSignal_t ABSPWM = {.id = ABSPWM_ID, .gpioPin = GPIO_PIN_0};
+    PWMSignal_t ABSPWM = {.id = ABSPWM_ID, .gpioPort = GPIO_PORTB_BASE, .gpioPin = GPIO_PIN_0};
     registerPWMSignal(ABSPWM);
 
     createQueues();

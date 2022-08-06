@@ -128,22 +128,22 @@ int main (void)
     // TO DO: Should all this PWM stuff be its own module? pwm_manager?
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
 
-    PWMSignal_t LFPWM = {.id = "LF", .gpioPin = GPIO_PIN_0};
+    PWMSignal_t LFPWM = {.id = "LF", .gpioPort = GPIO_PORTB_BASE, .gpioPin = GPIO_PIN_0};
     registerPWMSignal(LFPWM);
 
-    PWMSignal_t RFPWM = {.id = "RF", .gpioPin = GPIO_PIN_1};
+    PWMSignal_t RFPWM = {.id = "RF", .gpioPort = GPIO_PORTB_BASE, .gpioPin = GPIO_PIN_1};
     registerPWMSignal(RFPWM);
 
-    PWMSignal_t LRPWM = {.id = "LR", .gpioPin = GPIO_PIN_2};
+    PWMSignal_t LRPWM = {.id = "LR", .gpioPort = GPIO_PORTB_BASE, .gpioPin = GPIO_PIN_2};
     registerPWMSignal(LRPWM);
 
-    PWMSignal_t RRPWM = {.id = "RR", .gpioPin = GPIO_PIN_4};
+    PWMSignal_t RRPWM = {.id = "RR", .gpioPort = GPIO_PORTB_BASE, .gpioPin = GPIO_PIN_4};
     registerPWMSignal(RRPWM);  
 
-    PWMSignal_t SteeringPWM = {.id = "Steering", .gpioPin = GPIO_PIN_5};
+    PWMSignal_t SteeringPWM = {.id = "Steering", .gpioPort = GPIO_PORTB_BASE, .gpioPin = GPIO_PIN_5};
     registerPWMSignal(SteeringPWM);
 
-    PWMSignal_t BrakePedalPWM = {.id = "BrakePedal", .gpioPin = GPIO_PIN_7g};
+    PWMSignal_t BrakePedalPWM = {.id = "BrakePedal", .gpioPort = GPIO_PORTC_BASE, .gpioPin = GPIO_PIN_7};
     registerPWMSignal(BrakePedalPWM); 
 
     xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);

@@ -3,7 +3,7 @@
  * ap_pwm_input.c - Main controlling file for the 
  *      PWM information.
  *
- * IMPORTANT - This assumes all signals are on port B
+ * IMPORTANT - This assumes all signals are on port B or port C
  * 
  * T.R Peterson, M.C Gardyne
  * Last modified:  24.7.22
@@ -46,7 +46,7 @@
 #define TIMEOUT_DEFAULT_RATE    30  // [Hz]
 
 #define PWM_GPIO_BASE           GPIO_PORTB_BASE
-#define PWM_GPIO_PERIPH         SYSCTL_PERIPH_GPIOB
+#define PWM_GPIO_PERIPH         SYSCTL_PERIPH_GPIOB | SYSCTL_PERIPH_GPIOC
 
 //*************************************************************
 // Type Definitions
@@ -154,16 +154,14 @@ initPWMTimeoutTimer (void)
  */
 static void
 initPWMInput (PWMSignal_t inputSignal)
-{
-    SysCtlPeripheralEnable(PWM_GPIO_PERIPH);
+{    
+    GPIOPinTypeGPIOInput(inputSignal.gpioPort, inputSignal.gpioPin);
 
-    GPIOPinTypeGPIOInput(PWM_GPIO_BASE, inputSignal.gpioPin);
+    GPIOIntTypeSet(inputSignal.gpioPort, inputSignal.gpioPin, GPIO_BOTH_EDGES);
 
-    GPIOIntTypeSet(PWM_GPIO_BASE, inputSignal.gpioPin, GPIO_BOTH_EDGES);
+    GPIOIntRegister(inputSignal.gpioPort, PWMEdgeIntHandler);
 
-    GPIOIntRegister(PWM_GPIO_BASE, PWMEdgeIntHandler);
-
-    GPIOIntDisable(PWM_GPIO_BASE, inputSignal.gpioPin);
+    GPIOIntDisable(inputSignal.gpioPort, inputSignal.gpioPin); 
 }
 
 /**
@@ -175,6 +173,9 @@ initPWMInput (PWMSignal_t inputSignal)
 void
 initPWMInputManager (uint16_t PWMMinFreq)
 {
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOC);
+
     setPWMMinFeq(PWMMinFreq);
 
     initPWMEdgeTimer();
@@ -244,7 +245,18 @@ registerPWMSignal (PWMSignal_t newSignal)
 static void
 PWMEdgeIntHandler (void)
 {
-    if (GPIOPinRead (PWM_GPIO_BASE, GPIOIntStatus(PWM_GPIO_BASE, true)))
+    uint32_t base;
+
+    if (GPIOIntStatus(GPIO_PORTB_BASE, true) != 0)
+    {
+        base = GPIO_PORTB_BASE;
+    }
+    else if (GPIOIntStatus(GPIO_PORTC_BASE, true) != 0)
+    {
+        base = GPIO_PORTC_BASE; 
+    }
+
+    if (GPIOPinRead (base, GPIOIntStatus(base, true)))
     {
         edgeTimestamps.lastRisingEdge = edgeTimestamps.currRisingEdge;
         edgeTimestamps.currRisingEdge = TimerValueGet(EDGE_TIMER_BASE, EDGE_TIMER);
@@ -258,7 +270,7 @@ PWMEdgeIntHandler (void)
 
     // TO DO: if edge is two edges then queue edgeTimestamps
 
-    GPIOIntClear(PWM_GPIO_BASE, PWMInputSignals.pins);
+    GPIOIntClear(base, PWMInputSignals.pins);
 }
 
 /**
@@ -357,16 +369,16 @@ refreshPWMDetails(PWMSignal_t* PWMSignal)
 {
     risingEdgeCount = 0; // May need to be specific to PWM signal - not sure yet
 
-    GPIOIntClear(PWM_GPIO_BASE, PWMInputSignals.pins);
+    GPIOIntClear(PWMSignal->gpioPort, PWMInputSignals.pins);
 
     resetTimeout();
 
     // TO DO - disable anything that might interrupt this section
-    GPIOIntEnable(PWM_GPIO_BASE, PWMSignal->gpioPin);
+    GPIOIntEnable(PWMSignal->gpioPort, PWMSignal->gpioPin);
     TimerEnable(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);
     while (risingEdgeCount < RISING_EDGE_TIMEOUT && !PWMReadTimeout);
     TimerDisable(TIMEOUT_TIMER_BASE, TIMEOUT_TIMER);
-    GPIOIntDisable(PWM_GPIO_BASE, PWMSignal->gpioPin);
+    GPIOIntDisable(PWMSignal->gpioPort, PWMSignal->gpioPin);
 
     if (!PWMReadTimeout)
     {
@@ -405,8 +417,6 @@ calculatePWMPropertiesTask(void* args)
 
             calculatePWMProperties(PWMSignal);
         }
-        
-        // TO DO - wasn't dealing with timeout very well. Need to be able to do that
 
         vTaskDelay(xDelay);
     }  
@@ -505,6 +515,7 @@ getCountPWMInputs (void)
  * 
  * @param ids - An array to fill the IDs with
  * @param len - The length of the ids list
+ * @return None
  */
 void
 getIDList (char* ids[], size_t len)
