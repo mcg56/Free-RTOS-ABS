@@ -2,6 +2,7 @@
 #define PWM_INPUTS_H_
 
 #include <stdint.h>
+#include <stddef.h>
 
 #define ID_LEN 20
 #define ABSPWM_ID "ABS"

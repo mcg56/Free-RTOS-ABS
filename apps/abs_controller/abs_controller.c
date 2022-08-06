@@ -45,6 +45,7 @@
 #include "libs/lib_system/ap_system.h"
 #include "libs/lib_pwm/ap_pwm_input.h"
 #include "libs/lib_pwm/ap_pwm_output.h"
+#include "abs_manager.h"
 
 #include "brake_output.h"
 #include "display.h"
@@ -77,6 +78,17 @@ void updateButtonsTask(void* args)
     while (true)
     {
         updateButtons();
+        char str[100];
+        //float val = 6.54;
+        bool val = checkSlippySloppy();
+        if (val == false){
+            sprintf(str, "Not sliping\r\n\n");
+        } else {
+            sprintf(str, "Sliping\r\n\n");
+        }
+        
+        //gcvt(val,2,str); TEST
+        UARTSend(str);
 
         // if (checkButton(LEFT) == PUSHED)
         // {
@@ -88,27 +100,27 @@ void updateButtonsTask(void* args)
         //     printPWM("BrakePedal");
         // }
 
-        if (checkButton(RIGHT) == PUSHED)
-        {
-            toggleABS();
-        }
+        // if (checkButton(RIGHT) == PUSHED)
+        // {
+        //     toggleABS();
+        // }
 
-        // if (getPWMInputSignal("RR").frequency < 60)
+        // // if (getPWMInputSignal("RR").frequency < 60)
+        // // {
+        // //     setABS(ABS_ON);
+        // // }
+        // // else
+        // // {
+        // //     setABS(ABS_OFF);
+        // // }
+        // if (checkButton(UP) == PUSHED)
         // {
-        //     setABS(ABS_ON);
+        //     setABSDuty(getABSDuty() + 5);
         // }
-        // else
+        // if (checkButton(DOWN) == PUSHED)
         // {
-        //     setABS(ABS_OFF);
+        //     setABSDuty(getABSDuty() - 5);
         // }
-        if (checkButton(UP) == PUSHED)
-        {
-            setABSDuty(getABSDuty() + 5);
-        }
-        if (checkButton(DOWN) == PUSHED)
-        {
-            setABSDuty(getABSDuty() - 5);
-        }
 
         vTaskDelay(xDelay);
     }
