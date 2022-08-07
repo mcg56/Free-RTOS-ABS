@@ -178,12 +178,13 @@ void readInputsTask(void* args)
         
         //char string[17]; // Display fits 16 characters wide.
         
-        int32_t c = UARTCharGetNonBlocking(UART_USB_BASE);
+        
 
         // Wait until we can take the mutex to be able to use car state shared resource
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
         // We have obtained the mutex, now can run the task
 
+        int32_t c = UARTCharGetNonBlocking(UART_USB_BASE);
         // Update values accodingly.
         bool change = false;
 
@@ -327,8 +328,8 @@ void processABSPWMInputTask(void* args)
             {
                 if(updatePWMInput(ABSPWM_ID)) // Timeout occured again, ABS very likely to be on
                 {
-                    // Toggle blue
-                    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
+                    // Toggle Red led
+                    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
 
                     break;
                 } else{
@@ -339,11 +340,16 @@ void processABSPWMInputTask(void* args)
 
         setABSBrakePressureDuty(pwmDetails.duty);
 
-        char ANSIString[MAX_STR_LEN + 1]; // For uart message
+        char string[17]; // Display fits 16 characters wide.
+        sprintf(string, "D: %02ld F: %03ld", pwmDetails.duty, pwmDetails.frequency);
+        OLEDStringDraw (string, 0, 3);
+
+
+        /*char ANSIString[MAX_STR_LEN + 1]; // For uart message
         vt100_set_line_number(21);
         vt100_set_white();
         sprintf(ANSIString, "Duty: %lu  Freq %lu", pwmDetails.duty, pwmDetails.frequency);
-        UARTSend (ANSIString);
+        UARTSend (ANSIString);*/
 
         vTaskDelay(xDelay);
     }   
@@ -393,8 +399,6 @@ int main(void) {
     // Setup red LED on PF1
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1);
-    // Setup Blue LED on PF2
-    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_2);
 
     initButtons();
     initPWMInputManager (CAR_PWM_MIN_FREQ);
