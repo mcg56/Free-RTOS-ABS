@@ -93,7 +93,7 @@
 #define PWM_BRAKE_GPIO_CONFIG   GPIO_PD1_M1PWM1
 #define PWM_BRAKE_GPIO_PIN      GPIO_PIN_1
 #define PWM_BRAKE_FIXED_HZ      100
-#define PWM_BRAKE_START_DUTY    0
+#define PWM_BRAKE_START_DUTY    5
 
 //Steering wheel output PWM hardware details M1PWM2 (gen 1)
 #define PWM_STEER_BASE	        PWM1_BASE
@@ -113,59 +113,38 @@
 ***************************** PUBLIC STRUCT DEFINITIONS *****************************
 ************************************************************************************/
 
-
 /**
- * @brief Contains hadware information about specific PWM output
- * @param base Base of PWM module (PWM0_BASE or PWM1_BASE)
- * @param gen PWM generator (can ge gen 1,2,3 or 4)
- * @param outnum Output number of PWM (pwm 1-7)
- * @param outbit Bit-wise ID for pwm output number
- * @param periphPWM Peripheral of PWM (again 0 or 1)
- * @param periphGPIO GPIO peripheral (e.g A, B, C, D...)
- * @param gpioBase Base of GPIO peripheral (A base, B base etc)
- * @param gpioConfig Sets alternate configuration of GPIO pin to PWM
- * @param gpioPin Pin of the port used for PWM output
+ * @brief PWM name enumurated datatype
  */
-typedef struct{
-    uint32_t base;
-    uint32_t gen;
-    uint32_t outnum;
-    uint32_t outbit;
-    uint32_t periphPWM;
-    uint32_t periphGPIO;
-    uint32_t gpioBase;
-    uint32_t gpioConfig;
-    uint32_t gpioPin;
-} PWMHardwareDetails;
+typedef enum 
+{
+pwmLF = 0,
+pwmLR = 1,
+pwmRF = 2,
+pwmRR = 3,
+pwmBrake = 4,
+pwmSteering = 5
+} pwmOutputName;
+
 
 /**
- * @brief PWM signal struct, used for each PWM signal to define it's parameters
+ * @brief PWM output signal struct, used to pass desired pwm to updatePWMOutputsTask
+ * via a queue.
  * @param duty Desired duty cycle (%)
  * @param freq Desired frequency (Hz)
- * @param base Base of PWM signal
- * @param gen PWM generator
- * @param outnum Output number of PWM
+ * @param pwmName PWM name to change
  */
 typedef struct{
 uint32_t duty;
 uint32_t freq;
-uint32_t base;
-uint32_t gen;
-uint32_t outnum;
-}pwmSignal;
+pwmOutputName pwmName;
+}pwmOutputUpdate_t;
 
 
 /************************************************************************************
 **********************************GLOBAL VARIABLES**********************************
 ************************************************************************************/
 extern QueueHandle_t updatePWMQueue;
-extern PWMHardwareDetails PWMHardwareDetailsLF;
-extern PWMHardwareDetails PWMHardwareDetailsLR;
-extern PWMHardwareDetails PWMHardwareDetailsRF;
-extern PWMHardwareDetails PWMHardwareDetailsRR;
-extern PWMHardwareDetails PWMHardwareDetailsSteering;
-extern PWMHardwareDetails PWMHardwareDetailsBrake;
-
 
 /************************************************************************************
 *****************************PUBLIC FUNCTION PROTOTYPES*****************************
@@ -207,6 +186,5 @@ void updatePWMOutputsTask(void* args);
  * @return None
  */
 void initializeCarPWMOutputs(void);
-
 
 #endif

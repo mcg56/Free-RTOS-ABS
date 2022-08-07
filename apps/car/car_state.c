@@ -9,18 +9,24 @@
  * @param steeringWheelDuty Car steering wheel duty (%)
  * @param roadCondition         Road Condition
  * @param pedalState        Brake pedal toggle
- * @param brakePressureDuty     Brake pressure (%)
+ * @param brakePedalPressureDuty     Brake pedal pressure (%)
+ * @param ABSBrakePressureDuty  Pressure returned from the ABS 
+ * controller (should match brakePedalPressureDuty %) 
  */
 typedef struct {
     uint8_t speed; //m
     uint8_t steeringWheelDuty; //km/h
     uint8_t roadCondition; 
     bool pedalState; 
-    uint8_t brakePressureDuty;
+    uint8_t brakePedalPressureDuty;
+    uint8_t ABSBrakePressureDuty;
 } Car_t;
 
 // Define local car state object
-static Car_t carState = {50, 50, 0, 0, 0};
+static Car_t carState = {50, 50, 0, 0, 50, 5};
+
+// Mutex to ensure only one task can access car state struct at once (get/set etc)
+//SemaphoreHandle_t carStateMutex = xSemaphoreCreateMutex();
 
 // Getters
 uint8_t getCarSpeed(void)
@@ -43,10 +49,16 @@ bool getPedalState(void)
     return carState.pedalState;
 }
 
-uint8_t getBrakePressureDuty(void)
+uint8_t getBrakePedalPressureDuty(void)
 {
-    return carState.brakePressureDuty;
+    return carState.brakePedalPressureDuty;
 }
+
+uint8_t getABSBrakePressureDuty(void)
+{
+    return carState.ABSBrakePressureDuty;
+}
+
 
 // Setters
 void setCarSpeed(uint8_t speed)
@@ -69,8 +81,12 @@ void setPedalState(bool state)
     carState.pedalState = state;
 }
 
-void setBrakePressureDuty(uint8_t brakePressureDuty)
+void setBrakePedalPressureDuty(uint8_t duty)
 {
-    carState.brakePressureDuty = brakePressureDuty;
+    carState.brakePedalPressureDuty = duty;
 }
 
+void setABSBrakePressureDuty(uint8_t duty)
+{
+    carState.ABSBrakePressureDuty = duty;
+}

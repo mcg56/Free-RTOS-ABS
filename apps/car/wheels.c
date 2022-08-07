@@ -177,12 +177,12 @@ void updateWheelInfoTask(void* args)
         // Wait until a task has notified it to run, when a new message is to be written
         ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
 
-        // Get the new car state info
+        // Get the car state info
         uint8_t carSpeed = getCarSpeed();
         uint8_t steeringDuty = getSteeringDuty();
         uint8_t roadCondition = getRoadCondition();
         bool pedalState = getPedalState();
-        uint8_t brakeDuty = getBrakePressureDuty();
+        uint8_t brakePedalPressure = getBrakePedalPressureDuty();
 
         float alpha = calculateSteeringAngle((float)steeringDuty);
         if (alpha == 0) // Driving straight
@@ -211,28 +211,25 @@ void updateWheelInfoTask(void* args)
             calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, carSpeed);
         }
         calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
-        detectWheelSlip(&leftFront, &leftRear, &rightFront, &rightRear, slipArray, roadCondition, pedalState, brakeDuty);
+        detectWheelSlip(&leftFront, &leftRear, &rightFront, &rightRear, slipArray, roadCondition, pedalState, brakePedalPressure);
         vt100_print_slipage(slipArray);
 
-        // Wheel info updated, signal display tasks to run via queues
-        
-        DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, carSpeed, steeringDuty, alpha, roadCondition, pedalState, brakeDuty};
-        xQueueSendToBack(UARTDisplayQueue, &updatedDisplayInfo, 0);
-        xQueueSendToBack(OLEDDisplayQueue, &updatedDisplayInfo, 0);
-        
+        // Wheel info updated, add car information to queue for uart display task       
+        DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, carSpeed, steeringDuty, alpha, roadCondition, pedalState, brakePedalPressure};
+        xQueueSendToBack(UARTDisplayQueue, &updatedDisplayInfo, 0);        
 
         /* Sending wheel pwms 1 at a time may cause issues as it updates them one at a time so abs
         controller might think its slipping whne it just hasnt updated all wheels yet*/
-        pwmSignal leftFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, PWMHardwareDetailsLF.base, PWMHardwareDetailsLF.gen, PWMHardwareDetailsLF.outnum};
+        pwmOutputUpdate_t leftFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, pwmLF};
         xQueueSendToBack(updatePWMQueue, &leftFrontPWM, 0);
 
-        pwmSignal leftRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftRear.pulseHz, PWMHardwareDetailsLR.base, PWMHardwareDetailsLR.gen, PWMHardwareDetailsLR.outnum};
+        pwmOutputUpdate_t leftRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftRear.pulseHz, pwmLR};
         xQueueSendToBack(updatePWMQueue, &leftRearPWM, 0);
 
-        pwmSignal rightFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightFront.pulseHz, PWMHardwareDetailsRF.base, PWMHardwareDetailsRF.gen, PWMHardwareDetailsRF.outnum};
+        pwmOutputUpdate_t rightFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightFront.pulseHz, pwmRF};
         xQueueSendToBack(updatePWMQueue, &rightFrontPWM, 0);
 
-        pwmSignal rightRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightRear.pulseHz, PWMHardwareDetailsRR.base, PWMHardwareDetailsRR.gen, PWMHardwareDetailsRR.outnum};
+        pwmOutputUpdate_t rightRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightRear.pulseHz, pwmRR};
         xQueueSendToBack(updatePWMQueue, &rightRearPWM, 0);
 
     }

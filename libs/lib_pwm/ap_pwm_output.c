@@ -35,27 +35,60 @@
 /**
  * @brief Function to initialise a given PWM. Sets a start Hz and duty but turns
  * off the output.
- * @param PWM Hardware details of the PWM to initialize
+ * @param config Hardware config name of PWM to initialize
  * @param startHz Starting Hz
  * @param startDuty Starting duty
  * @return None
  */
-void initializePWMGeneral(PWMHardwareDetails PWM, uint32_t startHz, uint32_t startDuty);
+void initializePWMGeneral(pwmOutputName configName, uint32_t startHz, uint32_t startDuty);
+
+
+
+/**
+ * @brief Contains hadware information about specific PWM output
+ * @param base Base of PWM module (PWM0_BASE or PWM1_BASE)
+ * @param gen PWM generator (can ge gen 1,2,3 or 4)
+ * @param outnum Output number of PWM (pwm 1-7)
+ * @param outbit Bit-wise ID for pwm output number
+ * @param periphPWM Peripheral of PWM (again 0 or 1)
+ * @param periphGPIO GPIO peripheral (e.g A, B, C, D...)
+ * @param gpioBase Base of GPIO peripheral (A base, B base etc)
+ * @param gpioConfig Sets alternate configuration of GPIO pin to PWM
+ * @param gpioPin Pin of the port used for PWM output
+ */
+typedef struct{
+    uint32_t base;
+    uint32_t gen;
+    uint32_t outnum;
+    uint32_t outbit;
+    uint32_t periphPWM;
+    uint32_t periphGPIO;
+    uint32_t gpioBase;
+    uint32_t gpioConfig;
+    uint32_t gpioPin;
+} PWMHardwareDetails;
 
 
 /************************************************************************************
 **********************************GLOBAL VARIABLES**********************************
 ************************************************************************************/
 QueueHandle_t updatePWMQueue = NULL;
-PWMHardwareDetails PWMHardwareDetailsMAIN = {PWM_MAIN_BASE, PWM_MAIN_GEN, PWM_MAIN_OUTNUM, PWM_MAIN_OUTBIT, PWM_MAIN_PERIPH_PWM, PWM_MAIN_PERIPH_GPIO, PWM_MAIN_GPIO_BASE, PWM_MAIN_GPIO_CONFIG, PWM_MAIN_GPIO_PIN};
-PWMHardwareDetails PWMHardwareDetailsLF = {PWM_LF_BASE, PWM_LF_GEN, PWM_LF_OUTNUM, PWM_LF_OUTBIT, PWM_LF_PERIPH_PWM, PWM_LF_PERIPH_GPIO, PWM_LF_GPIO_BASE, PWM_LF_GPIO_CONFIG, PWM_LF_GPIO_PIN};
-PWMHardwareDetails PWMHardwareDetailsLR = {PWM_LR_BASE, PWM_LR_GEN, PWM_LR_OUTNUM, PWM_LR_OUTBIT, PWM_LR_PERIPH_PWM, PWM_LR_PERIPH_GPIO, PWM_LR_GPIO_BASE, PWM_LR_GPIO_CONFIG, PWM_LR_GPIO_PIN};
-PWMHardwareDetails PWMHardwareDetailsRF = {PWM_RF_BASE, PWM_RF_GEN, PWM_RF_OUTNUM, PWM_RF_OUTBIT, PWM_RF_PERIPH_PWM, PWM_RF_PERIPH_GPIO, PWM_RF_GPIO_BASE, PWM_RF_GPIO_CONFIG, PWM_RF_GPIO_PIN};
-PWMHardwareDetails PWMHardwareDetailsRR = {PWM_RR_BASE, PWM_RR_GEN, PWM_RR_OUTNUM, PWM_RR_OUTBIT, PWM_RR_PERIPH_PWM, PWM_RR_PERIPH_GPIO, PWM_RR_GPIO_BASE, PWM_RR_GPIO_CONFIG, PWM_RR_GPIO_PIN};
-PWMHardwareDetails PWMHardwareDetailsSteering = {PWM_STEER_BASE, PWM_STEER_GEN, PWM_STEER_OUTNUM, PWM_STEER_OUTBIT, PWM_STEER_PERIPH_PWM, PWM_STEER_PERIPH_GPIO, PWM_STEER_GPIO_BASE, PWM_STEER_GPIO_CONFIG, PWM_STEER_GPIO_PIN};
-PWMHardwareDetails PWMHardwareDetailsBrake = {PWM_BRAKE_BASE, PWM_BRAKE_GEN, PWM_BRAKE_OUTNUM, PWM_BRAKE_OUTBIT, PWM_BRAKE_PERIPH_PWM, PWM_BRAKE_PERIPH_GPIO, PWM_BRAKE_GPIO_BASE, PWM_BRAKE_GPIO_CONFIG, PWM_BRAKE_GPIO_PIN};
+static const PWMHardwareDetails PWMHardwareDetailsLF = {PWM_LF_BASE, PWM_LF_GEN, PWM_LF_OUTNUM, PWM_LF_OUTBIT, PWM_LF_PERIPH_PWM, PWM_LF_PERIPH_GPIO, PWM_LF_GPIO_BASE, PWM_LF_GPIO_CONFIG, PWM_LF_GPIO_PIN};
+static const PWMHardwareDetails PWMHardwareDetailsLR = {PWM_LR_BASE, PWM_LR_GEN, PWM_LR_OUTNUM, PWM_LR_OUTBIT, PWM_LR_PERIPH_PWM, PWM_LR_PERIPH_GPIO, PWM_LR_GPIO_BASE, PWM_LR_GPIO_CONFIG, PWM_LR_GPIO_PIN};
+static const PWMHardwareDetails PWMHardwareDetailsRF = {PWM_RF_BASE, PWM_RF_GEN, PWM_RF_OUTNUM, PWM_RF_OUTBIT, PWM_RF_PERIPH_PWM, PWM_RF_PERIPH_GPIO, PWM_RF_GPIO_BASE, PWM_RF_GPIO_CONFIG, PWM_RF_GPIO_PIN};
+static const PWMHardwareDetails PWMHardwareDetailsRR = {PWM_RR_BASE, PWM_RR_GEN, PWM_RR_OUTNUM, PWM_RR_OUTBIT, PWM_RR_PERIPH_PWM, PWM_RR_PERIPH_GPIO, PWM_RR_GPIO_BASE, PWM_RR_GPIO_CONFIG, PWM_RR_GPIO_PIN};
+static const PWMHardwareDetails PWMHardwareDetailsSteering = {PWM_STEER_BASE, PWM_STEER_GEN, PWM_STEER_OUTNUM, PWM_STEER_OUTBIT, PWM_STEER_PERIPH_PWM, PWM_STEER_PERIPH_GPIO, PWM_STEER_GPIO_BASE, PWM_STEER_GPIO_CONFIG, PWM_STEER_GPIO_PIN};
+static const PWMHardwareDetails PWMHardwareDetailsBrake = {PWM_BRAKE_BASE, PWM_BRAKE_GEN, PWM_BRAKE_OUTNUM, PWM_BRAKE_OUTBIT, PWM_BRAKE_PERIPH_PWM, PWM_BRAKE_PERIPH_GPIO, PWM_BRAKE_GPIO_BASE, PWM_BRAKE_GPIO_CONFIG, PWM_BRAKE_GPIO_PIN};
 
-
+// Order must match pwmHardwareConfig enum
+static const PWMHardwareDetails PWMOutputsHardware[7] = 
+{PWMHardwareDetailsLF,
+PWMHardwareDetailsLR,
+PWMHardwareDetailsRF,
+PWMHardwareDetailsRR,
+PWMHardwareDetailsBrake,
+PWMHardwareDetailsSteering
+};
 
 /************************************************************************************
 **********************************PUBLIC FUNCTIONS**********************************
@@ -111,12 +144,13 @@ void updatePWMOutputsTask(void* args)
     (void)args; // unused
     while(true)
     {
-        // Wait until a new pwm is to be made, as its added to queue
-        pwmSignal requestedPWM;
+        // Wait until a new pwm is to be updated, when its added to queue
+        pwmOutputUpdate_t requestedPWM;
         portBASE_TYPE status = xQueueReceive(updatePWMQueue, &requestedPWM, 100);
         if (status == pdPASS)
         {
-            setPWMGeneral(requestedPWM.freq, requestedPWM.duty, requestedPWM.base, requestedPWM.gen, requestedPWM.outnum);
+            PWMHardwareDetails pwmHardware = PWMOutputsHardware[requestedPWM.pwmName];
+            setPWMGeneral(requestedPWM.freq, requestedPWM.duty, pwmHardware.base, pwmHardware.gen, pwmHardware.outnum);
         } else continue;
         
     }
@@ -124,13 +158,10 @@ void updatePWMOutputsTask(void* args)
 
 
 
-void initializePWMGeneral(PWMHardwareDetails PWM, uint32_t startHz, uint32_t startDuty)
+void initializePWMGeneral(pwmOutputName configName, uint32_t startHz, uint32_t startDuty)
 {
-    // Reset peripherals before enabling them. DO WE BEED TO RESET WHOLE PERIPHERAL?
-    // Means this function must come very early in setup and being after initOLED or LED 
-    // will make them not work
-    //SysCtlPeripheralReset (PWM.periphGPIO); // Used for PWM output
-    //SysCtlPeripheralReset (PWM.periphPWM); // GPIO for PWM
+    // Extract pwm hardware config from list
+    PWMHardwareDetails PWM = PWMOutputsHardware[configName];
 
     // Now enable the peripherals
     SysCtlPeripheralEnable(PWM.periphPWM);  // turn on pwm peripheral
@@ -160,19 +191,19 @@ void initializePWMGeneral(PWMHardwareDetails PWM, uint32_t startHz, uint32_t sta
 
 void initializeCarPWMOutputs(void)
 {
-    initializePWMGeneral(PWMHardwareDetailsLF, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
-    initializePWMGeneral(PWMHardwareDetailsLR, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
-    initializePWMGeneral(PWMHardwareDetailsRF, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
-    initializePWMGeneral(PWMHardwareDetailsRR, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
-    initializePWMGeneral(PWMHardwareDetailsSteering, PWM_STEERING_FIXED_HZ, PWM_STEERING_START_DUTY); // Need to check the nominal freq/duty of this
-    //initializePWMGeneral(PWMHardwareDetailsBrake, PWM_BRAKE_FIXED_HZ, PWM_BRAKE_START_DUTY); // Need to check the nominal freq/duty of this
+    initializePWMGeneral(pwmLF, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
+    initializePWMGeneral(pwmLR, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
+    initializePWMGeneral(pwmRF, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
+    initializePWMGeneral(pwmRR, PWM_WHEEL_START_HZ, PWM_WHEEL_FIXED_DUTY);
+    initializePWMGeneral(pwmBrake, PWM_BRAKE_FIXED_HZ, PWM_BRAKE_START_DUTY); // Need to check the nominal freq/duty of this
+    initializePWMGeneral(pwmSteering, PWM_STEERING_FIXED_HZ, PWM_STEERING_START_DUTY); // Need to check the nominal freq/duty of this
     
     // Initialisation is complete, so turn on the pwm output.
-    PWMOutputState(PWMHardwareDetailsLF.base, PWMHardwareDetailsLF.outbit, true);
-    PWMOutputState(PWMHardwareDetailsLR.base, PWMHardwareDetailsLR.outbit, true);
-    PWMOutputState(PWMHardwareDetailsRF.base, PWMHardwareDetailsRF.outbit, true);
-    PWMOutputState(PWMHardwareDetailsRR.base, PWMHardwareDetailsRR.outbit, true);
-    PWMOutputState(PWMHardwareDetailsSteering.base, PWMHardwareDetailsSteering.outbit, true);
-    //PWMOutputState(PWMHardwareDetailsBrake.base, PWMHardwareDetailsBrake.outbit, true);
+    PWMOutputState(PWMOutputsHardware[pwmLF].base, PWMOutputsHardware[pwmLF].outbit, true);
+    PWMOutputState(PWMOutputsHardware[pwmLR].base, PWMOutputsHardware[pwmLR].outbit, true);
+    PWMOutputState(PWMOutputsHardware[pwmRF].base, PWMOutputsHardware[pwmRF].outbit, true);
+    PWMOutputState(PWMOutputsHardware[pwmRR].base, PWMOutputsHardware[pwmRR].outbit, true);
+    PWMOutputState(PWMOutputsHardware[pwmBrake].base, PWMOutputsHardware[pwmBrake].outbit, true);
+    PWMOutputState(PWMOutputsHardware[pwmSteering].base, PWMOutputsHardware[pwmSteering].outbit, true);
 }
 

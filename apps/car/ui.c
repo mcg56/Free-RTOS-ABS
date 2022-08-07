@@ -63,7 +63,7 @@ void vt100_print_text(void) {
     vt100_set_line_number(10);
     UARTSend ("Wheel radii (m)");
     vt100_set_line_number(12);
-    UARTSend ("Brake pressure -> ([, ]):");
+    UARTSend ("Brake pedal pressure -> ([, ]):");
     vt100_set_line_number(14);
     UARTSend ("Brake pedal push/release -> (b):");
     vt100_set_line_number(16);
@@ -177,3 +177,4 @@ void vt100_print_slipage(bool slipArray[4])
     UARTSend (ANSIString);
     vt100_set_yellow();
 }
+
