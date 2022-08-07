@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "stdlib.h"
 #include <FreeRTOS.h>
-#include <task.h>
+#include <semphr.h>
 
 uint8_t getCarSpeed(void);
 uint8_t getSteeringDuty(void);
@@ -21,5 +21,7 @@ void setPedalState(bool state);
 void setBrakePedalPressureDuty(uint8_t duty);
 void setABSBrakePressureDuty(uint8_t duty);
 
+// Mutex to ensure only one task can access car state struct at once (get/set etc)
+extern SemaphoreHandle_t carStateMutex;
 
 #endif

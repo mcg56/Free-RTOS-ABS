@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "stdlib.h"
+#include <FreeRTOS.h>
+#include <semphr.h>
 
 /**
  * @brief Private struture for storing car state
@@ -25,8 +27,7 @@ typedef struct {
 // Define local car state object
 static Car_t carState = {50, 50, 0, 0, 50, 5};
 
-// Mutex to ensure only one task can access car state struct at once (get/set etc)
-//SemaphoreHandle_t carStateMutex = xSemaphoreCreateMutex();
+SemaphoreHandle_t carStateMutex = NULL;
 
 // Getters
 uint8_t getCarSpeed(void)

@@ -78,7 +78,7 @@ void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront,
  * @param condition     Condition of the road
  * @return Bool         Wheel slip condition
  */
-void detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear,char *slipArray, uint8_t condition, bool pedal, uint8_t pressure);
+void detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear, bool *slipArray, uint8_t condition, bool pedal, uint8_t pressure);
 
 
 
@@ -117,7 +117,7 @@ void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront,
     rightRear->pulseHz = PULSES_PER_REV*rightRear->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(1.0*PI);
 }
 
-void detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear, char *slipArray, uint8_t condition, bool pedal, uint8_t pressure)
+void detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear, bool *slipArray, uint8_t condition, bool pedal, uint8_t pressure)
 {
     int8_t m = -1;
     int8_t c;
@@ -171,11 +171,14 @@ void updateWheelInfoTask(void* args)
     static Wheel leftRear   = {0, 0, 0};
     static Wheel rightFront = {0, 0, 0};
     static Wheel rightRear  = {0, 0, 0};
-    bool wheelSlip = 0;
     bool slipArray[4] = {0,0,0,0};
     while(true) {
-        // Wait until a task has notified it to run, when a new message is to be written
+        // Wait until a task has notified it to run, when the car state has changed
         ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+
+        // Wait until we can take the mutex to be able to use car state shared resource
+        xSemaphoreTake(carStateMutex, portMAX_DELAY);
+        // We have obtained the mutex, now can run the task
 
         // Get the car state info
         uint8_t carSpeed = getCarSpeed();
@@ -231,6 +234,9 @@ void updateWheelInfoTask(void* args)
 
         pwmOutputUpdate_t rightRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightRear.pulseHz, pwmRR};
         xQueueSendToBack(updatePWMQueue, &rightRearPWM, 0);
+
+        // Give the mutex back
+        xSemaphoreGive(carStateMutex);
 
     }
 }

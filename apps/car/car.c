@@ -46,6 +46,15 @@ void createQueues(void)
     updatePWMQueue = xQueueCreate(10, sizeof(pwmOutputUpdate_t));
 }
 
+/**
+ * @brief Creates instances of all semaphores/mutexs
+ * @return None
+ */
+void createSempahores(void)
+{
+    carStateMutex = xSemaphoreCreateMutex();
+}
+
 
 /**
  * @brief Task that blinks LED
@@ -76,9 +85,7 @@ void blink(void* args) {
 void updateUARTTask(void* args)
 {
     (void)args;
-    TickType_t wake_time = xTaskGetTickCount();
-
-    
+   
     // // Create empty ine array to clear lines
     // char empytLine[MAX_STR_LEN + 1];
     // for(int i = 0; i < MAX_STR_LEN; i++)
@@ -86,6 +93,7 @@ void updateUARTTask(void* args)
     //     empytLine[i] = ' ';
     // }
     // empytLine[sizeof(empytLine)/sizeof(empytLine[0]) - 1] = '\r'; // Put last index as carridge return
+    const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
 
     vt100_print_text();
     vt100_set_white();
@@ -148,7 +156,7 @@ void updateUARTTask(void* args)
             vt100_print_pedal(updatedDisplayInfo.pedal);
 
         }else continue;
-  
+        vTaskDelay(xDelay);
     }
 }
 
@@ -171,6 +179,10 @@ void readInputsTask(void* args)
         //char string[17]; // Display fits 16 characters wide.
         
         int32_t c = UARTCharGetNonBlocking(UART_USB_BASE);
+
+        // Wait until we can take the mutex to be able to use car state shared resource
+        xSemaphoreTake(carStateMutex, portMAX_DELAY);
+        // We have obtained the mutex, now can run the task
 
         // Update values accodingly.
         bool change = false;
@@ -272,13 +284,15 @@ void readInputsTask(void* args)
             }
             change = true;
         }
+
+        // Give the mutex back
+        xSemaphoreGive(carStateMutex);
         
         //Check if any buttons changed
         if (change){
             // Tell the wheel update task to run
             xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
         }
-
 
         taskYIELD(); // Not sure if this is needed or not
         vTaskDelay(xDelay);
@@ -294,20 +308,33 @@ void processABSPWMInputTask(void* args)
     while (true) 
     {
         bool ABSOn = false;
+        // TO DO: maybe make this reading of pwm a critcal section so wont cause unwanted timeouts
         for (int i = 0; i<10; i++)
         {
-            if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS must be on
+            if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS might be on
             {
                 ABSOn = true;
+                break;
             } else{
                 pwmDetails = getPWMInputSignal(ABSPWM_ID);
             }
 
         }
+        
         if (ABSOn) // TO DO: Implement what we want to do when ABS is on
         {
-            // Toggle blue
-            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
+            for (int i = 0; i<10; i++) // Check again to make sure it wasnt interrupted by another task to cause timeout
+            {
+                if(updatePWMInput(ABSPWM_ID)) // Timeout occured again, ABS very likely to be on
+                {
+                    // Toggle blue
+                    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_2));
+
+                    break;
+                } else{
+                    pwmDetails = getPWMInputSignal(ABSPWM_ID);
+                }
+            }
         }
 
         setABSBrakePressureDuty(pwmDetails.duty);
@@ -315,7 +342,7 @@ void processABSPWMInputTask(void* args)
         char ANSIString[MAX_STR_LEN + 1]; // For uart message
         vt100_set_line_number(21);
         vt100_set_white();
-        sprintf(ANSIString, "Duty: %d  Freq %d", pwmDetails.duty, pwmDetails.frequency);
+        sprintf(ANSIString, "Duty: %lu  Freq %lu", pwmDetails.duty, pwmDetails.frequency);
         UARTSend (ANSIString);
 
         vTaskDelay(xDelay);
@@ -330,6 +357,11 @@ void updateDecel (void* args)
     
     while (true)
     {
+            // Wait until we can take the mutex to be able to use car state shared resource
+            //while(xSemaphoreTake( carStateMutex, ( TickType_t ) 10 ) != pdTRUE) continue;
+            xSemaphoreTake(carStateMutex, portMAX_DELAY);
+            // We have obtained the mutex, now can run the task
+
             uint8_t currentSpeed = getCarSpeed();
             // TO DO: Change to getABSBrakePressureDuty when using with ABS controller 
             //(Doesnt make a difference to output but shows we actually use the ABS duty not just our own)
@@ -342,6 +374,10 @@ void updateDecel (void* args)
             }
 
             setCarSpeed((uint8_t)newSpeed);
+
+            // Give the mutex back
+            xSemaphoreGive(carStateMutex);
+
             // Tell the wheel update task to run
             xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
             vTaskDelay(xDelay);
@@ -371,6 +407,8 @@ int main(void) {
     registerPWMSignal(ABSPWM);
 
     createQueues();
+    createSempahores();
+
     //xTaskCreate(&blink, "blink", 150, NULL, 0, &blinkHandle);
     xTaskCreate(&readInputsTask, "read inputs", 150, NULL, 0, &readInputsHandle);
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
