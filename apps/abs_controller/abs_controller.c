@@ -53,6 +53,7 @@
 TaskHandle_t updateButtonsHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 TaskHandle_t calculatePWMPropertiesHandle;
+TaskHandle_t checkSlipHandle;
 
 void
 printPWM(char* id)
@@ -78,17 +79,7 @@ void updateButtonsTask(void* args)
     while (true)
     {
         updateButtons();
-        char str[100];
-        //float val = 6.54;
-        bool val = checkSlippySloppy();
-        if (val == false){
-            sprintf(str, "Not sliping\r\n\n");
-        } else {
-            sprintf(str, "Sliping\r\n\n");
-        }
-        
-        //gcvt(val,2,str); TEST
-        UARTSend(str);
+        //char str[100];
 
         // if (checkButton(LEFT) == PUSHED)
         // {
@@ -134,7 +125,7 @@ int main (void)
     initPWMInputManager (ABS_PWM_MIN_FREQ);
     initialiseUSB_UART ();
     initBrakeOutput ();
-    initDisplay ();
+    //initDisplay ();
     
 
     // TO DO: Should all this PWM stuff be its own module? pwm_manager?
@@ -158,9 +149,10 @@ int main (void)
     PWMSignal_t BrakePedalPWM = {.id = "BrakePedal", .gpioPort = GPIO_PORTC_BASE, .gpioPin = GPIO_PIN_7};
     registerPWMSignal(BrakePedalPWM); 
 
-    xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);
+    //xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);
     xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, &updateAllPWMInputsHandle);
     // xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 256, NULL, 0, &calculatePWMPropertiesHandle);  
+    xTaskCreate(&checkSlipTask, "checkSlip", 256, NULL, 0, &checkSlipHandle);
 
     vTaskStartScheduler();
 
