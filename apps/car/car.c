@@ -34,6 +34,7 @@ TaskHandle_t updateUARTHandle;
 TaskHandle_t updatePWMOutputsTaskHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 TaskHandle_t updateDecelHandle;
+TaskHandle_t toggleABSTaskHandle; // NEW
 
 /**
  * @brief Creates instances of all queues
@@ -268,7 +269,7 @@ void readInputsTask(void* args)
             {
                 setPedalState(1);
                 // Start decleration task
-                vTaskResume(updateDecelHandle);
+                //vTaskResume(updateDecelHandle);
 
                 // Notify PWM task to update brake pwm as pedal is activated
                 pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, pwmBrake};
@@ -310,7 +311,7 @@ void processABSPWMInputTask(void* args)
     {
         bool ABSOn = false;
         // TO DO: maybe make this reading of pwm a critcal section so wont cause unwanted timeouts
-        for (int i = 0; i<10; i++)
+        for (int i = 0; i<15; i++) // Could be 10, testing with 15 for safety
         {
             if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS might be on
             {
@@ -319,26 +320,21 @@ void processABSPWMInputTask(void* args)
             } else{
                 pwmDetails = getPWMInputSignal(ABSPWM_ID);
             }
-
         }
-        
-        if (ABSOn) // TO DO: Implement what we want to do when ABS is on
+        if (ABSOn)
         {
-            for (int i = 0; i<10; i++) // Check again to make sure it wasnt interrupted by another task to cause timeout
-            {
-                if(updatePWMInput(ABSPWM_ID)) // Timeout occured again, ABS very likely to be on
-                {
-                    // Toggle Red led
-                    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
-
-                    break;
-                } else{
-                    pwmDetails = getPWMInputSignal(ABSPWM_ID);
-                }
-            }
+            OLEDStringDraw("ABS on ", 0, 1);
+        }else{
+            OLEDStringDraw("ABS off", 0, 1);
         }
 
+
+        // NEW
+        xSemaphoreTake(carStateMutex, portMAX_DELAY);
         setABSBrakePressureDuty(pwmDetails.duty);
+        setABSState(ABSOn);
+        // Give the mutex back
+        xSemaphoreGive(carStateMutex);
 
         char string[17]; // Display fits 16 characters wide.
         sprintf(string, "D: %02ld F: %03ld", pwmDetails.duty, pwmDetails.frequency);
@@ -391,6 +387,9 @@ void updateDecel (void* args)
 }
 
 
+
+
+
 int main(void) {
     SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
     
@@ -420,6 +419,7 @@ int main(void) {
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
     xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
     xTaskCreate(&updateDecel, "updateDecel", 256, NULL, 0, &updateDecelHandle);
+    xTaskCreate(toggleABSTask, "Toggle ABS", 50, NULL, 0, &toggleABSTaskHandle);
     vTaskSuspend(updateDecelHandle);
 
     // Tell the wheel update task to run, which fills out the wheels speeds with starting info

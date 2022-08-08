@@ -22,10 +22,11 @@ typedef struct {
     bool pedalState; 
     uint8_t brakePedalPressureDuty;
     uint8_t ABSBrakePressureDuty;
+    bool ABSState;
 } Car_t;
 
 // Define local car state object
-static Car_t carState = {50, 50, 0, 0, 50, 5};
+static Car_t carState = {50, 50, 0, 0, 50, 5, false};
 
 SemaphoreHandle_t carStateMutex = NULL;
 
@@ -60,6 +61,11 @@ uint8_t getABSBrakePressureDuty(void)
     return carState.ABSBrakePressureDuty;
 }
 
+bool getABSState(void)
+{
+    return carState.ABSState;
+}
+
 
 // Setters
 void setCarSpeed(uint8_t speed)
@@ -90,4 +96,9 @@ void setBrakePedalPressureDuty(uint8_t duty)
 void setABSBrakePressureDuty(uint8_t duty)
 {
     carState.ABSBrakePressureDuty = duty;
+}
+
+void setABSState(bool state)
+{
+    carState.ABSState = state;
 }

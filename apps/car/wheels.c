@@ -2,6 +2,8 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <inc/hw_memmap.h>
+#include <driverlib/gpio.h>
 #include "stdlib.h"
 #include "utils/ustdlib.h"
 #include <stdio.h>
@@ -19,7 +21,10 @@
 #define KPH_TO_MS_SCALE_FACTOR (1000.0/3600.0)
 #define PI (3.141592653589793)
 
+static bool ABSPulseOn = true;
+
 //**********************Local function prototypes******************************
+
 
 
 /**
@@ -70,15 +75,12 @@ void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront,
 /**
  * @brief Function to calculate whether or not any wheel is slipping
  * specification says to only divide by pi.
- * @param leftFront     Left front wheel struct
- * @param leftRear      Left rear wheel struct                
- * @param rightFront    Right front wheel struct
- * @param rightRear     Right rear wheel struct
- * @param carSpeed      Speed of the vehicle
- * @param condition     Condition of the road
+ * @param wheel         wheel struct being detected
+ * @param condition     Left rear wheel struct                
+ * @param pressure      Right front wheel struct
  * @return Bool         Wheel slip condition
  */
-void detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear, bool *slipArray, uint8_t condition, bool pedal, uint8_t pressure);
+bool detectWheelSlip(Wheel* wheel, uint8_t condition, uint8_t pressure);
 
 
 
@@ -108,7 +110,7 @@ void calculateWheelSpeedsFromRadii(Wheel* leftFront, Wheel* leftRear, Wheel* rig
     rightRear->speed = angularSpeed*rightRear->turnRadius;
 }
 
-
+//TO DO: Make it take only one wheel, and loop through calling it with 4 wheels outside? Like wheel slip func
 void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear)
 {
     leftFront->pulseHz = PULSES_PER_REV*leftFront->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(1.0*PI);
@@ -117,46 +119,45 @@ void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront,
     rightRear->pulseHz = PULSES_PER_REV*rightRear->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(1.0*PI);
 }
 
-void detectWheelSlip(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront, Wheel* rightRear, bool *slipArray, uint8_t condition, bool pedal, uint8_t pressure)
+bool detectWheelSlip(Wheel* wheel, uint8_t condition, uint8_t pressure)
 {
-    int8_t m = -1;
+    const int8_t m = -1;
     int8_t c;
-    int8_t y = pressure;
-    int8_t x;
     uint8_t minspeed = 10;
-    if (pedal){
-        if (condition == 0) {
-            c = 120;
-        } else if (condition == 1){
-            c = 100;
-        } else if (condition == 2){
-            c = 80;
-        }
+    if (condition == 0) {
+        c = 120;
+    } else if (condition == 1){
+        c = 100;
+    } else if (condition == 2){
+        c = 80;
+    }
 
-        for (int8_t i = 0; i < 4; i++){
-            if (i == 0) {
-                x = leftFront->speed;
-            } else if (i == 1){
-                 x = leftRear->speed;
-            } else if (i == 2){
-                 x = rightFront->speed;
-            } else if (i == 3){
-                 x = rightRear->speed;
-            }
-            if ((x >= minspeed) && (y >= m*x + c) ){
-                slipArray[i] = 1;
-            } else {
-                slipArray[i] = 0;
-            } //TO DO SET FREQ Here 
-        }
+    if ((wheel->speed >= minspeed) && (pressure >= m*wheel->speed + c) ){
+        wheel->pulseHz = 0;
+        return 1;
     } else {
-        slipArray[0] = 0;
-        slipArray[1] = 0;
-        slipArray[2] = 0;
-        slipArray[3] = 0;
+        return 0;
     }
 }
 
+
+
+void toggleABSTask(void* args)
+{
+    (void)args;
+    TickType_t wake_time = xTaskGetTickCount(); 
+    while (true)
+    {
+        ABSPulseOn = !ABSPulseOn;
+        if (ABSPulseOn)
+        {
+            OLEDStringDraw ("Pulse on ", 0, 2);
+        } else{
+            OLEDStringDraw ("Pulse off", 0, 2);
+        }
+        vTaskDelayUntil(&wake_time, 1000);
+    }   
+}
 
 
 /**
@@ -171,7 +172,7 @@ void updateWheelInfoTask(void* args)
     static Wheel leftRear   = {0, 0, 0};
     static Wheel rightFront = {0, 0, 0};
     static Wheel rightRear  = {0, 0, 0};
-    bool slipArray[4] = {0,0,0,0};
+    Wheel* wheelArray[4] = {&leftFront, &leftRear, &rightFront, &rightRear};
     while(true) {
         // Wait until a task has notified it to run, when the car state has changed
         ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
@@ -214,7 +215,17 @@ void updateWheelInfoTask(void* args)
             calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, carSpeed);
         }
         calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
-        detectWheelSlip(&leftFront, &leftRear, &rightFront, &rightRear, slipArray, roadCondition, pedalState, brakePedalPressure);
+
+        bool absState = getABSState();
+        bool slipArray[4] = {0,0,0,0};
+
+        if ((absState && ABSPulseOn) || (!absState && pedalState))
+        {
+            for (int i = 0; i<4; i++){
+            slipArray[i] = detectWheelSlip(wheelArray[i], roadCondition, brakePedalPressure);
+            } 
+        }
+
         vt100_print_slipage(slipArray);
 
         // Wheel info updated, add car information to queue for uart display task       
