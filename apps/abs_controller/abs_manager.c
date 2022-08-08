@@ -145,6 +145,7 @@ void checkSlip(void)
         float diff = ((mondeo.carVel - calcHypoVel[i])*SCALE_FACTOR)/mondeo.carVel;
         if ((diff > TOLERANCE) && (mondeo.carVel > MIN_VELOCITY)) {
             state = ABS_ON;
+            //TODO ABS state debouncing (make sure can activate within 0.5 sec)
         }
     }
    
