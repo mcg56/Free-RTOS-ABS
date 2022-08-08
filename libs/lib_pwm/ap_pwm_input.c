@@ -324,7 +324,7 @@ void updateAllPWMInputsTask(void* args)
 
     while (true) 
     {
-        updateAllPWMInputs();
+        updateAllPWMInputs(); // TO DO: Split into individual processes
 
         vTaskDelay(xDelay);
     }   

@@ -99,6 +99,7 @@ static int screenIndex = 0;
 
 /**
  * @brief Initialise the display module
+ * 
  * @return None
  */
 void
@@ -108,7 +109,7 @@ initDisplay (void)
     OLEDInitialise ();
 
     xTaskCreate(&updateDisplayTask, "updateDisplay", 256, NULL, 0, NULL);
-    xTaskCreate(&updateDisplayButtonsTask, "updateDuttons", 256, NULL, 0, NULL);
+    xTaskCreate(&updateDisplayButtonsTask, "updateButtons", 256, NULL, 0, NULL);
 }
 
 /**
@@ -131,6 +132,7 @@ updateDisplayTask (void* args)
     }   
 }
 
+//TO DO
 static void
 updateDisplayButtonsTask (void* args)
 {

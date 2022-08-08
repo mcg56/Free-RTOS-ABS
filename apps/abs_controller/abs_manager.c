@@ -116,12 +116,13 @@ void checkSlip(void)
     mondeo.steeringAngle = calcAngle(getPWMInputSignal("Steering").duty);
 
     // Calculate individual wheel velocities
+    // TO DO: confirm with mark what happens if some or all are zero
     mondeo.wheelVel[REAR_LEFT] = calcWheelVel(getPWMInputSignal("LR").frequency);
     mondeo.wheelVel[REAR_RIGHT] = calcWheelVel(getPWMInputSignal("RR").frequency);
     mondeo.wheelVel[FRONT_LEFT] = calcWheelVel(getPWMInputSignal("LF").frequency);
     mondeo.wheelVel[FRONT_RIGHT] = calcWheelVel(getPWMInputSignal("RF").frequency);
 
-
+    // SPlit and task notify
     // Calculate hypothetical speed
     int32_t calcHypoVel[NUM_WHEELS];
     calcHypoVel[REAR_LEFT] = calcCarVel(REAR_LEFT);

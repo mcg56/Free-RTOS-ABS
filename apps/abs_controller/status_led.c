@@ -38,9 +38,10 @@
 //*************************************************************
 // Function prototypes
 //*************************************************************
-void blinkTask(void* args); 
+static void blinkTask(void* args);
+static void setBlinkDelayTask(void* args);  
 static void toggleLED (void);
-static void setBlinkTaskDelay (TickType_t delay);
+static void setBlinkDelay (TickType_t delay);
 static void ledOn (void);
 static void ledOff (void);
 
@@ -49,6 +50,8 @@ static void ledOff (void);
 //*****************************************************************************
 TaskHandle_t blinkLEDHandle;
 
+QueueHandle_t blinkRateQueue;
+
 //*************************************************************
 // Static variables
 //*************************************************************
@@ -56,6 +59,7 @@ static TickType_t blinkTaskDelay = DEFAULT_BLINK_RATE / portTICK_PERIOD_MS;
 
 /**
  * @brief Initialise LED
+ * 
  * @return None
  */
 void
@@ -64,12 +68,16 @@ initStatusLED (void)
     SysCtlPeripheralEnable(STATUS_LED_PERIPH);
     GPIOPinTypeGPIOOutput(STATUS_LED_BASE, STATUS_LED_PIN);
 
+    blinkRateQueue = xQueueCreate(5, sizeof(TickType_t));
+
     xTaskCreate(&blinkTask, "blinkLED", 256, NULL, 0, &blinkLEDHandle);
+    xTaskCreate(&setBlinkDelayTask, "setBlinkDelay", 256, NULL, 0, NULL);
 }
 
 /**
  * @brief Set the Status LED State object
  * 
+ * @return None
  */
 void
 setStatusLEDState (enum statusLEDState state)
@@ -92,9 +100,10 @@ setStatusLEDState (enum statusLEDState state)
 
 /**
  * @brief Task to blink the LED a certain rate
+ * 
  * @return None
  */
-void 
+static void 
 blinkTask(void* args) 
 {
     (void)args; // unused
@@ -115,7 +124,30 @@ blinkTask(void* args)
 void 
 setStatusLEDBlinkRate (float rateHz)
 {
-    setBlinkTaskDelay((1000 / rateHz) / portTICK_PERIOD_MS);
+    // setBlinkTaskDelay((1000 / rateHz) / portTICK_PERIOD_MS);
+    TickType_t delay = ((1000 / rateHz) / portTICK_PERIOD_MS);
+    
+    xQueueSendToBack(blinkRateQueue, &delay, 0);
+}
+
+/**
+ * @brief Task to set the LED blink task delay
+ * 
+ * @return None
+ */
+static void 
+setBlinkDelayTask(void* args) 
+{
+    (void)args; // unused
+    TickType_t delay;
+
+    while (true) 
+    {
+        if (xQueueReceive(blinkRateQueue, &delay, portMAX_DELAY) == pdPASS)
+        { 
+            setBlinkDelay (delay);
+        }
+    }
 }
 
 /**
@@ -125,7 +157,7 @@ setStatusLEDBlinkRate (float rateHz)
  * @return None
  */
 static void
-setBlinkTaskDelay (TickType_t delay)
+setBlinkDelay (TickType_t delay)
 {
     blinkTaskDelay = delay;
 }

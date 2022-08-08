@@ -50,7 +50,9 @@
 #include "brake_output.h"
 #include "display.h"
 
-TaskHandle_t updateButtonsHandle;
+#include "status_led.h"
+
+TaskHandle_t testHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 TaskHandle_t calculatePWMPropertiesHandle;
 TaskHandle_t checkSlipHandle;
@@ -70,16 +72,16 @@ printPWM(char* id)
     UARTSend(str);
 }
 
-void updateButtonsTask(void* args)
+void testTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 100 / portTICK_PERIOD_MS;
 
     UARTSend("\n\rWaiting for press...\r\n");
     while (true)
     {
-        updateButtons();
-        //char str[100];
+        // updateButtons();
+        // char str[100];
 
         // if (checkButton(LEFT) == PUSHED)
         // {
@@ -93,7 +95,8 @@ void updateButtonsTask(void* args)
 
         // if (checkButton(RIGHT) == PUSHED)
         // {
-        //     toggleABS();
+        //     // toggleABS();
+        //     // setStatusLEDBlinkRate(5);
         // }
 
         // // if (getPWMInputSignal("RR").frequency < 60)
@@ -126,7 +129,6 @@ int main (void)
     initialiseUSB_UART ();
     initBrakeOutput ();
     initDisplay ();
-    
 
     // TO DO: Should all this PWM stuff be its own module? pwm_manager?
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
@@ -149,10 +151,9 @@ int main (void)
     PWMSignal_t BrakePedalPWM = {.id = "BrakePedal", .gpioPort = GPIO_PORTC_BASE, .gpioPin = GPIO_PIN_7};
     registerPWMSignal(BrakePedalPWM); 
 
-    //xTaskCreate(&updateButtonsTask, "updateButtons", 256, NULL, 0, &updateButtonsHandle);
-    xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, &updateAllPWMInputsHandle);
-    // xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 256, NULL, 0, &calculatePWMPropertiesHandle);  
-    xTaskCreate(&checkSlipTask, "checkSlip", 256, NULL, 0, &checkSlipHandle);
+    // xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, &updateAllPWMInputsHandle);
+    // xTaskCreate(&checkSlipTask, "checkSlip", 256, NULL, 0, &checkSlipHandle);
+    // xTaskCreate(&testTask, "testTask", 256, NULL, 0, &testHandle);
 
     vTaskStartScheduler();
 
