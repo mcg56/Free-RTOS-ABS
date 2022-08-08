@@ -58,15 +58,20 @@ uint32_t calcCarVel(uint32_t wheel)
     uint32_t result = mondeo.wheelVel[wheel];
 
     if (alpha != 0) {
-        innerRear = 2.5/tan(fabs(alpha));
-        innerFront = 2.5/sin(fabs(alpha));
+        innerRear = 2.5/tan(fabsf(alpha));
+        innerFront = 2.5/sin(fabsf(alpha));
         outerRear = innerRear + TRACK;
         outerFront = innerFront + TRACK;
+
+        
+        // gcvt(innerRear, 1111, str);
+        // //sprintf(str, "radii %d\r\n\n", innerRear);
+        // UARTSend(str);
         // Definition of turn radii from wheels.c may try combine later 
         float normWheelOrder[NUM_WHEELS] = {innerRear, outerRear, innerFront, outerFront};
         float currentRadii;
-
-        if (alpha > 0) {
+        // Check sign TESTING
+        if (alpha > 0) { 
             currentRadii = normWheelOrder[wheel];        
         } else {
             // If turning opposite way swap inner/outer pairs
@@ -96,9 +101,9 @@ uint32_t calcWheelVel(uint32_t frequency)
  * @param duty Duty cycle of steering input
  * @return Float (steering angle)
  */
-float calcAngle(uint32_t duty)
-{
-    return (MID_DUTY-duty)*(MAX_ANGLE / HALF_DUTY);
+float calcAngle(int32_t duty)
+{   
+    return (MID_DUTY-duty-1)*(MAX_ANGLE / HALF_DUTY);
 }
 
 /**
@@ -120,7 +125,7 @@ void checkSlip(void)
 
 
     // Calculate hypothetical speed
-    uint32_t calcHypoVel[NUM_WHEELS];
+    int32_t calcHypoVel[NUM_WHEELS];
     calcHypoVel[REAR_LEFT] = calcCarVel(REAR_LEFT);
     calcHypoVel[REAR_RIGHT] = calcCarVel(REAR_RIGHT);
     calcHypoVel[FRONT_LEFT] = calcCarVel(FRONT_LEFT);
@@ -134,25 +139,19 @@ void checkSlip(void)
     //good
     // 5% at the moment may need tuned
     for (uint32_t i = 0; i < NUM_WHEELS; i++){
-        if ((mondeo.carVel - calcHypoVel[i]) > 5) {
+        float diff = (mondeo.carVel - calcHypoVel[i])*100;
+        char str[100];
+        gcvt(diff, 3, str);
+        //sprintf(str, "diff %d\r\n\n", ((mondeo.carVel - calcHypoVel[i])/mondeo.carVel)*100);
+        UARTSend(str); 
+        sprintf(str, "\r\n\n");
+        UARTSend(str);
+        if ((mondeo.carVel - calcHypoVel[i]) > TOLERANCE) {
             state = ABS_ON;
         }
-        //(((mondeo.carVel - calcHypoVel[i])/mondeo.carVel)*SCALE_FACTOR > TOLERANCE)
+        //(((mondeo.carVel - calcHypoVel[i])/mondeo.carVel)*SCALE_FACTOR > TOLERANCE) CONVERT TO PERCENTAGE
     }
-    char str[100];
-    //sprintf(str, "Not sliping %d\r\n\n", mondeo.steeringAngle); 
-    //sprintf(str, "diff %d\r\n\n", (mondeo.carVel - calcHypoVel[REAR_LEFT]));
-    //UARTSend(str);
-    //sprintf(str, "State %d\r\n\n", state);
-    //sprintf(str, "RL %d\r\n\n", ((mondeo.carVel - calcHypoVel[REAR_LEFT])/mondeo.carVel)*SCALE_FACTOR);
-    sprintf(str, "RL %d\r\n\n", calcHypoVel[REAR_LEFT]);
-    UARTSend(str); 
-    sprintf(str, "RR %d\r\n\n", calcHypoVel[REAR_RIGHT]);
-    UARTSend(str); 
-    sprintf(str, "FL %d\r\n\n", calcHypoVel[FRONT_LEFT]);
-    UARTSend(str); 
-    sprintf(str, "FR %d\r\n\n", calcHypoVel[FRONT_RIGHT]);
-    UARTSend(str); 
+   
     setABS(state);
 }
 
@@ -164,7 +163,7 @@ void checkSlip(void)
 void checkSlipTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 200 / portTICK_PERIOD_MS; // TO DO: magic number
+    const TickType_t xDelay = 400 / portTICK_PERIOD_MS; // TO DO: magic number
 
     // PWMSignalQueue = xQueueCreate(8, sizeof(PWMSignal_t*)); TESTING
 
