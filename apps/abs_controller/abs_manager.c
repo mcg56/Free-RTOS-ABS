@@ -10,6 +10,7 @@
 #include "abs_manager.h"
 #include "math.h"
 #include <FreeRTOS.h>
+#include <stdio.h>
 #include <queue.h>
 #include "driverlib/timer.h"
 #include "brake_output.h"
@@ -21,16 +22,10 @@
 #define MAX_ANGLE               29.1    // Max absolute turn angle (deg)
 #define TRACK                   1.5     // Wheel seperation (m)
 #define TICKS_PER_REV           20      // Encoder pulses per single wheel revolution
-#define TOLERANCE               10       // 5% velocity difference
-#define FACTOR                  3.6     // km/h to m/s
+#define TOLERANCE               10      // 10% velocity difference as per guide
+#define FACTOR                  3.6     // m/s to km/h
 #define SCALE_FACTOR            100     // Scale result to percentage
-/**
- * This will contain:
- * 
- * 1. The calculation for what brake output is required given the PWM signals.
- * 2. Probably the LED stuff unless we make another file
- * 
- */
+#define MIN_VELOCITY            10      // Minimum required velocity for ABS to function (m/s)
 
 CarAttributes_t mondeo; // Probably not very reliable
 
@@ -48,42 +43,43 @@ typedef enum {
  */
 uint32_t calcCarVel(uint32_t wheel)
 {
-    // Vehicle turning angle
+    // Radians conversion for math.h
     float alpha = mondeo.steeringAngle*(M_PI/180);
 
+    // Initialise values to zero 
     float innerRear = 0;
     float innerFront = 0;
     float outerRear = 0;
     float outerFront = 0;
-    uint32_t result = mondeo.wheelVel[wheel];
+
+    // If alpha equals zero no conversion required
+    uint32_t velocity = mondeo.wheelVel[wheel];
 
     if (alpha != 0) {
+        // Radii calculations (Definition of turn radii from wheels.c may try combine later )
         innerRear = 2.5/tan(fabsf(alpha));
         innerFront = 2.5/sin(fabsf(alpha));
         outerRear = innerRear + TRACK;
         outerFront = innerFront + TRACK;
 
-        
-        // gcvt(innerRear, 1111, str);
-        // //sprintf(str, "radii %d\r\n\n", innerRear);
-        // UARTSend(str);
-        // Definition of turn radii from wheels.c may try combine later 
+        // Initialise left hand turn orders array
         float normWheelOrder[NUM_WHEELS] = {innerRear, outerRear, innerFront, outerFront};
-        float currentRadii;
-        // Check sign TESTING
+        float currentRadii = 0;
+        
         if (alpha > 0) { 
             currentRadii = normWheelOrder[wheel];        
         } else {
-            // If turning opposite way swap inner/outer pairs
+            // If turning opposite way swap inner/outer pairs of turn array
             if ((wheel%2) == 0) { 
                 currentRadii = normWheelOrder[wheel+1];
             } else {
                 currentRadii = normWheelOrder[wheel-1];
             }
         }
-        result = mondeo.wheelVel[wheel]*(outerFront/currentRadii);
+        // Apply normalisation factor to standardise outer most wheel as vehicle velocity
+        velocity = mondeo.wheelVel[wheel]*(outerFront/currentRadii);
     }
-    return result;
+    return velocity;
 }
 
 /**
@@ -114,10 +110,12 @@ float calcAngle(int32_t duty)
 void checkSlip(void)
 {
     uint8_t state = ABS_OFF;
-    mondeo.sold = false;
+    mondeo.sold = false; // GIGITY GIGITY
     
+    // Update steering angle
     mondeo.steeringAngle = calcAngle(getPWMInputSignal("Steering").duty);
 
+    // Calculate individual wheel velocities
     mondeo.wheelVel[REAR_LEFT] = calcWheelVel(getPWMInputSignal("LR").frequency);
     mondeo.wheelVel[REAR_RIGHT] = calcWheelVel(getPWMInputSignal("RR").frequency);
     mondeo.wheelVel[FRONT_LEFT] = calcWheelVel(getPWMInputSignal("LF").frequency);
@@ -130,26 +128,24 @@ void checkSlip(void)
     calcHypoVel[REAR_RIGHT] = calcCarVel(REAR_RIGHT);
     calcHypoVel[FRONT_LEFT] = calcCarVel(FRONT_LEFT);
     calcHypoVel[FRONT_RIGHT] = calcCarVel(FRONT_RIGHT);
+
+    // Reset velocity for next computation
     mondeo.carVel = 0;
+
+    // Loop through each hypotheticle car velocity and update car velocity to maximum value
     for (uint32_t i = 0; i < NUM_WHEELS; i++){
         if (calcHypoVel[i] > mondeo.carVel) {
             mondeo.carVel = calcHypoVel[i];
         }
     }
-    //good
-    // 5% at the moment may need tuned
+
+    // Loop through each hypotheticle car velocity and compare to maximum car velocity.
+    // If absolute differnce greater than 10% and car velocity greater than 10 m/s turn ABS on
     for (uint32_t i = 0; i < NUM_WHEELS; i++){
-        float diff = (mondeo.carVel - calcHypoVel[i])*100;
-        char str[100];
-        gcvt(diff, 3, str);
-        //sprintf(str, "diff %d\r\n\n", ((mondeo.carVel - calcHypoVel[i])/mondeo.carVel)*100);
-        UARTSend(str); 
-        sprintf(str, "\r\n\n");
-        UARTSend(str);
-        if ((mondeo.carVel - calcHypoVel[i]) > TOLERANCE) {
+        float diff = ((mondeo.carVel - calcHypoVel[i])*SCALE_FACTOR)/mondeo.carVel;
+        if ((diff > TOLERANCE) && (mondeo.carVel > MIN_VELOCITY)) {
             state = ABS_ON;
         }
-        //(((mondeo.carVel - calcHypoVel[i])/mondeo.carVel)*SCALE_FACTOR > TOLERANCE) CONVERT TO PERCENTAGE
     }
    
     setABS(state);
@@ -157,7 +153,6 @@ void checkSlip(void)
 
 /**
  * @brief Regularly scheduled task for updating all PWM signals
- * 
  * @return None
  */
 void checkSlipTask(void* args)
@@ -173,3 +168,11 @@ void checkSlipTask(void* args)
         vTaskDelay(xDelay);
     }   
 }
+
+// TESTING
+// char str[100];
+// gcvt(diff, 3, str);
+// sprintf(str, "diff %d\r\n\n", ((mondeo.carVel - calcHypoVel[i])/mondeo.carVel)*100);
+// UARTSend(str); 
+// sprintf(str, "\r\n\n");
+// UARTSend(str)

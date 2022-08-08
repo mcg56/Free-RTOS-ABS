@@ -30,7 +30,6 @@ checkSlip(void);
 
 /**
  * @brief Regularly scheduled task for checking if the vehicle is slipping
- * 
  * @return None
  */
 extern void 
