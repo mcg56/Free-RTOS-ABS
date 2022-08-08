@@ -15,9 +15,9 @@
  * @param carVel            Car velocity (max of wheel signals)
  */
 typedef struct {
-    uint32_t wheelVel[NUM_WHEELS];
-    uint32_t steeringAngle;
-    uint32_t carVel;
+    int32_t wheelVel[NUM_WHEELS];
+    float steeringAngle;
+    int32_t carVel;
     bool sold;
 } CarAttributes_t;
 
@@ -30,7 +30,6 @@ checkSlip(void);
 
 /**
  * @brief Regularly scheduled task for checking if the vehicle is slipping
- * 
  * @return None
  */
 extern void 

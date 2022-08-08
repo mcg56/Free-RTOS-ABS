@@ -6,7 +6,7 @@
 
 #define ID_LEN 20
 #define ABSPWM_ID "ABS"
-#define ABS_PWM_MIN_FREQ      35 // [Hz]
+#define ABS_PWM_MIN_FREQ      23 // [Hz]
 #define CAR_PWM_MIN_FREQ      50 // [Hz]
 
 //*************************************************************

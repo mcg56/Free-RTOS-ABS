@@ -125,7 +125,7 @@ int main (void)
     initPWMInputManager (ABS_PWM_MIN_FREQ);
     initialiseUSB_UART ();
     initBrakeOutput ();
-    //initDisplay ();
+    initDisplay ();
     
 
     // TO DO: Should all this PWM stuff be its own module? pwm_manager?
