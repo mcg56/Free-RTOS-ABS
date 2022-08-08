@@ -80,6 +80,7 @@ typedef struct {
 // Function prototype
 //*************************************************************
 static void updateDisplayTask (void* args);
+static void updateDisplayButtonsTask (void* args);
 static void updateDisplay (void);
 static void updateSelectedScreen (void);
 static void updateScreenIndex (void);
@@ -107,6 +108,7 @@ initDisplay (void)
     OLEDInitialise ();
 
     xTaskCreate(&updateDisplayTask, "updateDisplay", 256, NULL, 0, NULL);
+    xTaskCreate(&updateDisplayButtonsTask, "updateDuttons", 256, NULL, 0, NULL);
 }
 
 /**
@@ -119,11 +121,26 @@ updateDisplayTask (void* args)
 {
     (void)args;
 
-    const TickType_t xDelay = 200 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 100 / portTICK_PERIOD_MS; //TO DO: set rate
 
     while (true)
     {
         updateDisplay();
+
+        vTaskDelay(xDelay);
+    }   
+}
+
+static void
+updateDisplayButtonsTask (void* args)
+{
+    (void)args;
+
+    const TickType_t xDelay = 10 / portTICK_PERIOD_MS; //TO DO: set rate
+
+    while (true)
+    {
+        updateButtons ();
 
         vTaskDelay(xDelay);
     }   
@@ -189,8 +206,6 @@ getSelectedPWM (void)
 static void
 updateScreenIndex (void)
 {
-    updateButtons();
-
     if (checkButton(LEFT) == PUSHED) // TO DO: Change to up and down
     {
         if (screenIndex == getCountPWMInputs())

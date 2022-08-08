@@ -12,6 +12,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
+#include <stddef.h>
 
 
 #include <inc/hw_memmap.h>
@@ -445,11 +447,14 @@ calculatePWMProperties(PWMSignal_t* PWMSignal)
             - edgeTimestamps.lastRisingEdge);
     }
 
-    // Currently no timer overflow protection - TO DO
-    PWMSignal->duty = 100 * (edgeTimestamps.currFallingEdge - edgeTimestamps.lastRisingEdge) /
-        (edgeTimestamps.currRisingEdge - edgeTimestamps.lastRisingEdge);
 
-    // TO DO - if freq not zero and duty zero, then the duty is wrong
+    uint32_t duty = ceil(100 * (float)(edgeTimestamps.currFallingEdge - edgeTimestamps.lastRisingEdge) /
+        (float)(edgeTimestamps.currRisingEdge - edgeTimestamps.lastRisingEdge));
+
+    if (duty > 0 || duty < 100)
+    {
+        PWMSignal->duty = duty;
+    }
 }
 
 /**
