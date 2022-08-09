@@ -151,7 +151,6 @@ int main (void)
     PWMSignal_t BrakePedalPWM = {.id = "BrakePedal", .gpioPort = GPIO_PORTC_BASE, .gpioPin = GPIO_PIN_7};
     registerPWMSignal(BrakePedalPWM); 
 
-    xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, &updateAllPWMInputsHandle);
     xTaskCreate(&checkSlipTask, "checkSlip", 256, NULL, 0, &checkSlipHandle);
     xTaskCreate(&testTask, "testTask", 256, NULL, 0, &testHandle);
 

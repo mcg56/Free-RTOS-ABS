@@ -50,15 +50,6 @@ initPWMInputManager (uint16_t PWMMinFreq);
 extern int 
 registerPWMSignal (PWMSignal_t newSignal);
 
-// TO DO: This could be done internally within the module?
-/**
- * @brief Regularly scheduled task for updating all PWM signals
- * 
- * @return None
- */
-extern void 
-updateAllPWMInputsTask(void* args);
-
 /**
  * @brief Updates specific PWM signal information
  * 

@@ -84,6 +84,7 @@ typedef struct {
 //*************************************************************
 // Function prototypes
 //*************************************************************
+static void updateAllPWMInputsTask(void* args);
 static void setPWMTimeout (uint16_t timeoutRate);
 static void PWMEdgeIntHandler (void);
 static void PWMTimeoutHandler (void);
@@ -184,6 +185,8 @@ initPWMInputManager (uint16_t PWMMinFreq)
     initPWMEdgeTimer();
 
     initPWMTimeoutTimer();
+
+    xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, NULL);
 }
 
 
@@ -315,7 +318,8 @@ resetTimeout (void)
  * 
  * @return None
  */
-void updateAllPWMInputsTask(void* args)
+static void 
+updateAllPWMInputsTask(void* args)
 {
     (void)args;
     const TickType_t xDelay = 330 / portTICK_PERIOD_MS; // TO DO: magic number
