@@ -269,7 +269,7 @@ void readInputsTask(void* args)
             {
                 setPedalState(1);
                 // Start decleration task
-                //vTaskResume(updateDecelHandle);
+                vTaskResume(updateDecelHandle);
 
                 // Notify PWM task to update brake pwm as pedal is activated
                 pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, pwmBrake};
@@ -370,7 +370,7 @@ void updateDecel (void* args)
             uint8_t currentABSBrakeDuty = getBrakePedalPressureDuty(); // = getABSBrakePressureDuty();
             
             // Modify the speed dependant on brake pressure
-            int newSpeed = currentSpeed - currentABSBrakeDuty/5;
+            int newSpeed = currentSpeed - currentABSBrakeDuty/10;
             if (newSpeed <= 0) {
                     newSpeed = 0;
             }

@@ -149,13 +149,7 @@ void toggleABSTask(void* args)
     while (true)
     {
         ABSPulseOn = !ABSPulseOn;
-        if (ABSPulseOn)
-        {
-            OLEDStringDraw ("Pulse on ", 0, 2);
-        } else{
-            OLEDStringDraw ("Pulse off", 0, 2);
-        }
-        vTaskDelayUntil(&wake_time, 1000);
+        vTaskDelayUntil(&wake_time, 50);
     }   
 }
 
@@ -219,7 +213,7 @@ void updateWheelInfoTask(void* args)
         bool absState = getABSState();
         bool slipArray[4] = {0,0,0,0};
 
-        if ((absState && ABSPulseOn) || (!absState && pedalState))
+        if ((absState && ABSPulseOn && pedalState) || (!absState && pedalState))
         {
             for (int i = 0; i<4; i++){
             slipArray[i] = detectWheelSlip(wheelArray[i], roadCondition, brakePedalPressure);
