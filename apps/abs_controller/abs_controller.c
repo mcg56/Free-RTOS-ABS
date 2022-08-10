@@ -107,14 +107,14 @@ void testTask(void* args)
         // // {
         // //     setABS(ABS_OFF);
         // // }
-        if (checkButton(UP) == PUSHED)
-        {
-            setABSDuty(getABSDuty() + 5);
-        }
-        if (checkButton(DOWN) == PUSHED)
-        {
-            setABSDuty(getABSDuty() - 5);
-        }
+        // if (checkButton(UP) == PUSHED)
+        // {
+        //     setABSDuty(getABSDuty() + 5);
+        // }
+        // if (checkButton(DOWN) == PUSHED)
+        // {
+        //     setABSDuty(getABSDuty() - 5);
+        // }
 
         vTaskDelay(xDelay);
     }
