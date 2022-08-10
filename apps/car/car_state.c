@@ -21,7 +21,7 @@
  * controller (should match brakePedalPressureDuty %) 
  */
 typedef struct {
-    uint16_t speed;
+    float speed;
     uint8_t steeringWheelDuty;
     float alpha;
     uint8_t roadCondition; 
@@ -41,14 +41,14 @@ static const Wheel RF = {0, 0, 0, false};
 static const Wheel RR = {0, 0, 0, false};
 
 // Define local car state object
-static Car_t carState = {.speed=50, .steeringWheelDuty=50, .alpha=0.0, .roadCondition=0,
+static Car_t carState = {.speed=50.0, .steeringWheelDuty=50, .alpha=0.0, .roadCondition=0,
                          .pedalState=false, .brakePedalPressureDuty=50, .ABSBrakePressureDuty=5,
                          .ABSState=false, .leftFront=LF, .leftRear=LR, .rightFront=RF, .rightRear=RR};
 
 SemaphoreHandle_t carStateMutex = NULL;
 
 //*****************************Getters***************************************
-uint16_t getCarSpeed(void)
+float getCarSpeed(void)
 {
     return carState.speed;
 }
@@ -110,7 +110,7 @@ Wheel getRightRear(void)
 
 
 //*****************************Setters***************************************
-void setCarSpeed(uint16_t speed)
+void setCarSpeed(float speed)
 {
     carState.speed = speed;
 }

@@ -137,6 +137,7 @@ bool detectWheelSlip(Wheel* wheel, uint8_t condition, uint8_t pressure)
         wheel->slipping = true;
         return 1;
     } else {
+        wheel->slipping = false;
         return 0;
     }
 }
@@ -172,7 +173,7 @@ void updateWheelInfoTask(void* args)
         // We have obtained the mutex, now can run the task
 
         // Get the car state info
-        uint8_t carSpeed = getCarSpeed();
+        float carSpeed = getCarSpeed();
         uint8_t steeringDuty = getSteeringDuty();
         uint8_t roadCondition = getRoadCondition();
         bool pedalState = getPedalState();
@@ -218,6 +219,11 @@ void updateWheelInfoTask(void* args)
             for (int i = 0; i<4; i++){
             detectWheelSlip(wheelArray[i], roadCondition, brakePedalPressure);
             } 
+        } else if (!pedalState) // If pedal is off, reset slips 
+        { 
+            for (int i = 0; i<4; i++){
+            wheelArray[i]->slipping = false;
+        }
         }
 
         // Set wheel paramaters of car_state to the new values

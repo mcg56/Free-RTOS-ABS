@@ -55,6 +55,7 @@ void createSempahores(void)
 }
 
 
+
 /**
  * @brief Update the UART terminal with data about the car.
  * @param args Unused
@@ -63,8 +64,9 @@ void createSempahores(void)
 void updateUARTTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 750 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 333 / portTICK_PERIOD_MS;
 
+    // Save previous writes to check if they need to be updated
     uint8_t prevSteeringDuty;
     uint8_t prevSpeed;
     float prevLFSpeed;
@@ -73,14 +75,61 @@ void updateUARTTask(void* args)
     uint8_t prevRoadCondition;
     bool prevPedalState;
     bool prevSlipArray[4];
+    bool prevABSState;
 
     char LFbuff[6];
     char LRbuff[6]; 
     char RFbuff[6]; 
     char RRbuff[6];
-
+    char floatBuff[6];
 
     vt100_print_text();
+
+    // Print statting information first time task is run
+    gcvt (getSteeringAngle(), 4, &floatBuff);
+    vt100_print_steering_angle(getSteeringDuty(), floatBuff);
+
+    gcvt (getCarSpeed(), 4, &floatBuff);
+    vt100_print_car_speed(floatBuff);
+    Wheel LF = getleftFront();
+    Wheel LR = getleftRear();
+    Wheel RF = getRightFront();
+    Wheel RR = getRightRear();
+    // Wheel speed line
+    //Convert floats to strings
+    gcvt (LF.speed, 4, &LFbuff);
+    gcvt (LR.speed, 4, &LRbuff);
+    gcvt (RF.speed, 4, &RFbuff);
+    gcvt (RR.speed, 4, &RRbuff);
+
+    vt100_print_wheel_speed(LFbuff, LRbuff, RFbuff, RRbuff);
+
+    //Wheel PRR line
+    //First, convert floats to strings
+    gcvt (LF.pulseHz, 4, &LFbuff);
+    gcvt (LR.pulseHz, 4, &LRbuff);
+    gcvt (RF.pulseHz, 4, &RFbuff);
+    gcvt (RR.pulseHz, 4, &RRbuff);
+
+    vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
+
+    //Radius line
+    //First, convert floats to strings
+    gcvt (LF.turnRadius, 4, &LFbuff);
+    gcvt (LR.turnRadius, 4, &LRbuff);
+    gcvt (RF.turnRadius, 4, &RFbuff);
+    gcvt (RR.turnRadius, 4, &RRbuff);
+
+    vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
+    vt100_print_brake_pressure(getBrakePedalPressureDuty());
+    vt100_print_condition(getRoadCondition());
+    vt100_print_pedal(getPedalState());
+
+    bool slipArray[4] = {LF.slipping, LR.slipping, RF.slipping, RR.slipping};
+    bool absState = getABSState();
+    vt100_print_slipage(slipArray, absState);
+
+    
     while(true)
     {
         // Wait until we can take the mutex to be able to use car state shared resource
@@ -90,18 +139,18 @@ void updateUARTTask(void* args)
         //Steering line
         uint8_t steeringDuty = getSteeringDuty();
         if (steeringDuty != prevSteeringDuty) // Only write line if there was a change
-        {
-            char alphaStr[6];        
-            gcvt (getSteeringAngle(), 4, &alphaStr);
-            vt100_print_steering_angle(getSteeringDuty(), alphaStr);
+        {      
+            gcvt (getSteeringAngle(), 4, &floatBuff);
+            vt100_print_steering_angle(getSteeringDuty(), floatBuff);
             prevSteeringDuty = steeringDuty;
         }
         
         // Car speed line
-        uint16_t speed = getCarSpeed();
+        float speed = getCarSpeed();
         if (speed != prevSpeed) // Only write line if there was a change
         {
-            vt100_print_car_speed(speed);
+            gcvt (getCarSpeed(), 4, &floatBuff);
+            vt100_print_car_speed(floatBuff);
             prevSpeed = speed;
         }
         
@@ -174,13 +223,15 @@ void updateUARTTask(void* args)
         }
         
         bool slipArray[4] = {LF.slipping, LR.slipping, RF.slipping, RR.slipping};
-        if((prevSlipArray[0] != slipArray[0]) || (prevSlipArray[1] != slipArray[1]) || (prevSlipArray[2] != slipArray[2]) || (prevSlipArray[3] != slipArray[3]))
+        bool absState = getABSState();
+        if((prevSlipArray[0] != slipArray[0]) || (prevSlipArray[1] != slipArray[1]) || (prevSlipArray[2] != slipArray[2]) || (prevSlipArray[3] != slipArray[3]) || (absState != prevABSState))
         {
-            vt100_print_slipage(slipArray);
+            vt100_print_slipage(slipArray, absState);
             for (int i=0;i < 4; i++)
             {
                 prevSlipArray[i] = slipArray[i];
             }
+            prevABSState = absState;
         }
 
         // Give the mutex back
@@ -205,11 +256,6 @@ void readInputsTask(void* args)
     while (true) 
     {
         updateButtons();
-        
-        //char string[17]; // Display fits 16 characters wide.
-        
-        
-
         // Wait until we can take the mutex to be able to use car state shared resource
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
         // We have obtained the mutex, now can run the task
@@ -220,13 +266,13 @@ void readInputsTask(void* args)
 
         if (checkButton(UP) == PUSHED || c == 'w')
         {
-            uint16_t currentSpeed = getCarSpeed();
+            float currentSpeed = getCarSpeed();
             setCarSpeed(currentSpeed + 5);
             change = true;            
         }
         if (checkButton(DOWN) == PUSHED || c == 's')
         {
-            uint16_t currentSpeed = getCarSpeed();
+            float currentSpeed = getCarSpeed();
             if (currentSpeed != 0) {
                 setCarSpeed(currentSpeed - 5);
             }
@@ -350,12 +396,13 @@ void processABSPWMInputTask(void* args)
                 pwmDetails = getPWMInputSignal(ABSPWM_ID);
             }
         }
+        /*
         if (ABSOn)
         {
             OLEDStringDraw("ABS on ", 0, 1);
         }else{
             OLEDStringDraw("ABS off", 0, 1);
-        }
+        }*/
 
 
         // NEW
@@ -365,9 +412,9 @@ void processABSPWMInputTask(void* args)
         // Give the mutex back
         xSemaphoreGive(carStateMutex);
 
-        char string[17]; // Display fits 16 characters wide.
+        /*char string[17]; // Display fits 16 characters wide.
         sprintf(string, "D: %02ld F: %03ld", pwmDetails.duty, pwmDetails.frequency);
-        OLEDStringDraw (string, 0, 3);
+        OLEDStringDraw (string, 0, 3);*/
 
 
         /*char ANSIString[MAX_STR_LEN + 1]; // For uart message
@@ -383,8 +430,9 @@ void processABSPWMInputTask(void* args)
 void decelerationTask (void* args)
 {
     (void)args;
-
-    const TickType_t xDelay = 1000 / portTICK_PERIOD_MS; // Need to match this to the ABS Duty
+    const float maxDecel = 1; // m/s^2
+    const float taskPeriodms = 50; //ms
+    TickType_t wake_time = xTaskGetTickCount();     
     
     while (true)
     {
@@ -393,25 +441,25 @@ void decelerationTask (void* args)
             xSemaphoreTake(carStateMutex, portMAX_DELAY);
             // We have obtained the mutex, now can run the task
 
-            uint16_t currentSpeed = getCarSpeed();
+            float currentSpeed = getCarSpeed();
             // TO DO: Change to getABSBrakePressureDuty when using with ABS controller 
             //(Doesnt make a difference to output but shows we actually use the ABS duty not just our own)
             uint8_t currentABSBrakeDuty = getBrakePedalPressureDuty(); // = getABSBrakePressureDuty();
             
             // Modify the speed dependant on brake pressure
-            int newSpeed = currentSpeed - currentABSBrakeDuty/10;
+            float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel*taskPeriodms/1000.0/100.0;
             if (newSpeed <= 0) {
                     newSpeed = 0;
             }
 
-            setCarSpeed((uint16_t)newSpeed);
+            setCarSpeed(newSpeed);
 
             // Give the mutex back
             xSemaphoreGive(carStateMutex);
 
             // Tell the wheel update task to run
             xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
-            vTaskDelay(xDelay);
+            vTaskDelayUntil(&wake_time, taskPeriodms);
     }   
 }
 

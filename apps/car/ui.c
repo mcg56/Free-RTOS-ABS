@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "stdlib.h"
 #include <stdio.h>
+#include <string.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
@@ -78,10 +79,10 @@ void vt100_print_steering_angle(uint8_t duty, char alphaStr[6]) {
     UARTSend (ANSIString);
 }
 
-void vt100_print_car_speed(uint8_t speed) {
+void vt100_print_car_speed(char speedStr[6]) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(5);
-    sprintf (ANSIString, "%2d km/h\r\n\n", speed);
+    sprintf (ANSIString, "%5s km/h\r\n\n", speedStr);
     UARTSend (ANSIString);
 }
 
@@ -149,11 +150,20 @@ const char* get_condition(uint8_t condition){
     }
 }
 
-void vt100_print_slipage(bool slipArray[4]) 
+void vt100_print_slipage(bool slipArray[4], bool ABSstate) 
 {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(19);
-    sprintf(ANSIString, "LF: %d LR: %d RF: %d RR: %d", slipArray[0], slipArray[1],slipArray[2],slipArray[3]);
+    char buf[4];
+    if (ABSstate)
+    {
+        strncpy(buf, "ON", 4);
+    } 
+    else
+    {
+        strncpy(buf, "OFF", 4);
+    } 
+    sprintf(ANSIString, "LF: %d LR: %d RF: %d RR: %d ABS: %s", slipArray[0], slipArray[1],slipArray[2], slipArray[3], buf);
     UARTSend (ANSIString);
 }
 

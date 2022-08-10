@@ -30,7 +30,8 @@
         "abs_control.h": "c",
         "queue.h": "c",
         "hw_types.h": "c",
-        "car_state.h": "c"
+        "car_state.h": "c",
+        "string.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }
