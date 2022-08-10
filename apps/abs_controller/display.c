@@ -18,6 +18,8 @@
 
 #include <FreeRTOS.h>
 #include <task.h>
+#include <queue.h>
+#include <semphr.h>
 
 #include "utils/ustdlib.h"
 
@@ -31,7 +33,7 @@
 //*************************************************************
 // Constant Definitions
 //*************************************************************
-
+#define OLED_CHAR_WIDTH 17 // OLED is 16 characters wide
 
 //*************************************************************
 // Type Definitions
@@ -76,6 +78,19 @@ typedef struct {
     } content;
 } Screen_t;
 
+/**
+ * @brief Information to write one line on the OLED display
+ * 
+ * @param str - String to write
+ * @param col - Column to start string from
+ * @param row - Row to draw string on
+ */
+typedef struct {
+    char str[OLED_CHAR_WIDTH];
+    int col;
+    int row;
+} OLEDDraw_t;
+
 //*************************************************************
 // Function prototype
 //*************************************************************
@@ -87,9 +102,17 @@ static void updateScreenIndex (void);
 static void updateScreen (void);
 static void OLEDDrawABSScreen (void);
 static void OLEDDrawPWMScreen (void);
+static void OLEDDrawTask(void* args);
+static void OLEDDraw(char str[], int col, int row);
 static void clearScreen (void);
 static char* getABSStateName (enum absStates state);
 static PWMSignal_t getSelectedPWM (void);
+
+//*************************************************************
+// FreeRTOS Handles
+//*************************************************************
+QueueHandle_t OLEDDrawQueue;
+SemaphoreHandle_t OLEDDrawMutex;
 
 //*****************************************************************************
 // Global variables
@@ -108,8 +131,13 @@ initDisplay (void)
     initButtons ();
     OLEDInitialise ();
 
+    OLEDDrawQueue = xQueueCreate(10, sizeof(OLEDDraw_t));
+
+    OLEDDrawMutex = xSemaphoreCreateMutex();
+
     xTaskCreate(&updateDisplayTask, "updateDisplay", 256, NULL, 0, NULL);
     xTaskCreate(&updateDisplayButtonsTask, "updateButtons", 256, NULL, 0, NULL);
+    xTaskCreate(&OLEDDrawTask, "OLEDDraw", 256, NULL, 0, NULL);
 }
 
 /**
@@ -122,7 +150,7 @@ updateDisplayTask (void* args)
 {
     (void)args;
 
-    const TickType_t xDelay = 100 / portTICK_PERIOD_MS; //TO DO: set rate
+    const TickType_t xDelay = 200 / portTICK_PERIOD_MS; //TO DO: set rate
 
     while (true)
     {
@@ -132,7 +160,11 @@ updateDisplayTask (void* args)
     }   
 }
 
-//TO DO
+/**
+ * @brief Task to regularly update any button presses
+ * 
+ * @return None
+ */
 static void
 updateDisplayButtonsTask (void* args)
 {
@@ -267,14 +299,22 @@ updateScreen (void)
 static void
 OLEDDrawABSScreen (void)
 {
-    char str[17]; // Display fits 16 characters wide.
+    OLEDDraw_t lineToDraw;
 	
-    usnprintf (str, sizeof(str), "---Brake Info---");
-    OLEDStringDraw (str, 0, 0);
-    usnprintf (str, sizeof(str), "ABS State:   %s ", getABSStateName(screen.content.absScreen.absState));
-    OLEDStringDraw (str, 0, 1);
-    usnprintf (str, sizeof(str), "ABS Duty:    %2d%%", screen.content.absScreen.duty);
-    OLEDStringDraw (str, 0, 2);
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "---Brake Info---");
+    lineToDraw.row = 0;
+    lineToDraw.col = 0;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "ABS State:   %s ", getABSStateName(screen.content.absScreen.absState));
+    lineToDraw.row = 1;
+    lineToDraw.col = 0;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "ABS Duty:    %2d%%", screen.content.absScreen.duty);
+    lineToDraw.row = 2;
+    lineToDraw.col = 0;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 }
 
 /**
@@ -285,18 +325,71 @@ OLEDDrawABSScreen (void)
 static void
 OLEDDrawPWMScreen (void)
 {
-    char str[17]; // Display fits 16 characters wide.
+    OLEDDraw_t lineToDraw;
 	
-    usnprintf (str, sizeof(str), "----PWM Info----");
-    OLEDStringDraw (str, 0, 0);
-    usnprintf (str, sizeof(str), "ID:             ");
-    OLEDStringDraw (str, 0, 1);
-    usnprintf (str, sizeof(str), "%s", screen.content.pwmScreen.pwmSignal.id);
-    OLEDStringDraw (str, 16 - strlen(str), 1); // Right align ID
-    usnprintf (str, sizeof(str), "Freq:     %3d Hz", screen.content.pwmScreen.pwmSignal.frequency);
-    OLEDStringDraw (str, 0, 2);
-    usnprintf (str, sizeof(str), "Duty:        %2d%%", screen.content.pwmScreen.pwmSignal.duty);
-    OLEDStringDraw (str, 0, 3);
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "----PWM Info----");
+    lineToDraw.row = 0;
+    lineToDraw.col = 0;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "ID:             ");
+    lineToDraw.row = 1;
+    lineToDraw.col = 0;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%s", screen.content.pwmScreen.pwmSignal.id);
+    lineToDraw.row = 1;
+    lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str); // Right align ID
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);   
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "Freq:     %3d Hz", screen.content.pwmScreen.pwmSignal.frequency);
+    lineToDraw.row = 2;
+    lineToDraw.col = 0;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0); 
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "Duty:        %2d%%", screen.content.pwmScreen.pwmSignal.duty);
+    lineToDraw.row = 3;
+    lineToDraw.col = 0;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);    
+}
+
+/**
+ * @brief  Task to draw to the OLED display
+ * 
+ * @return None
+ */
+static void 
+OLEDDrawTask(void* args)
+{
+    (void)args;
+
+    OLEDDraw_t lineToDraw;
+    while (true) 
+    {
+        if (xQueueReceive(OLEDDrawQueue, &lineToDraw, portMAX_DELAY) == pdPASS)
+        {
+            OLEDDraw(lineToDraw.str, lineToDraw.col, lineToDraw.row);
+        }
+    }   
+}
+
+/**
+ * @brief Writes to the OLED library
+ * 
+ * @param str - The string to be drawn
+ * @param col - Column to start string
+ * @param row - Row to write string on
+ */
+static void
+OLEDDraw(char str[], int col, int row)
+{
+    if (xSemaphoreTake(OLEDDrawMutex, (TickType_t) 10) == pdTRUE)
+    {
+        OLEDStringDraw (str, col, row);
+
+        xSemaphoreGive(OLEDDrawMutex);
+    }
+
 }
 
 /**
@@ -307,13 +400,19 @@ OLEDDrawPWMScreen (void)
 static void
 clearScreen (void)
 {
-    char str[17]; // Display fits 16 characters wide.
+    OLEDDraw_t lineToDraw;
+
+    lineToDraw.col = 0;
 	
-    usnprintf (str, sizeof(str), "                ");
-    OLEDStringDraw (str, 0, 0);
-    OLEDStringDraw (str, 0, 1);
-    OLEDStringDraw (str, 0, 2);
-    OLEDStringDraw (str, 0, 3);
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "                ");
+    lineToDraw.row = 0;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0); 
+    lineToDraw.row = 1;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0); 
+    lineToDraw.row = 2;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0); 
+    lineToDraw.row = 3;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0); 
 }
 
 

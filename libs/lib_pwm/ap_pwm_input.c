@@ -417,7 +417,7 @@ refreshPWMDetails(PWMSignal_t* PWMSignal)
         PWMRefreshInfo_t pwmRefreshInfo = {.PWMSignal = PWMSignal, .timestamps = edgeTimestamps};
 
         // calculatePWMProperties(PWMSignal);
-        xQueueSendToBack(PWMCalcDetailsQueue, &pwmRefreshInfo, 0); //TESTING
+        xQueueSendToBack(PWMCalcDetailsQueue, &pwmRefreshInfo, 0);
 
         return false;
     }
