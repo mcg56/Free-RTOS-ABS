@@ -97,18 +97,20 @@ typedef struct {
 //*************************************************************
 static void updateAllPWMInputsTask(void* args);
 static void calculatePWMPropertiesTask(void* args);
+static void refreshPWMDetailsTask(void* args);
 static void setPWMTimeout (uint16_t timeoutRate);
 static void PWMEdgeIntHandler (void);
 static void PWMTimeoutHandler (void);
 static void calculatePWMProperties (PWMSignal_t* PWMSignal, edgeTimestamps_t timestamps);
-static int updateAllPWMInputs(void);
+static void updateAllPWMInputs(void);
 static bool refreshPWMDetails(PWMSignal_t* PWMSignal);
 static PWMSignal_t* findPWMInput(char* id);
 
 //*************************************************************
 // FreeRTOS handles
 //*************************************************************
-QueueHandle_t PWMSignalQueue;
+QueueHandle_t PWMCalcDetailsQueue;
+QueueHandle_t PWMUpdateTimestampsQueue;
 
 //*************************************************************
 // Static variables
@@ -197,10 +199,12 @@ initPWMInputManager (uint16_t PWMMinFreq)
 
     initPWMTimeoutTimer();
 
-    PWMSignalQueue = xQueueCreate(6, sizeof(PWMRefreshInfo_t));
+    PWMCalcDetailsQueue = xQueueCreate(6, sizeof(PWMRefreshInfo_t));
+    PWMUpdateTimestampsQueue = xQueueCreate(6, sizeof(PWMSignal_t*));
 
     xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, NULL);
     xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 128, NULL, 0, NULL);
+    xTaskCreate(&refreshPWMDetailsTask, "refreshPWMDetails", 128, NULL, 0, NULL);
 }
 
 
@@ -343,21 +347,16 @@ updateAllPWMInputsTask(void* args)
 /**
  * @brief Updates all PWM signal information
  * 
- * @return Count off failed PWM signal updates
+ * @return None
  */
-static int 
+static void 
 updateAllPWMInputs(void)
 {
-    int failedUpdates = 0;
-
     for (int i = 0; i < PWMInputSignals.count; i++)
     {
-        failedUpdates += refreshPWMDetails(&PWMInputSignals.signals[i]);
-
-        // printPWM(PWMInputSignals.signals[i].id); // TESTING
+        PWMSignal_t* PWMSignalPtr = &PWMInputSignals.signals[i];
+        xQueueSendToBack(PWMUpdateTimestampsQueue, &PWMSignalPtr, 0);
     }  
-
-    return failedUpdates; 
 }
 
 /**
@@ -369,6 +368,26 @@ int
 updatePWMInput(char* id)
 {
     return refreshPWMDetails(findPWMInput(id));
+}
+
+/**
+ * @brief Queue based task to updating the details of one PWM signal
+ * 
+ * @return None
+ */
+static void 
+refreshPWMDetailsTask(void* args)
+{
+    (void)args;
+
+    PWMSignal_t* PWMSignalPtr;
+    while (true) 
+    {
+        if (xQueueReceive(PWMUpdateTimestampsQueue, &PWMSignalPtr, portMAX_DELAY) == pdPASS)
+        {
+            refreshPWMDetails(PWMSignalPtr);
+        }
+    }   
 }
 
 /**
@@ -398,7 +417,7 @@ refreshPWMDetails(PWMSignal_t* PWMSignal)
         PWMRefreshInfo_t pwmRefreshInfo = {.PWMSignal = PWMSignal, .timestamps = edgeTimestamps};
 
         // calculatePWMProperties(PWMSignal);
-        xQueueSendToBack(PWMSignalQueue, &pwmRefreshInfo, 0); //TESTING
+        xQueueSendToBack(PWMCalcDetailsQueue, &pwmRefreshInfo, 0); //TESTING
 
         return false;
     }
@@ -421,7 +440,7 @@ calculatePWMPropertiesTask(void* args)
     PWMRefreshInfo_t pwmRefreshInfo;
     while (true) 
     {
-        if (xQueueReceive(PWMSignalQueue, &pwmRefreshInfo, portMAX_DELAY) == pdPASS)
+        if (xQueueReceive(PWMCalcDetailsQueue, &pwmRefreshInfo, portMAX_DELAY) == pdPASS)
         {
             calculatePWMProperties(pwmRefreshInfo.PWMSignal, pwmRefreshInfo.timestamps);
         }
