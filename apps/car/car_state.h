@@ -7,23 +7,48 @@
 #include <FreeRTOS.h>
 #include <semphr.h>
 
-uint8_t getCarSpeed(void);
+/**
+ * @brief Structure for storing information about car wheels
+ * @param turnRadius The turn radius of the wheel (m)
+ * @param speed The tangential velocity of the wheel (km/h)
+ * @param pulseHz The pulse rate of wheel pwm encoder (Hz) 
+ * @param slipping Boolean showing if this wheel is slipping or not
+ */
+typedef struct {
+    float turnRadius; //m
+    float speed; //km/h
+    float pulseHz; //Hz
+    bool slipping; 
+} Wheel;
+
+uint16_t getCarSpeed(void);
 uint8_t getSteeringDuty(void);
+float getSteeringAngle(void);
 uint8_t getRoadCondition(void);
 bool getPedalState(void);
 uint8_t getBrakePedalPressureDuty(void);
 uint8_t getABSBrakePressureDuty(void);
 bool getABSState(void);
+Wheel getleftFront(void);
+Wheel getleftRear(void);
+Wheel getRightFront(void);
+Wheel getRightRear(void);
 
-void setCarSpeed(uint8_t speed);
+
+void setCarSpeed(uint16_t speed);
 void setSteeringDuty(uint8_t duty);
+void setSteeringAngle(float angle);
 void setRoadCondition(uint8_t condition);
 void setPedalState(bool state);
 void setBrakePedalPressureDuty(uint8_t duty);
 void setABSBrakePressureDuty(uint8_t duty);
 void setABSState(bool state);
+void setLeftFront(Wheel wheel);
+void setLeftRear(Wheel wheel);
+void setRightFront(Wheel wheel);
+void setRightRear(Wheel wheel);
 
-// Mutex to ensure only one task can access car state struct at once (get/set etc)
+// Mutex to ensure only one task can access the shared resource car state struct at once (get/set etc)
 extern SemaphoreHandle_t carStateMutex;
 
 #endif

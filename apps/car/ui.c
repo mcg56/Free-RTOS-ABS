@@ -9,9 +9,6 @@
 #include <queue.h>
 #include "libs/lib_uart/ap_uart.h"
 
-QueueHandle_t OLEDDisplayQueue = NULL;
-QueueHandle_t UARTDisplayQueue = NULL;
-
 void vt100_set_yellow(void) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     sprintf(ANSIString, "%c%s", VT100_ESC, VT100_FG_YELLOW);
@@ -51,6 +48,7 @@ void vt100_set_line_number(int line) {
 
 void vt100_print_text(void) {
     vt100_clear();
+    vt100_set_yellow();
     UARTSend ("*** ABS SIM (12.07.22) ***");
     vt100_set_line_number(2);
     UARTSend ("Steering -> (1, 2):");
@@ -70,52 +68,42 @@ void vt100_print_text(void) {
     UARTSend ("Road Condition -> (r):");
     vt100_set_line_number(18);
     UARTSend ("Wheel Slip -> (LF LR RF RR):");
-    
+    vt100_set_white();
 }
 
 void vt100_print_steering_angle(uint8_t duty, char alphaStr[6]) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(3);
-    vt100_set_white();
     sprintf (ANSIString, "Duty: %2d%%    Angle: %5s degrees\r\n\n", duty, alphaStr);
     UARTSend (ANSIString);
-    vt100_set_yellow();
 }
 
 void vt100_print_car_speed(uint8_t speed) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(5);
-    vt100_set_white();
     sprintf (ANSIString, "%2d km/h\r\n\n", speed);
     UARTSend (ANSIString);
-    vt100_set_yellow();
 }
 
 void vt100_print_wheel_speed(char LF[6],char LR[6],char RF[6],char RR[6]) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(7);
-    vt100_set_white();
     sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LF, LR, RF, RR);
     UARTSend (ANSIString);
-    vt100_set_yellow();
 }
 
 void vt100_print_radii(char LF[6],char LR[6],char RF[6],char RR[6]) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(11);
-    vt100_set_white();
     sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LF, LR, RF, RR);
     UARTSend (ANSIString);
-    vt100_set_yellow();
 }
 
 void vt100_print_prr(char LF[6],char LR[6],char RF[6],char RR[6]) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(9);
-    vt100_set_white();
     sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LF, LR, RF, RR);
     UARTSend (ANSIString);
-    vt100_set_yellow();
 }
 
 
@@ -123,16 +111,13 @@ void vt100_print_prr(char LF[6],char LR[6],char RF[6],char RR[6]) {
 void vt100_print_brake_pressure(uint8_t pressure) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(13);
-    vt100_set_white();
     sprintf(ANSIString, "%d %%", pressure);
     UARTSend (ANSIString);
-    vt100_set_yellow();
 }
 
 
 void vt100_print_pedal(bool pedal) {
     vt100_set_line_number(15);
-    vt100_set_white();
     if (pedal == 1)
     {
         UARTSend ("ON");
@@ -140,17 +125,13 @@ void vt100_print_pedal(bool pedal) {
     else{
         UARTSend ("OFF");
     }
-    
-    vt100_set_yellow();
 }
 
 void vt100_print_condition(uint8_t condition) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(17);
-    vt100_set_white();
     sprintf(ANSIString, "%s", get_condition(condition));
     UARTSend (ANSIString);
-    vt100_set_yellow();
 }
 
 const char* get_condition(uint8_t condition){
@@ -172,9 +153,7 @@ void vt100_print_slipage(bool slipArray[4])
 {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
     vt100_set_line_number(19);
-    vt100_set_white();
-    sprintf(ANSIString, "%d %d %d %d", slipArray[0], slipArray[1],slipArray[2],slipArray[3]);
+    sprintf(ANSIString, "LF: %d LR: %d RF: %d RR: %d", slipArray[0], slipArray[1],slipArray[2],slipArray[3]);
     UARTSend (ANSIString);
-    vt100_set_yellow();
 }
 

@@ -134,6 +134,7 @@ bool detectWheelSlip(Wheel* wheel, uint8_t condition, uint8_t pressure)
 
     if ((wheel->speed >= minspeed) && (pressure >= m*wheel->speed + c) ){
         wheel->pulseHz = 0;
+        wheel->slipping = true;
         return 1;
     } else {
         return 0;
@@ -161,12 +162,7 @@ void toggleABSTask(void* args)
  */
 void updateWheelInfoTask(void* args)
 {
-    (void)args; // unused
-    static Wheel leftFront  = {0, 0, 0};
-    static Wheel leftRear   = {0, 0, 0};
-    static Wheel rightFront = {0, 0, 0};
-    static Wheel rightRear  = {0, 0, 0};
-    Wheel* wheelArray[4] = {&leftFront, &leftRear, &rightFront, &rightRear};
+    (void)args; // unused   
     while(true) {
         // Wait until a task has notified it to run, when the car state has changed
         ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
@@ -181,6 +177,12 @@ void updateWheelInfoTask(void* args)
         uint8_t roadCondition = getRoadCondition();
         bool pedalState = getPedalState();
         uint8_t brakePedalPressure = getBrakePedalPressureDuty();
+        Wheel leftFront = getleftFront();
+        Wheel leftRear = getleftRear();
+        Wheel rightFront = getRightFront();
+        Wheel rightRear = getRightRear();
+
+        Wheel* wheelArray[4] = {&leftFront, &leftRear, &rightFront, &rightRear};
 
         float alpha = calculateSteeringAngle((float)steeringDuty);
         if (alpha == 0) // Driving straight
@@ -211,20 +213,21 @@ void updateWheelInfoTask(void* args)
         calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
 
         bool absState = getABSState();
-        bool slipArray[4] = {0,0,0,0};
-
         if ((absState && ABSPulseOn && pedalState) || (!absState && pedalState))
         {
             for (int i = 0; i<4; i++){
-            slipArray[i] = detectWheelSlip(wheelArray[i], roadCondition, brakePedalPressure);
+            detectWheelSlip(wheelArray[i], roadCondition, brakePedalPressure);
             } 
         }
 
-        vt100_print_slipage(slipArray);
+        // Set wheel paramaters of car_state to the new values
+        setLeftFront(leftFront);
+        setLeftRear(leftRear);
+        setRightFront(rightFront);
+        setRightRear(rightRear);
+        setSteeringAngle(alpha);
 
-        // Wheel info updated, add car information to queue for uart display task       
-        DisplayInfo updatedDisplayInfo = {leftFront, leftRear, rightFront, rightRear, carSpeed, steeringDuty, alpha, roadCondition, pedalState, brakePedalPressure};
-        xQueueSendToBack(UARTDisplayQueue, &updatedDisplayInfo, 0);        
+        // Wheel info updated, add to PWM queue to update signals to ABS controller
 
         /* Sending wheel pwms 1 at a time may cause issues as it updates them one at a time so abs
         controller might think its slipping whne it just hasnt updated all wheels yet*/

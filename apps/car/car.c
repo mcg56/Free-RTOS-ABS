@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <inc/hw_memmap.h>
@@ -29,11 +30,10 @@
 //Task handles
 TaskHandle_t updateWheelInfoHandle;
 TaskHandle_t readInputsHandle;
-TaskHandle_t blinkHandle;
 TaskHandle_t updateUARTHandle;
 TaskHandle_t updatePWMOutputsTaskHandle;
 TaskHandle_t updateAllPWMInputsHandle;
-TaskHandle_t updateDecelHandle;
+TaskHandle_t decelerationTaskHandle;
 TaskHandle_t toggleABSTaskHandle; // NEW
 
 /**
@@ -42,8 +42,6 @@ TaskHandle_t toggleABSTaskHandle; // NEW
  */
 void createQueues(void)
 {
-    OLEDDisplayQueue = xQueueCreate(5, sizeof(DisplayInfo));
-    UARTDisplayQueue = xQueueCreate(5, sizeof(DisplayInfo));
     updatePWMQueue = xQueueCreate(10, sizeof(pwmOutputUpdate_t));
 }
 
@@ -58,27 +56,6 @@ void createSempahores(void)
 
 
 /**
- * @brief Task that blinks LED
- * @param args Unused
- * @return None
- */
-void blink(void* args) {
-    (void)args; // unused
-
-    TickType_t wake_time = xTaskGetTickCount();
-    
-
-    while (true) {
-        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
-        vTaskDelayUntil(&wake_time, 100);
-
-        
-
-        // configASSERT(wake_time < 1000);  // Runs vAssertCalBled() if false
-    }
-}
-
-/**
  * @brief Update the UART terminal with data about the car.
  * @param args Unused
  * @return No return
@@ -86,77 +63,129 @@ void blink(void* args) {
 void updateUARTTask(void* args)
 {
     (void)args;
-   
-    // // Create empty ine array to clear lines
-    // char empytLine[MAX_STR_LEN + 1];
-    // for(int i = 0; i < MAX_STR_LEN; i++)
-    // {
-    //     empytLine[i] = ' ';
-    // }
-    // empytLine[sizeof(empytLine)/sizeof(empytLine[0]) - 1] = '\r'; // Put last index as carridge return
-    const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 750 / portTICK_PERIOD_MS;
+
+    uint8_t prevSteeringDuty;
+    uint8_t prevSpeed;
+    float prevLFSpeed;
+    float prevLFRadius;
+    uint8_t prevBrakeDuty;
+    uint8_t prevRoadCondition;
+    bool prevPedalState;
+    bool prevSlipArray[4];
+
+    char LFbuff[6];
+    char LRbuff[6]; 
+    char RFbuff[6]; 
+    char RRbuff[6];
+
 
     vt100_print_text();
-    vt100_set_white();
-
     while(true)
     {
-        // Wait until a new message is to be written, as its added to queue
-        DisplayInfo updatedDisplayInfo;
-        portBASE_TYPE status = xQueueReceive(UARTDisplayQueue, &updatedDisplayInfo, 100);
-        if (status == pdPASS)
+        // Wait until we can take the mutex to be able to use car state shared resource
+        xSemaphoreTake(carStateMutex, portMAX_DELAY);
+        // We have obtained the mutex, now can run the task
+
+        //Steering line
+        uint8_t steeringDuty = getSteeringDuty();
+        if (steeringDuty != prevSteeringDuty) // Only write line if there was a change
         {
-
-            //Steering line
-            
-            char alphaStr[6];
-            
-            gcvt (updatedDisplayInfo.alpha, 4, &alphaStr);
-            vt100_print_steering_angle(updatedDisplayInfo.steeringWheelDuty, alphaStr);
-
-
-            // Car speed line
-            vt100_print_car_speed(updatedDisplayInfo.speed);
+            char alphaStr[6];        
+            gcvt (getSteeringAngle(), 4, &alphaStr);
+            vt100_print_steering_angle(getSteeringDuty(), alphaStr);
+            prevSteeringDuty = steeringDuty;
+        }
         
-            
-            char LFbuff[6];
-            char LRbuff[6]; 
-            char RFbuff[6]; 
-            char RRbuff[6];
+        // Car speed line
+        uint16_t speed = getCarSpeed();
+        if (speed != prevSpeed) // Only write line if there was a change
+        {
+            vt100_print_car_speed(speed);
+            prevSpeed = speed;
+        }
+        
+        // Wheel information lines
+        // First get the wheel structs
+        Wheel LF = getleftFront();
+        Wheel LR = getleftRear();
+        Wheel RF = getRightFront();
+        Wheel RR = getRightRear();
+        
+        // Wheel speed and PRR lines
+        // If one wheel changed speed, they will all have changed speed and PRR.
+        if (LF.speed != prevLFSpeed)// Only write line if there was a change
+        {
             // Wheel speed line
-            //First, convert floats to strings
-            gcvt (updatedDisplayInfo.LF.speed, 4, &LFbuff);
-            gcvt (updatedDisplayInfo.LR.speed, 4, &LRbuff);
-            gcvt (updatedDisplayInfo.RF.speed, 4, &RFbuff);
-            gcvt (updatedDisplayInfo.RR.speed, 4, &RRbuff);
+            //Convert floats to strings
+            gcvt (LF.speed, 4, &LFbuff);
+            gcvt (LR.speed, 4, &LRbuff);
+            gcvt (RF.speed, 4, &RFbuff);
+            gcvt (RR.speed, 4, &RRbuff);
 
             vt100_print_wheel_speed(LFbuff, LRbuff, RFbuff, RRbuff);
 
-            // Wheel turn radii line
-            //First, convert floats to strings
-            gcvt (updatedDisplayInfo.LF.turnRadius, 4, &LFbuff);
-            gcvt (updatedDisplayInfo.LR.turnRadius, 4, &LRbuff);
-            gcvt (updatedDisplayInfo.RF.turnRadius, 4, &RFbuff);
-            gcvt (updatedDisplayInfo.RR.turnRadius, 4, &RRbuff);
-
-            vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
-            
             //Wheel PRR line
             //First, convert floats to strings
-            gcvt (updatedDisplayInfo.LF.pulseHz, 4, &LFbuff);
-            gcvt (updatedDisplayInfo.LR.pulseHz, 4, &LRbuff);
-            gcvt (updatedDisplayInfo.RF.pulseHz, 4, &RFbuff);
-            gcvt (updatedDisplayInfo.RR.pulseHz, 4, &RRbuff);
+            gcvt (LF.pulseHz, 4, &LFbuff);
+            gcvt (LR.pulseHz, 4, &LRbuff);
+            gcvt (RF.pulseHz, 4, &RFbuff);
+            gcvt (RR.pulseHz, 4, &RRbuff);
 
             vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
+            prevLFSpeed = LF.speed;
+        }
 
-            vt100_print_brake_pressure(updatedDisplayInfo.brakePressure);
+        // Wheel turn radii line
+        // If one radius changed, they will all have changed
+        if (LF.turnRadius != prevLFRadius) // Only write line if there was a change
+        {
+            //First, convert floats to strings
+            gcvt (LF.turnRadius, 4, &LFbuff);
+            gcvt (LR.turnRadius, 4, &LRbuff);
+            gcvt (RF.turnRadius, 4, &RFbuff);
+            gcvt (RR.turnRadius, 4, &RRbuff);
 
-            vt100_print_condition(updatedDisplayInfo.condition);
+            vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
+            prevLFRadius = LF.turnRadius;
+        }
+        
+        uint8_t brakeDuty = getBrakePedalPressureDuty();
+        if (brakeDuty != prevBrakeDuty)
+        {
+            vt100_print_brake_pressure(brakeDuty);
+            prevBrakeDuty = brakeDuty;
+        }
 
-            vt100_print_pedal(updatedDisplayInfo.pedal);
 
-        }else continue;
+        uint8_t roadCondition  = getRoadCondition();
+        if (roadCondition != prevRoadCondition)
+        {
+            vt100_print_condition(roadCondition);
+            prevRoadCondition = roadCondition;
+        }
+        
+
+        bool pedalState = getPedalState();
+        if (pedalState != prevPedalState)
+        {   
+            vt100_print_pedal(pedalState);
+            prevPedalState = pedalState;
+        }
+        
+        bool slipArray[4] = {LF.slipping, LR.slipping, RF.slipping, RR.slipping};
+        if((prevSlipArray[0] != slipArray[0]) || (prevSlipArray[1] != slipArray[1]) || (prevSlipArray[2] != slipArray[2]) || (prevSlipArray[3] != slipArray[3]))
+        {
+            vt100_print_slipage(slipArray);
+            for (int i=0;i < 4; i++)
+            {
+                prevSlipArray[i] = slipArray[i];
+            }
+        }
+
+        // Give the mutex back
+        xSemaphoreGive(carStateMutex);
+
         vTaskDelay(xDelay);
     }
 }
@@ -185,25 +214,25 @@ void readInputsTask(void* args)
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
         // We have obtained the mutex, now can run the task
 
-        int32_t c = UARTCharGetNonBlocking(UART_USB_BASE);
+        int32_t c = tolower(UARTCharGetNonBlocking(UART_USB_BASE));
         // Update values accodingly.
         bool change = false;
 
         if (checkButton(UP) == PUSHED || c == 'w')
         {
-            uint8_t currentSpeed = getCarSpeed();
+            uint16_t currentSpeed = getCarSpeed();
             setCarSpeed(currentSpeed + 5);
             change = true;            
         }
-        if (checkButton(DOWN) == PUSHED || c == 'q')
+        if (checkButton(DOWN) == PUSHED || c == 's')
         {
-            uint8_t currentSpeed = getCarSpeed();
+            uint16_t currentSpeed = getCarSpeed();
             if (currentSpeed != 0) {
                 setCarSpeed(currentSpeed - 5);
             }
             change = true;
         }
-        if (checkButton(LEFT) == PUSHED || c == '1')
+        if (checkButton(LEFT) == PUSHED || c == 'a')
         {
             uint8_t currentSteeringWheelDuty = getSteeringDuty();
             if (currentSteeringWheelDuty > 5) {
@@ -214,7 +243,7 @@ void readInputsTask(void* args)
             xQueueSendToBack(updatePWMQueue, &steeringPWM, 0);
             change = true;
         }
-        if (checkButton(RIGHT) == PUSHED|| c == '2')
+        if (checkButton(RIGHT) == PUSHED|| c == 'd')
         {
             uint8_t currentSteeringWheelDuty = getSteeringDuty();
             if (currentSteeringWheelDuty < 95) {
@@ -269,14 +298,14 @@ void readInputsTask(void* args)
             {
                 setPedalState(1);
                 // Start decleration task
-                vTaskResume(updateDecelHandle);
+                vTaskResume(decelerationTaskHandle);
 
                 // Notify PWM task to update brake pwm as pedal is activated
                 pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, pwmBrake};
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
             } else {
                 // Stop deceleration Task
-                vTaskSuspend(updateDecelHandle);
+                vTaskSuspend(decelerationTaskHandle);
 
                 // Set brake pwm to 5% duty (0 pressure)
                 pwmOutputUpdate_t brakePWM = {5, PWM_BRAKE_FIXED_HZ, pwmBrake};
@@ -351,7 +380,7 @@ void processABSPWMInputTask(void* args)
     }   
 }
 
-void updateDecel (void* args)
+void decelerationTask (void* args)
 {
     (void)args;
 
@@ -364,7 +393,7 @@ void updateDecel (void* args)
             xSemaphoreTake(carStateMutex, portMAX_DELAY);
             // We have obtained the mutex, now can run the task
 
-            uint8_t currentSpeed = getCarSpeed();
+            uint16_t currentSpeed = getCarSpeed();
             // TO DO: Change to getABSBrakePressureDuty when using with ABS controller 
             //(Doesnt make a difference to output but shows we actually use the ABS duty not just our own)
             uint8_t currentABSBrakeDuty = getBrakePedalPressureDuty(); // = getABSBrakePressureDuty();
@@ -375,7 +404,7 @@ void updateDecel (void* args)
                     newSpeed = 0;
             }
 
-            setCarSpeed((uint8_t)newSpeed);
+            setCarSpeed((uint16_t)newSpeed);
 
             // Give the mutex back
             xSemaphoreGive(carStateMutex);
@@ -412,15 +441,14 @@ int main(void) {
     createQueues();
     createSempahores();
 
-    //xTaskCreate(&blink, "blink", 150, NULL, 0, &blinkHandle);
     xTaskCreate(&readInputsTask, "read inputs", 150, NULL, 0, &readInputsHandle);
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
     xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
-    xTaskCreate(&updateDecel, "updateDecel", 256, NULL, 0, &updateDecelHandle);
+    xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 0, &decelerationTaskHandle);
     xTaskCreate(toggleABSTask, "Toggle ABS", 50, NULL, 0, &toggleABSTaskHandle);
-    vTaskSuspend(updateDecelHandle);
+    vTaskSuspend(decelerationTaskHandle);
 
     // Tell the wheel update task to run, which fills out the wheels speeds with starting info
     xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
