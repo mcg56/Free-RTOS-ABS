@@ -34,6 +34,7 @@
 // Constant Definitions
 //*************************************************************
 #define OLED_CHAR_WIDTH 17 // OLED is 16 characters wide
+#define MAX_ID_LEN 12
 
 //*************************************************************
 // Type Definitions
@@ -100,8 +101,11 @@ static void updateDisplay (void);
 static void updateSelectedScreen (void);
 static void updateScreenIndex (void);
 static void updateScreen (void);
-static void OLEDDrawABSScreen (void);
-static void OLEDDrawPWMScreen (void);
+static void OLEDUpdateABSScreen (void);
+static void OLEDUpdatePWMScreen (void);
+static void OLEDDrawTemplate (void);
+static void OLEDDrawABSTemplate (void);
+static void OLEDDrawPWMTemplate (void);
 static void OLEDDrawTask(void* args);
 static void OLEDDraw(char str[], int col, int row);
 static void clearScreen (void);
@@ -138,6 +142,8 @@ initDisplay (void)
     xTaskCreate(&updateDisplayTask, "updateDisplay", 256, NULL, 0, NULL);
     xTaskCreate(&updateDisplayButtonsTask, "updateButtons", 256, NULL, 0, NULL);
     xTaskCreate(&OLEDDrawTask, "OLEDDraw", 256, NULL, 0, NULL);
+
+    OLEDDrawTemplate ();
 }
 
 /**
@@ -273,31 +279,51 @@ static void
 updateScreen (void)
 {
     // Clear screen if changing types
-    static enum screenType prevScreenType = ABS_INFO;
+    static enum screenType prevScreenType;
     if (screen.type != prevScreenType)
     {
         clearScreen ();
+        OLEDDrawTemplate ();
         prevScreenType = screen.type;
     }
 
     switch (screen.type)
     {
         case ABS_INFO:
-            OLEDDrawABSScreen ();
+            OLEDUpdateABSScreen ();
             break;
         case PWM_INFO:
-            OLEDDrawPWMScreen ();
+            OLEDUpdatePWMScreen ();
             break;
     } 
 }
 
 /**
- * @brief Updates the screen for an ABS information display
+ * @brief Draws the screen template based on the selected screen
  * 
  * @return None
  */
 static void
-OLEDDrawABSScreen (void)
+OLEDDrawTemplate (void)
+{
+    switch (screen.type)
+    {
+        case ABS_INFO:
+            OLEDDrawABSTemplate ();
+            break;
+        case PWM_INFO:
+            OLEDDrawPWMTemplate ();
+            break;
+    } 
+}
+
+/**
+ * @brief Draws the template for the ABS information display
+ * 
+ * @return None
+ */
+static void
+OLEDDrawABSTemplate (void)
 {
     OLEDDraw_t lineToDraw;
 	
@@ -306,24 +332,24 @@ OLEDDrawABSScreen (void)
     lineToDraw.col = 0;
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "ABS State:   %s ", getABSStateName(screen.content.absScreen.absState));
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "ABS State:      ");
     lineToDraw.row = 1;
     lineToDraw.col = 0;
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "ABS Duty:    %2d%%", screen.content.absScreen.duty);
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "ABS Duty:      %%");
     lineToDraw.row = 2;
     lineToDraw.col = 0;
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 }
 
 /**
- * @brief Updates the screen for a PWM information display
+ * @brief Draws the template for the PWM information display
  * 
  * @return None
  */
 static void
-OLEDDrawPWMScreen (void)
+OLEDDrawPWMTemplate (void)
 {
     OLEDDraw_t lineToDraw;
 	
@@ -337,21 +363,73 @@ OLEDDrawPWMScreen (void)
     lineToDraw.col = 0;
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%s", screen.content.pwmScreen.pwmSignal.id);
-    lineToDraw.row = 1;
-    lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str); // Right align ID
-    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);   
-
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "Freq:     %3d Hz", screen.content.pwmScreen.pwmSignal.frequency);
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "Freq:           ");
     lineToDraw.row = 2;
     lineToDraw.col = 0;
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0); 
 
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "Duty:        %2d%%", screen.content.pwmScreen.pwmSignal.duty);
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "Duty:           ");
     lineToDraw.row = 3;
     lineToDraw.col = 0;
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);    
 }
+
+
+/**
+ * @brief Update only the variable information for the ABS screen
+ * 
+ * @return None
+ */
+static void
+OLEDUpdateABSScreen (void)
+{
+    OLEDDraw_t lineToDraw;
+	
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%s", getABSStateName(screen.content.absScreen.absState));
+    lineToDraw.row = 1;
+    lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%2d%%", screen.content.absScreen.duty);
+    lineToDraw.row = 2;
+    lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
+}
+
+/**
+ * @brief Update only the variable information for the PWM screen
+ * 
+ * @return None
+ */
+static void
+OLEDUpdatePWMScreen (void)
+{
+    OLEDDraw_t lineToDraw;
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%s", screen.content.pwmScreen.pwmSignal.id);
+    lineToDraw.row = 1;
+    if (strlen(lineToDraw.str) > MAX_ID_LEN) lineToDraw.str[MAX_ID_LEN] = 0; // Prevent overflow of long IDs
+    lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);   
+
+    // Adds whitespace when changing from long IDs to shorter IDs
+    int whiteSpaceLen = MAX_ID_LEN - strlen(lineToDraw.str);
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "                ");
+    lineToDraw.str[whiteSpaceLen - 1] = 0;
+    lineToDraw.col = OLED_CHAR_WIDTH - MAX_ID_LEN;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);   
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%3d Hz", screen.content.pwmScreen.pwmSignal.frequency);
+    lineToDraw.row = 2;
+    lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0); 
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%2d%%", screen.content.pwmScreen.pwmSignal.duty);
+    lineToDraw.row = 3;
+    lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);    
+}
+
 
 /**
  * @brief  Task to draw to the OLED display
