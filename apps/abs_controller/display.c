@@ -208,7 +208,7 @@ getSelectedPWM (void)
 static void
 updateScreenIndex (void)
 {
-    if (checkButton(LEFT) == PUSHED) // TO DO: Change to up and down
+    if (checkButton(UP) == PUSHED)
     {
         if (screenIndex == getCountPWMInputs())
         {
@@ -217,6 +217,17 @@ updateScreenIndex (void)
         else
         {
             screenIndex++;
+        }
+    }
+    else if (checkButton(DOWN) == PUSHED)
+    {
+        if (screenIndex == 0)
+        {
+            screenIndex = getCountPWMInputs();
+        }
+        else
+        {
+            screenIndex--;
         }
     }
 }
@@ -278,7 +289,7 @@ OLEDDrawPWMScreen (void)
 	
     usnprintf (str, sizeof(str), "----PWM Info----");
     OLEDStringDraw (str, 0, 0);
-    usnprintf (str, sizeof(str), "ID:", screen.content.pwmScreen.pwmSignal.id);
+    usnprintf (str, sizeof(str), "ID:             ");
     OLEDStringDraw (str, 0, 1);
     usnprintf (str, sizeof(str), "%s", screen.content.pwmScreen.pwmSignal.id);
     OLEDStringDraw (str, 16 - strlen(str), 1); // Right align ID
