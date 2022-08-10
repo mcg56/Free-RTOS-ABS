@@ -406,17 +406,18 @@ OLEDUpdatePWMScreen (void)
 {
     OLEDDraw_t lineToDraw;
 
-    // TO DO: This clears the string but creates the flickering
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "            ");
-    lineToDraw.row = 1;
-    lineToDraw.col = 3;
-    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
-
     usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%s", screen.content.pwmScreen.pwmSignal.id);
     lineToDraw.row = 1;
     if (strlen(lineToDraw.str) > MAX_ID_LEN) lineToDraw.str[MAX_ID_LEN] = 0; // Prevent overflow of long IDs
     lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
-    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);    
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);   
+
+    // Adds whitespace when changing from long IDs to shorter IDs
+    int whiteSpaceLen = MAX_ID_LEN - strlen(lineToDraw.str);
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "                ");
+    lineToDraw.str[whiteSpaceLen - 1] = 0;
+    lineToDraw.col = OLED_CHAR_WIDTH - MAX_ID_LEN;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);   
 
     usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%3d Hz", screen.content.pwmScreen.pwmSignal.frequency);
     lineToDraw.row = 2;
