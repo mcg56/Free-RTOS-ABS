@@ -424,7 +424,7 @@ OLEDUpdatePWMScreen (void)
     lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0); 
 
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%2d%%", screen.content.pwmScreen.pwmSignal.duty);
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), " %2d%%", screen.content.pwmScreen.pwmSignal.duty);
     lineToDraw.row = 3;
     lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);    

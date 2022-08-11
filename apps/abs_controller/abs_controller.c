@@ -55,7 +55,7 @@
 TaskHandle_t testHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 TaskHandle_t calculatePWMPropertiesHandle;
-TaskHandle_t checkSlipHandle;
+
 
 void
 printPWM(char* id)
@@ -129,6 +129,7 @@ int main (void)
     initialiseUSB_UART ();
     initBrakeOutput ();
     initDisplay ();
+    initABSManager ();
 
     // TO DO: Should all this PWM stuff be its own module? pwm_manager?
     PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
@@ -151,7 +152,6 @@ int main (void)
     PWMSignal_t BrakePedalPWM = {.id = "BrakePedal", .gpioPort = GPIO_PORTC_BASE, .gpioPin = GPIO_PIN_7};
     registerPWMSignal(BrakePedalPWM); 
 
-    xTaskCreate(&checkSlipTask, "checkSlip", 256, NULL, 0, &checkSlipHandle);
     xTaskCreate(&testTask, "testTask", 256, NULL, 0, &testHandle);
 
     vTaskStartScheduler();

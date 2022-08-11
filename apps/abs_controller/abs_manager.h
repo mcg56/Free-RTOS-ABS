@@ -19,20 +19,21 @@ typedef struct {
     float steeringAngle;
     int32_t carVel;
     bool sold;
+    uint8_t absState;
+    uint32_t brake;
 } CarAttributes_t;
 
 //*************************************************************
 // Function handles
 //*************************************************************
 
-extern void 
-checkSlip(void);
 
 /**
  * @brief Regularly scheduled task for checking if the vehicle is slipping
  * @return None
  */
 extern void 
-checkSlipTask(void* args);
+initABSManager (void);
+
 
 #endif
