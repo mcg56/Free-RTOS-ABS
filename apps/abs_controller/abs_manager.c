@@ -28,6 +28,7 @@
 #define MIN_VELOCITY            10      // Minimum required velocity for ABS to function (m/s)
 
 CarAttributes_t mondeo; // Probably not very reliable
+TaskHandle_t checkVelHandle;
 
 typedef enum {
     REAR_LEFT = 0, 
@@ -103,73 +104,97 @@ float calcAngle(int32_t duty)
 }
 
 /**
- * @brief Checks if vehicle is slipping or not
- * @param void
- * @return Boolean slip true/false
+ * @brief Updates car attributes
+ * @param 
+ * @return 
  */
-void checkSlip(void)
-{
-    uint8_t state = ABS_OFF;
-    mondeo.sold = false; // GIGITY GIGITY
-    
+void updateCar(void)
+{   
+
+    // GIGITY GIGITY
+    mondeo.sold = false; 
+
     // Update steering angle
     mondeo.steeringAngle = calcAngle(getPWMInputSignal("Steering").duty);
 
     // Calculate individual wheel velocities
-    // TO DO: confirm with mark what happens if some or all are zero
     mondeo.wheelVel[REAR_LEFT] = calcWheelVel(getPWMInputSignal("LR").frequency);
     mondeo.wheelVel[REAR_RIGHT] = calcWheelVel(getPWMInputSignal("RR").frequency);
     mondeo.wheelVel[FRONT_LEFT] = calcWheelVel(getPWMInputSignal("LF").frequency);
     mondeo.wheelVel[FRONT_RIGHT] = calcWheelVel(getPWMInputSignal("RF").frequency);
-
-    // SPlit and task notify
-    // Calculate hypothetical speed
-    int32_t calcHypoVel[NUM_WHEELS];
-    calcHypoVel[REAR_LEFT] = calcCarVel(REAR_LEFT);
-    calcHypoVel[REAR_RIGHT] = calcCarVel(REAR_RIGHT);
-    calcHypoVel[FRONT_LEFT] = calcCarVel(FRONT_LEFT);
-    calcHypoVel[FRONT_RIGHT] = calcCarVel(FRONT_RIGHT);
-
-    // Reset velocity for next computation
-    mondeo.carVel = 0;
-
-    // Loop through each hypotheticle car velocity and update car velocity to maximum value
-    for (uint32_t i = 0; i < NUM_WHEELS; i++){
-        if (calcHypoVel[i] > mondeo.carVel) {
-            mondeo.carVel = calcHypoVel[i];
-        }
-    }
-
-    // Loop through each hypotheticle car velocity and compare to maximum car velocity.
-    // If absolute differnce greater than 10% and car velocity greater than 10 m/s turn ABS on
-    for (uint32_t i = 0; i < NUM_WHEELS; i++){
-        float diff = ((mondeo.carVel - calcHypoVel[i])*SCALE_FACTOR)/mondeo.carVel;
-        if ((diff > TOLERANCE) && (mondeo.carVel > MIN_VELOCITY)) {
-            state = ABS_ON;
-            //TODO ABS state debouncing (make sure can activate within 0.5 sec)
-        }
-    }
-   
-    setABS(state);
+    // Tell checkVel to compare speeds
+    xTaskNotifyGiveIndexed( checkVelHandle, 0 );
+    
 }
+
+/**
+ * @brief Updates car attributes
+ * @param void
+ * @return 
+ */
+void checkVel(void* args)
+{   
+    (void)args; 
+    while (true)
+    {
+        // Wait until a task has notified it to run
+        ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
+
+        mondeo.absState = ABS_OFF;
+
+        // Calculate hypothetical speed
+        int32_t calcHypoVel[NUM_WHEELS];
+        calcHypoVel[REAR_LEFT] = calcCarVel(REAR_LEFT);
+        calcHypoVel[REAR_RIGHT] = calcCarVel(REAR_RIGHT);
+        calcHypoVel[FRONT_LEFT] = calcCarVel(FRONT_LEFT);
+        calcHypoVel[FRONT_RIGHT] = calcCarVel(FRONT_RIGHT);
+
+        // Reset velocity for next computation
+        mondeo.carVel = 0;
+
+        // Loop through each hypotheticle car velocity and update car velocity to maximum value
+        for (uint32_t i = 0; i < NUM_WHEELS; i++){
+            if (calcHypoVel[i] > mondeo.carVel) {
+                mondeo.carVel = calcHypoVel[i];
+            }
+        }
+
+        // Loop through each hypotheticle car velocity and compare to maximum car velocity.
+        // If absolute differnce greater than 10% and car velocity greater than 10 m/s turn ABS on
+        for (uint32_t i = 0; i < NUM_WHEELS; i++){
+            float diff = ((mondeo.carVel - calcHypoVel[i])*SCALE_FACTOR)/mondeo.carVel;
+            if ((diff > TOLERANCE) && (mondeo.carVel > MIN_VELOCITY)) {
+                mondeo.absState = ABS_ON;
+                //TODO ABS state debouncing (make sure can activate within 0.5 sec)
+            }
+        }
+        setABS(mondeo.absState);
+    }
+}
+
+
+void initABSManager (void)
+{
+    xTaskCreate(&checkVel, "checkVel", 80, NULL, 0, &checkVelHandle);
+}
+
 
 /**
  * @brief Regularly scheduled task for updating all PWM signals
  * @return None
  */
-void checkSlipTask(void* args)
+void updateCarTask(void* args)
 {
     (void)args;
     const TickType_t xDelay = 400 / portTICK_PERIOD_MS; // TO DO: magic number
-
-    // PWMSignalQueue = xQueueCreate(8, sizeof(PWMSignal_t*)); TESTING
-
     while (true) 
     {
-        checkSlip();
+        updateCar();
         vTaskDelay(xDelay);
     }   
 }
+
+
 
 // TESTING
 // char str[100];
