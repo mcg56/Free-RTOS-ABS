@@ -51,6 +51,8 @@
 #define PWM_GPIO_BASE           GPIO_PORTB_BASE
 #define PWM_GPIO_PERIPH         SYSCTL_PERIPH_GPIOB | SYSCTL_PERIPH_GPIOC
 
+#define UPDATE_ALL_PWM_INPUTS_TASK_RATE 330 // [ms]
+
 //*************************************************************
 // Type Definitions
 //*************************************************************
@@ -334,7 +336,7 @@ static void
 updateAllPWMInputsTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 330 / portTICK_PERIOD_MS; // TO DO: magic number
+    const TickType_t xDelay = UPDATE_ALL_PWM_INPUTS_TASK_RATE / portTICK_PERIOD_MS; // TO DO: magic number
 
     while (true) 
     {

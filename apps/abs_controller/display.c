@@ -29,12 +29,16 @@
 
 #include "display.h"
 #include "brake_output.h"
+#include "abs_manager.h"
 
 //*************************************************************
 // Constant Definitions
 //*************************************************************
 #define OLED_CHAR_WIDTH 17 // OLED is 16 characters wide
 #define MAX_ID_LEN 12
+
+#define UPDATE_DISPLAY_TASK_RATE            200 // [ms]
+#define UPDATE_DISPLAY_BUTTONS_TASK_RATE    10  // [ms]
 
 //*************************************************************
 // Type Definitions
@@ -156,7 +160,7 @@ updateDisplayTask (void* args)
 {
     (void)args;
 
-    const TickType_t xDelay = 200 / portTICK_PERIOD_MS; //TO DO: set rate
+    const TickType_t xDelay = UPDATE_DISPLAY_TASK_RATE / portTICK_PERIOD_MS; //TO DO: set rate
 
     while (true)
     {
@@ -176,7 +180,7 @@ updateDisplayButtonsTask (void* args)
 {
     (void)args;
 
-    const TickType_t xDelay = 10 / portTICK_PERIOD_MS; //TO DO: set rate
+    const TickType_t xDelay = UPDATE_DISPLAY_BUTTONS_TASK_RATE / portTICK_PERIOD_MS; //TO DO: set rate
 
     while (true)
     {
@@ -327,18 +331,23 @@ OLEDDrawABSTemplate (void)
 {
     OLEDDraw_t lineToDraw;
 	
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "---Brake Info---");
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "----Car Info----");
     lineToDraw.row = 0;
     lineToDraw.col = 0;
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "ABS State:      ");
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "Turn Angle:     ");
     lineToDraw.row = 1;
     lineToDraw.col = 0;
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "ABS Duty:      %%");
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "ABS State:      ");
     lineToDraw.row = 2;
+    lineToDraw.col = 0;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "ABS Duty:      %%");
+    lineToDraw.row = 3;
     lineToDraw.col = 0;
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 }
@@ -385,13 +394,18 @@ OLEDUpdateABSScreen (void)
 {
     OLEDDraw_t lineToDraw;
 	
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%s", getABSStateName(screen.content.absScreen.absState));
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%d", getSteeringAngle()); // TO DO: clear whitespace
     lineToDraw.row = 1;
     lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%2d%%", screen.content.absScreen.duty);
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%s", getABSStateName(screen.content.absScreen.absState)); // TO DO: clear whitespace
     lineToDraw.row = 2;
+    lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
+
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%2d%%", screen.content.absScreen.duty);
+    lineToDraw.row = 3;
     lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 }

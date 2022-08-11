@@ -26,19 +26,23 @@
 //*************************************************************
 // Constant Definitions
 //*************************************************************
-#define ABS_DUTY_DEFAULT 50 // [%]
+#define ABS_DUTY_DEFAULT        50      // [%]
+#define LED_BLINK_RATE_COEFF    0.08    // Coefficient for relating brake duty to blink rate
 
-// This will be the output pin details but right now its just PC5
+// TO DO: This will be the output pin details but right now its just PC5
+
+#define PULSE_ABS_TASK_RATE     50 // [ms] (From requirements)
+#define UPDATE_ABS_TASK_RATE    50 // [ms]
 
 //*************************************************************
 // Function prototype
 //*************************************************************
-void pulseABS (void);
-static void setABSState (enum absStates state);
-void updateABSTask (void* args);
-void pulseABSTask (void* args);
-void updateABS (void);
-static void toggleABSState (void);
+void            pulseABS        (void);
+static void     setABSState     (enum absStates state);
+void            updateABSTask   (void* args);
+void            pulseABSTask    (void* args);
+void            updateABS       (void);
+static void     toggleABSState  (void);
 
 //*****************************************************************************
 // Global variables
@@ -74,7 +78,7 @@ updateABSTask (void* args)
 {
     (void)args;
 
-    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = UPDATE_ABS_TASK_RATE / portTICK_PERIOD_MS;
 
     while (true)
     {
@@ -117,13 +121,13 @@ pulseABSTask (void* args)
 {
     (void)args;
 
-    const TickType_t xDelay = 50 / portTICK_PERIOD_MS; // Check timing
+    const TickType_t xDelay = PULSE_ABS_TASK_RATE / portTICK_PERIOD_MS; // Check timing
 
     while (true)
     {
         pulseABS();
 
-        setStatusLEDBlinkRate(ABSDuty * 0.08); // TO DO: magic number
+        setStatusLEDBlinkRate(ABSDuty * LED_BLINK_RATE_COEFF);
 
         vTaskDelay(xDelay);
     }   

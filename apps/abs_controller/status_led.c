@@ -23,27 +23,21 @@
 //*************************************************************
 // Constant Definitions
 //*************************************************************
-#define DEFAULT_BLINK_RATE 500
+#define DEFAULT_BLINK_RATE  500                 // [ms]
 
-#define STATUS_LED_PERIPH SYSCTL_PERIPH_GPIOF
-#define STATUS_LED_BASE GPIO_PORTF_BASE
-#define STATUS_LED_PIN GPIO_PIN_1
-
-//*************************************************************
-// Type Definitions
-//*************************************************************
-
-
+#define STATUS_LED_PERIPH   SYSCTL_PERIPH_GPIOF
+#define STATUS_LED_BASE     GPIO_PORTF_BASE
+#define STATUS_LED_PIN      GPIO_PIN_1
 
 //*************************************************************
 // Function prototypes
 //*************************************************************
-static void blinkTask(void* args);
-static void setBlinkDelayTask(void* args);  
-static void toggleLED (void);
-static void setBlinkDelay (TickType_t delay);
-static void ledOn (void);
-static void ledOff (void);
+static void blinkTask           (void* args);
+static void setBlinkDelayTask   (void* args);  
+static void toggleLED           (void);
+static void setBlinkDelay       (TickType_t delay);
+static void ledOn               (void);
+static void ledOff              (void);
 
 //*****************************************************************************
 // freeRTOS handles

@@ -14,6 +14,7 @@
 #include <queue.h>
 #include "driverlib/timer.h"
 #include "brake_output.h"
+#include "pwm_info.h"
 
 
 #define DIAMETER                0.5     // Wheel diameter (m)
@@ -27,6 +28,8 @@
 #define SCALE_FACTOR            100     // Scale result to percentage
 #define MIN_VELOCITY            10      // Minimum required velocity for ABS to function (m/s)
 #define NUM_ABS_POLLS           2
+
+#define UPDATE_CAR_TASK_RATE    50     // [ms]
 
 void checkVelTask(void* args);
 void updateCarTask(void* args);
@@ -122,25 +125,31 @@ float calcAngle(int32_t duty)
  * @param 
  * @return 
  */
-void updateCar(void)
+void updateCar( void)
 {   
 
     // GIGITY GIGITY
     mondeo.sold = false; 
 
     // Update steering angle
-    mondeo.steeringAngle = calcAngle(getPWMInputSignal("Steering").duty);
-    mondeo.brake = getPWMInputSignal("BrakePedal").duty;
+    mondeo.steeringAngle = calcAngle(getPWMInputSignal(STEERING_ID).duty);
+    mondeo.brake = getPWMInputSignal(BRAKE_PEDAL_ID).duty;
 
 
     // Calculate individual wheel velocities
-    mondeo.wheelVel[REAR_LEFT] = calcWheelVel(getPWMInputSignal("LR").frequency);
-    mondeo.wheelVel[REAR_RIGHT] = calcWheelVel(getPWMInputSignal("RR").frequency);
-    mondeo.wheelVel[FRONT_LEFT] = calcWheelVel(getPWMInputSignal("LF").frequency);
-    mondeo.wheelVel[FRONT_RIGHT] = calcWheelVel(getPWMInputSignal("RF").frequency);
+    mondeo.wheelVel[REAR_LEFT] = calcWheelVel(getPWMInputSignal(RL_WHEEL_ID).frequency);
+    mondeo.wheelVel[REAR_RIGHT] = calcWheelVel(getPWMInputSignal(RR_WHEEL_ID).frequency);
+    mondeo.wheelVel[FRONT_LEFT] = calcWheelVel(getPWMInputSignal(FL_WHEEL_ID).frequency);
+    mondeo.wheelVel[FRONT_RIGHT] = calcWheelVel(getPWMInputSignal(FR_WHEEL_ID).frequency);
     // Tell checkVel to compare speeds
     xTaskNotifyGiveIndexed( checkVelHandle, 0 );
     
+}
+
+int 
+getSteeringAngle (void)
+{
+    return mondeo.steeringAngle;
 }
 
 /**
@@ -151,7 +160,7 @@ void updateCar(void)
 void checkVelTask(void* args)
 {   
     (void)args; 
-    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+
     while (true)
     {
         // Wait until a task has notified it to run
@@ -219,7 +228,7 @@ void checkVelTask(void* args)
 void updateCarTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 400 / portTICK_PERIOD_MS; // TO DO: magic number
+    const TickType_t xDelay = UPDATE_CAR_TASK_RATE / portTICK_PERIOD_MS; // TO DO: magic number
     while (true) 
     {
         updateCar();
@@ -227,7 +236,8 @@ void updateCarTask(void* args)
     }   
 }
 
-
+// TO DO: Make a get steering angle function
+// TO DO: abs turns on when brake pedal not pressed
 
 // TESTING
 // char str[100];

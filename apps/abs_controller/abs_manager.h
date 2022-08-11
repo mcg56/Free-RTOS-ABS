@@ -35,5 +35,8 @@ typedef struct {
 extern void 
 initABSManager (void);
 
+extern int 
+getSteeringAngle (void);
+
 
 #endif
