@@ -21,7 +21,6 @@
 #define KPH_TO_MS_SCALE_FACTOR (1000.0/3600.0)
 #define PI (3.141592653589793)
 
-static bool ABSPulseOn = true;
 
 //**********************Local function prototypes******************************
 
@@ -133,26 +132,14 @@ bool detectWheelSlip(Wheel* wheel, uint8_t condition, uint8_t pressure)
     }
 
     if ((wheel->speed >= minspeed) && (pressure >= m*wheel->speed + c) ){
-        wheel->pulseHz = 0;
+        wheel->speed = wheel->speed * 0.9 - 1.25*(pressure - (m*wheel->speed + c)); // Set wheel speed to a lower value dependant on how far over slip limit we are
+        if(wheel->speed <= 0) wheel->speed = 0;
         wheel->slipping = true;
         return 1;
     } else {
         wheel->slipping = false;
         return 0;
     }
-}
-
-
-
-void toggleABSTask(void* args)
-{
-    (void)args;
-    TickType_t wake_time = xTaskGetTickCount(); 
-    while (true)
-    {
-        ABSPulseOn = !ABSPulseOn;
-        vTaskDelayUntil(&wake_time, 50);
-    }   
 }
 
 
@@ -211,20 +198,22 @@ void updateWheelInfoTask(void* args)
             calculateWheelRadii(&rightRear, &rightFront, &leftRear, &leftFront, alpha);
             calculateWheelSpeedsFromRadii(&leftFront, &leftRear, &rightFront, &rightRear, carSpeed);
         }
-        calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
-
-        bool absState = getABSState();
-        if ((absState && ABSPulseOn && pedalState) || (!absState && pedalState))
+        
+        if (pedalState)
         {
-            for (int i = 0; i<4; i++){
-            detectWheelSlip(wheelArray[i], roadCondition, brakePedalPressure);
-            } 
-        } else if (!pedalState) // If pedal is off, reset slips 
-        { 
-            for (int i = 0; i<4; i++){
-            wheelArray[i]->slipping = false;
+            for (int i=0; i < 4; i++)
+            {
+                detectWheelSlip(wheelArray[i], roadCondition, brakePedalPressure);
+            }
+        } else // Not braking, reset slips
+        {
+            for (int i=0; i < 4; i++)
+            {
+                wheelArray[i]->slipping = false;
+            }
         }
-        }
+        
+        calculateWheelPwmFreq(&leftFront, &leftRear, &rightFront, &rightRear);
 
         // Set wheel paramaters of car_state to the new values
         setLeftFront(leftFront);

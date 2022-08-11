@@ -15,6 +15,4 @@
  */
 void updateWheelInfoTask(void* args);
 
-void toggleABSTask(void* args);
-
 #endif

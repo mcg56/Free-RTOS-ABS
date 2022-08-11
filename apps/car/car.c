@@ -34,7 +34,6 @@ TaskHandle_t updateUARTHandle;
 TaskHandle_t updatePWMOutputsTaskHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 TaskHandle_t decelerationTaskHandle;
-TaskHandle_t toggleABSTaskHandle; // NEW
 
 /**
  * @brief Creates instances of all queues
@@ -430,7 +429,7 @@ void processABSPWMInputTask(void* args)
 void decelerationTask (void* args)
 {
     (void)args;
-    const float maxDecel = 1; // m/s^2
+    const float maxDecel = 5; // m/s^2
     const float taskPeriodms = 50; //ms
     TickType_t wake_time = xTaskGetTickCount();     
     
@@ -495,7 +494,6 @@ int main(void) {
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
     xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
     xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 0, &decelerationTaskHandle);
-    xTaskCreate(toggleABSTask, "Toggle ABS", 50, NULL, 0, &toggleABSTaskHandle);
     vTaskSuspend(decelerationTaskHandle);
 
     // Tell the wheel update task to run, which fills out the wheels speeds with starting info
