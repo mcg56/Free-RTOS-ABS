@@ -26,5 +26,12 @@ void vt100_print_condition(uint8_t condition);
 const char* get_condition(uint8_t condition);
 void vt100_print_slipage(bool slipArray[4], bool ABSstate) ;
 
+/**
+ * @brief Update the UART terminal with data about the car.
+ * @param args Unused
+ * @return No return
+ */
+void updateUARTTask(void* args);
+
 #endif
 

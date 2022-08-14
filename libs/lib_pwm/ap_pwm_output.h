@@ -35,78 +35,7 @@
 #define PWM_MAIN_GPIO_PIN    GPIO_PIN_5
 
 
-#define PWM_WHEEL_FIXED_DUTY    50
-#define PWM_WHEEL_START_HZ      0
 
-// Left front wheel output PWM hardware details
-#define PWM_LF_BASE	        PWM0_BASE
-#define PWM_LF_GEN          PWM_GEN_1
-#define PWM_LF_OUTNUM       PWM_OUT_3
-#define PWM_LF_OUTBIT       PWM_OUT_3_BIT
-#define PWM_LF_PERIPH_PWM	SYSCTL_PERIPH_PWM0
-#define PWM_LF_PERIPH_GPIO  SYSCTL_PERIPH_GPIOB
-#define PWM_LF_GPIO_BASE    GPIO_PORTB_BASE
-#define PWM_LF_GPIO_CONFIG  GPIO_PB5_M0PWM3
-#define PWM_LF_GPIO_PIN     GPIO_PIN_5
-
-// Left rear wheel output PWM hardware details
-#define PWM_LR_BASE	        PWM0_BASE
-#define PWM_LR_GEN          PWM_GEN_2
-#define PWM_LR_OUTNUM       PWM_OUT_4
-#define PWM_LR_OUTBIT       PWM_OUT_4_BIT
-#define PWM_LR_PERIPH_PWM	SYSCTL_PERIPH_PWM0
-#define PWM_LR_PERIPH_GPIO  SYSCTL_PERIPH_GPIOE
-#define PWM_LR_GPIO_BASE    GPIO_PORTE_BASE
-#define PWM_LR_GPIO_CONFIG  GPIO_PE4_M0PWM4
-#define PWM_LR_GPIO_PIN     GPIO_PIN_4
-
-//Right front wheel output PWM hardware details
-#define PWM_RF_BASE	        PWM0_BASE
-#define PWM_RF_GEN          PWM_GEN_3
-#define PWM_RF_OUTNUM       PWM_OUT_7
-#define PWM_RF_OUTBIT       PWM_OUT_7_BIT
-#define PWM_RF_PERIPH_PWM	SYSCTL_PERIPH_PWM0
-#define PWM_RF_PERIPH_GPIO  SYSCTL_PERIPH_GPIOC
-#define PWM_RF_GPIO_BASE    GPIO_PORTC_BASE
-#define PWM_RF_GPIO_CONFIG  GPIO_PC5_M0PWM7
-#define PWM_RF_GPIO_PIN     GPIO_PIN_5
-
-//Right rear wheel output PWM hardware details
-#define PWM_RR_BASE	        PWM1_BASE
-#define PWM_RR_GEN          PWM_GEN_1
-#define PWM_RR_OUTNUM       PWM_OUT_2
-#define PWM_RR_OUTBIT       PWM_OUT_2_BIT
-#define PWM_RR_PERIPH_PWM	SYSCTL_PERIPH_PWM1
-#define PWM_RR_PERIPH_GPIO  SYSCTL_PERIPH_GPIOA
-#define PWM_RR_GPIO_BASE    GPIO_PORTA_BASE
-#define PWM_RR_GPIO_CONFIG  GPIO_PA6_M1PWM2
-#define PWM_RR_GPIO_PIN     GPIO_PIN_6
-
-//Brake level output PWM hardware details
-#define PWM_BRAKE_BASE	        PWM1_BASE
-#define PWM_BRAKE_GEN           PWM_GEN_3
-#define PWM_BRAKE_OUTNUM        PWM_OUT_6
-#define PWM_BRAKE_OUTBIT        PWM_OUT_6_BIT
-#define PWM_BRAKE_PERIPH_PWM	SYSCTL_PERIPH_PWM1
-#define PWM_BRAKE_PERIPH_GPIO   SYSCTL_PERIPH_GPIOF
-#define PWM_BRAKE_GPIO_BASE     GPIO_PORTF_BASE
-#define PWM_BRAKE_GPIO_CONFIG   GPIO_PF2_M1PWM6
-#define PWM_BRAKE_GPIO_PIN      GPIO_PIN_2
-#define PWM_BRAKE_FIXED_HZ      500
-#define PWM_BRAKE_START_DUTY    5
-
-//Steering wheel output PWM hardware details
-#define PWM_STEER_BASE	        PWM1_BASE
-#define PWM_STEER_GEN           PWM_GEN_3
-#define PWM_STEER_OUTNUM        PWM_OUT_7
-#define PWM_STEER_OUTBIT        PWM_OUT_7_BIT
-#define PWM_STEER_PERIPH_PWM	SYSCTL_PERIPH_PWM1
-#define PWM_STEER_PERIPH_GPIO   SYSCTL_PERIPH_GPIOF
-#define PWM_STEER_GPIO_BASE     GPIO_PORTF_BASE
-#define PWM_STEER_GPIO_CONFIG   GPIO_PF3_M1PWM7
-#define PWM_STEER_GPIO_PIN      GPIO_PIN_3
-#define PWM_STEERING_FIXED_HZ   PWM_BRAKE_FIXED_HZ // As on the same generator
-#define PWM_STEERING_START_DUTY 50
 
 
 /************************************************************************************
@@ -114,30 +43,39 @@
 ************************************************************************************/
 
 /**
- * @brief PWM name enumurated datatype
+ * @brief Contains hadware information about specific PWM output
+ * @param base Base of PWM module (PWM0_BASE or PWM1_BASE)
+ * @param gen PWM generator (can ge gen 1,2,3 or 4)
+ * @param outnum Output number of PWM (pwm 1-7)
+ * @param outbit Bit-wise ID for pwm output number
+ * @param periphPWM Peripheral of PWM (again 0 or 1)
+ * @param periphGPIO GPIO peripheral (e.g A, B, C, D...)
+ * @param gpioBase Base of GPIO peripheral (A base, B base etc)
+ * @param gpioConfig Sets alternate configuration of GPIO pin to PWM
+ * @param gpioPin Pin of the port used for PWM output
  */
-typedef enum 
-{
-pwmLF = 0,
-pwmLR = 1,
-pwmRF = 2,
-pwmRR = 3,
-pwmBrake = 4,
-pwmSteering = 5
-} pwmOutputName;
-
+typedef struct{
+    uint32_t base;
+    uint32_t gen;
+    uint32_t outnum;
+    uint32_t outbit;
+    uint32_t periphPWM;
+    uint32_t periphGPIO;
+    uint32_t gpioBase;
+    uint32_t gpioConfig;
+    uint32_t gpioPin;
+} PWMOutputHardwareDetails_t;
 
 /**
  * @brief Struct to pass desired output pwm to updatePWMOutputsTask via a queue
  * @param duty Desired duty cycle (%)
  * @param freq Desired frequency (Hz)
- * @param pwmName PWM name to change. Choose from pwmOutputName enum datatype:
- * [pwmLF, pwmLR, pwmRF, pwmRR, pwmBrake, pwmSteering]
+ * @param pwmOutput PWM output to change
  */
 typedef struct{
 uint32_t duty;
 uint32_t freq;
-pwmOutputName pwmName;
+PWMOutputHardwareDetails_t pwmOutput;
 }pwmOutputUpdate_t;
 
 
@@ -149,6 +87,15 @@ extern QueueHandle_t updatePWMQueue;
 /************************************************************************************
 *****************************PUBLIC FUNCTION PROTOTYPES*****************************
 ************************************************************************************/
+/**
+ * @brief Function to initialise a given PWM. Sets a start Hz and duty but turns
+ * off the output.
+ * @param pwmOutput Hardware details of PWM to initialise
+ * @param startHz Starting Hz
+ * @param startDuty Starting duty
+ * @return None
+ */
+void initializePWMGeneral(PWMOutputHardwareDetails_t PWM, uint32_t startHz, uint32_t startDuty);
 
 /********************************************************
  * Function to set the freq, duty cycle of M0PWM7
@@ -180,11 +127,6 @@ void initialisePWM (void);
  */
 void updatePWMOutputsTask(void* args);
 
-/**
- * @brief Function to initialise then turn on all car output PWM signals
- * off the output.
- * @return None
- */
-void initializeCarPWMOutputs(void);
+
 
 #endif

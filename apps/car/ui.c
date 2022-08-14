@@ -8,7 +8,10 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
+#include <semphr.h>
 #include "libs/lib_uart/ap_uart.h"
+#include "driverlib/uart.h"
+#include "car_state.h"
 
 void vt100_set_yellow(void) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
@@ -52,9 +55,9 @@ void vt100_print_text(void) {
     vt100_set_yellow();
     UARTSend ("*** ABS SIM (12.07.22) ***");
     vt100_set_line_number(2);
-    UARTSend ("Steering -> (1, 2):");
+    UARTSend ("Steering -> (a, d):");
     vt100_set_line_number(4);
-    UARTSend ("Car speed (km/h) -> (q, w):");
+    UARTSend ("Car speed (km/h) -> (s, w):");
     vt100_set_line_number(6);
     UARTSend ("Wheel speed (km/h):");
     vt100_set_line_number(8);
@@ -167,3 +170,182 @@ void vt100_print_slipage(bool slipArray[4], bool ABSstate)
     UARTSend (ANSIString);
 }
 
+void updateUARTTask(void* args)
+{
+    (void)args;
+    const TickType_t xDelay = 333 / portTICK_PERIOD_MS;
+
+    // Save previous writes to check if they need to be updated
+    uint8_t prevSteeringDuty;
+    uint8_t prevSpeed;
+    float prevLFSpeed;
+    float prevLFRadius;
+    uint8_t prevBrakeDuty;
+    uint8_t prevRoadCondition;
+    bool prevPedalState;
+    bool prevSlipArray[4];
+    bool prevABSState;
+
+    char LFbuff[6];
+    char LRbuff[6]; 
+    char RFbuff[6]; 
+    char RRbuff[6];
+    char floatBuff[6];
+
+    vt100_print_text();
+
+    // Print statting information first time task is run
+    gcvt (getSteeringAngle(), 4, &floatBuff);
+    vt100_print_steering_angle(getSteeringDuty(), floatBuff);
+
+    gcvt (getCarSpeed(), 4, &floatBuff);
+    vt100_print_car_speed(floatBuff);
+    Wheel LF = getleftFront();
+    Wheel LR = getleftRear();
+    Wheel RF = getRightFront();
+    Wheel RR = getRightRear();
+    // Wheel speed line
+    //Convert floats to strings
+    gcvt (LF.speed, 4, &LFbuff);
+    gcvt (LR.speed, 4, &LRbuff);
+    gcvt (RF.speed, 4, &RFbuff);
+    gcvt (RR.speed, 4, &RRbuff);
+
+    vt100_print_wheel_speed(LFbuff, LRbuff, RFbuff, RRbuff);
+
+    //Wheel PRR line
+    //First, convert floats to strings
+    gcvt (LF.pulseHz, 4, &LFbuff);
+    gcvt (LR.pulseHz, 4, &LRbuff);
+    gcvt (RF.pulseHz, 4, &RFbuff);
+    gcvt (RR.pulseHz, 4, &RRbuff);
+
+    vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
+
+    //Radius line
+    //First, convert floats to strings
+    gcvt (LF.turnRadius, 4, &LFbuff);
+    gcvt (LR.turnRadius, 4, &LRbuff);
+    gcvt (RF.turnRadius, 4, &RFbuff);
+    gcvt (RR.turnRadius, 4, &RRbuff);
+
+    vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
+    vt100_print_brake_pressure(getBrakePedalPressureDuty());
+    vt100_print_condition(getRoadCondition());
+    vt100_print_pedal(getPedalState());
+
+    bool slipArray[4] = {LF.slipping, LR.slipping, RF.slipping, RR.slipping};
+    bool absState = getABSState();
+    vt100_print_slipage(slipArray, absState);
+
+    
+    while(true)
+    {
+        // Wait until we can take the mutex to be able to use car state shared resource
+        xSemaphoreTake(carStateMutex, portMAX_DELAY);
+        // We have obtained the mutex, now can run the task
+
+        //Steering line
+        uint8_t steeringDuty = getSteeringDuty();
+        if (steeringDuty != prevSteeringDuty) // Only write line if there was a change
+        {      
+            gcvt (getSteeringAngle(), 4, &floatBuff);
+            vt100_print_steering_angle(getSteeringDuty(), floatBuff);
+            prevSteeringDuty = steeringDuty;
+        }
+        
+        // Car speed line
+        float speed = getCarSpeed();
+        if (speed != prevSpeed) // Only write line if there was a change
+        {
+            gcvt (getCarSpeed(), 4, &floatBuff);
+            vt100_print_car_speed(floatBuff);
+            prevSpeed = speed;
+        }
+        
+        // Wheel information lines
+        // First get the wheel structs
+        Wheel LF = getleftFront();
+        Wheel LR = getleftRear();
+        Wheel RF = getRightFront();
+        Wheel RR = getRightRear();
+        
+        // Wheel speed and PRR lines
+        // If one wheel changed speed, they will all have changed speed and PRR.
+        if (LF.speed != prevLFSpeed)// Only write line if there was a change
+        {
+            // Wheel speed line
+            //Convert floats to strings
+            gcvt (LF.speed, 4, &LFbuff);
+            gcvt (LR.speed, 4, &LRbuff);
+            gcvt (RF.speed, 4, &RFbuff);
+            gcvt (RR.speed, 4, &RRbuff);
+
+            vt100_print_wheel_speed(LFbuff, LRbuff, RFbuff, RRbuff);
+
+            //Wheel PRR line
+            //First, convert floats to strings
+            gcvt (LF.pulseHz, 4, &LFbuff);
+            gcvt (LR.pulseHz, 4, &LRbuff);
+            gcvt (RF.pulseHz, 4, &RFbuff);
+            gcvt (RR.pulseHz, 4, &RRbuff);
+
+            vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
+            prevLFSpeed = LF.speed;
+        }
+
+        // Wheel turn radii line
+        // If one radius changed, they will all have changed
+        if (LF.turnRadius != prevLFRadius) // Only write line if there was a change
+        {
+            //First, convert floats to strings
+            gcvt (LF.turnRadius, 4, &LFbuff);
+            gcvt (LR.turnRadius, 4, &LRbuff);
+            gcvt (RF.turnRadius, 4, &RFbuff);
+            gcvt (RR.turnRadius, 4, &RRbuff);
+
+            vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
+            prevLFRadius = LF.turnRadius;
+        }
+        
+        uint8_t brakeDuty = getBrakePedalPressureDuty();
+        if (brakeDuty != prevBrakeDuty)
+        {
+            vt100_print_brake_pressure(brakeDuty);
+            prevBrakeDuty = brakeDuty;
+        }
+
+
+        uint8_t roadCondition  = getRoadCondition();
+        if (roadCondition != prevRoadCondition)
+        {
+            vt100_print_condition(roadCondition);
+            prevRoadCondition = roadCondition;
+        }
+        
+
+        bool pedalState = getPedalState();
+        if (pedalState != prevPedalState)
+        {   
+            vt100_print_pedal(pedalState);
+            prevPedalState = pedalState;
+        }
+        
+        bool slipArray[4] = {LF.slipping, LR.slipping, RF.slipping, RR.slipping};
+        bool absState = getABSState();
+        if((prevSlipArray[0] != slipArray[0]) || (prevSlipArray[1] != slipArray[1]) || (prevSlipArray[2] != slipArray[2]) || (prevSlipArray[3] != slipArray[3]) || (absState != prevABSState))
+        {
+            vt100_print_slipage(slipArray, absState);
+            for (int i=0;i < 4; i++)
+            {
+                prevSlipArray[i] = slipArray[i];
+            }
+            prevABSState = absState;
+        }
+
+        // Give the mutex back
+        xSemaphoreGive(carStateMutex);
+
+        vTaskDelay(xDelay);
+    }
+}

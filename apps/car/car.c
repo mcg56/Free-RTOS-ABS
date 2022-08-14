@@ -11,20 +11,23 @@
 
 #include <FreeRTOS.h>
 #include <task.h>
+#include <queue.h>
+#include <semphr.h>
+
+#include "driverlib/uart.h"
 #include "libs/lib_buttons/ap_buttons.h"
 #include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 #include "stdlib.h"
 #include "utils/ustdlib.h"
 #include "driverlib/pwm.h"
 #include "wheels.h"
-#include <queue.h>
 #include "libs/lib_pwm/ap_pwm_input.h"
 #include "libs/lib_pwm/ap_pwm_output.h"
 #include "libs/lib_system/ap_system.h"
 #include "libs/lib_uart/ap_uart.h"
 #include "ui.h"
-#include "driverlib/uart.h"
 #include "car_state.h"
+#include "car_pwm.h"
 
 
 //Task handles
@@ -55,190 +58,7 @@ void createSempahores(void)
 
 
 
-/**
- * @brief Update the UART terminal with data about the car.
- * @param args Unused
- * @return No return
- */
-void updateUARTTask(void* args)
-{
-    (void)args;
-    const TickType_t xDelay = 333 / portTICK_PERIOD_MS;
 
-    // Save previous writes to check if they need to be updated
-    uint8_t prevSteeringDuty;
-    uint8_t prevSpeed;
-    float prevLFSpeed;
-    float prevLFRadius;
-    uint8_t prevBrakeDuty;
-    uint8_t prevRoadCondition;
-    bool prevPedalState;
-    bool prevSlipArray[4];
-    bool prevABSState;
-
-    char LFbuff[6];
-    char LRbuff[6]; 
-    char RFbuff[6]; 
-    char RRbuff[6];
-    char floatBuff[6];
-
-    vt100_print_text();
-
-    // Print statting information first time task is run
-    gcvt (getSteeringAngle(), 4, &floatBuff);
-    vt100_print_steering_angle(getSteeringDuty(), floatBuff);
-
-    gcvt (getCarSpeed(), 4, &floatBuff);
-    vt100_print_car_speed(floatBuff);
-    Wheel LF = getleftFront();
-    Wheel LR = getleftRear();
-    Wheel RF = getRightFront();
-    Wheel RR = getRightRear();
-    // Wheel speed line
-    //Convert floats to strings
-    gcvt (LF.speed, 4, &LFbuff);
-    gcvt (LR.speed, 4, &LRbuff);
-    gcvt (RF.speed, 4, &RFbuff);
-    gcvt (RR.speed, 4, &RRbuff);
-
-    vt100_print_wheel_speed(LFbuff, LRbuff, RFbuff, RRbuff);
-
-    //Wheel PRR line
-    //First, convert floats to strings
-    gcvt (LF.pulseHz, 4, &LFbuff);
-    gcvt (LR.pulseHz, 4, &LRbuff);
-    gcvt (RF.pulseHz, 4, &RFbuff);
-    gcvt (RR.pulseHz, 4, &RRbuff);
-
-    vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
-
-    //Radius line
-    //First, convert floats to strings
-    gcvt (LF.turnRadius, 4, &LFbuff);
-    gcvt (LR.turnRadius, 4, &LRbuff);
-    gcvt (RF.turnRadius, 4, &RFbuff);
-    gcvt (RR.turnRadius, 4, &RRbuff);
-
-    vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
-    vt100_print_brake_pressure(getBrakePedalPressureDuty());
-    vt100_print_condition(getRoadCondition());
-    vt100_print_pedal(getPedalState());
-
-    bool slipArray[4] = {LF.slipping, LR.slipping, RF.slipping, RR.slipping};
-    bool absState = getABSState();
-    vt100_print_slipage(slipArray, absState);
-
-    
-    while(true)
-    {
-        // Wait until we can take the mutex to be able to use car state shared resource
-        xSemaphoreTake(carStateMutex, portMAX_DELAY);
-        // We have obtained the mutex, now can run the task
-
-        //Steering line
-        uint8_t steeringDuty = getSteeringDuty();
-        if (steeringDuty != prevSteeringDuty) // Only write line if there was a change
-        {      
-            gcvt (getSteeringAngle(), 4, &floatBuff);
-            vt100_print_steering_angle(getSteeringDuty(), floatBuff);
-            prevSteeringDuty = steeringDuty;
-        }
-        
-        // Car speed line
-        float speed = getCarSpeed();
-        if (speed != prevSpeed) // Only write line if there was a change
-        {
-            gcvt (getCarSpeed(), 4, &floatBuff);
-            vt100_print_car_speed(floatBuff);
-            prevSpeed = speed;
-        }
-        
-        // Wheel information lines
-        // First get the wheel structs
-        Wheel LF = getleftFront();
-        Wheel LR = getleftRear();
-        Wheel RF = getRightFront();
-        Wheel RR = getRightRear();
-        
-        // Wheel speed and PRR lines
-        // If one wheel changed speed, they will all have changed speed and PRR.
-        if (LF.speed != prevLFSpeed)// Only write line if there was a change
-        {
-            // Wheel speed line
-            //Convert floats to strings
-            gcvt (LF.speed, 4, &LFbuff);
-            gcvt (LR.speed, 4, &LRbuff);
-            gcvt (RF.speed, 4, &RFbuff);
-            gcvt (RR.speed, 4, &RRbuff);
-
-            vt100_print_wheel_speed(LFbuff, LRbuff, RFbuff, RRbuff);
-
-            //Wheel PRR line
-            //First, convert floats to strings
-            gcvt (LF.pulseHz, 4, &LFbuff);
-            gcvt (LR.pulseHz, 4, &LRbuff);
-            gcvt (RF.pulseHz, 4, &RFbuff);
-            gcvt (RR.pulseHz, 4, &RRbuff);
-
-            vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
-            prevLFSpeed = LF.speed;
-        }
-
-        // Wheel turn radii line
-        // If one radius changed, they will all have changed
-        if (LF.turnRadius != prevLFRadius) // Only write line if there was a change
-        {
-            //First, convert floats to strings
-            gcvt (LF.turnRadius, 4, &LFbuff);
-            gcvt (LR.turnRadius, 4, &LRbuff);
-            gcvt (RF.turnRadius, 4, &RFbuff);
-            gcvt (RR.turnRadius, 4, &RRbuff);
-
-            vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
-            prevLFRadius = LF.turnRadius;
-        }
-        
-        uint8_t brakeDuty = getBrakePedalPressureDuty();
-        if (brakeDuty != prevBrakeDuty)
-        {
-            vt100_print_brake_pressure(brakeDuty);
-            prevBrakeDuty = brakeDuty;
-        }
-
-
-        uint8_t roadCondition  = getRoadCondition();
-        if (roadCondition != prevRoadCondition)
-        {
-            vt100_print_condition(roadCondition);
-            prevRoadCondition = roadCondition;
-        }
-        
-
-        bool pedalState = getPedalState();
-        if (pedalState != prevPedalState)
-        {   
-            vt100_print_pedal(pedalState);
-            prevPedalState = pedalState;
-        }
-        
-        bool slipArray[4] = {LF.slipping, LR.slipping, RF.slipping, RR.slipping};
-        bool absState = getABSState();
-        if((prevSlipArray[0] != slipArray[0]) || (prevSlipArray[1] != slipArray[1]) || (prevSlipArray[2] != slipArray[2]) || (prevSlipArray[3] != slipArray[3]) || (absState != prevABSState))
-        {
-            vt100_print_slipage(slipArray, absState);
-            for (int i=0;i < 4; i++)
-            {
-                prevSlipArray[i] = slipArray[i];
-            }
-            prevABSState = absState;
-        }
-
-        // Give the mutex back
-        xSemaphoreGive(carStateMutex);
-
-        vTaskDelay(xDelay);
-    }
-}
 
 
 
@@ -284,7 +104,7 @@ void readInputsTask(void* args)
                 setSteeringDuty(currentSteeringWheelDuty - 5);
             }
             // Notify PWM task to update steering PWM to new value
-            pwmOutputUpdate_t steeringPWM = {getSteeringDuty(), PWM_STEERING_FIXED_HZ, pwmSteering};
+            pwmOutputUpdate_t steeringPWM = {getSteeringDuty(), PWM_STEERING_FIXED_HZ, PWMHardwareDetailsSteering};
             xQueueSendToBack(updatePWMQueue, &steeringPWM, 0);
             change = true;
         }
@@ -295,7 +115,7 @@ void readInputsTask(void* args)
                 setSteeringDuty(currentSteeringWheelDuty + 5);
             }
             // Notify PWM task to update steering PWM to new value
-            pwmOutputUpdate_t steeringPWM = {getSteeringDuty(), PWM_STEERING_FIXED_HZ, pwmSteering};
+            pwmOutputUpdate_t steeringPWM = {getSteeringDuty(), PWM_STEERING_FIXED_HZ, PWMHardwareDetailsSteering};
             xQueueSendToBack(updatePWMQueue, &steeringPWM, 0);
             change = true;
         }
@@ -308,7 +128,7 @@ void readInputsTask(void* args)
             if(getPedalState()) // Brake pedal pressed, need to update brake PWM to abs controller
             {
                 // Notify PWM task to update brake pwm as pedal is activated
-                pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, pwmBrake};
+                pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
             }
             change = true;
@@ -322,7 +142,7 @@ void readInputsTask(void* args)
             if(getPedalState()) // Brake pedal pressed, need to update brake PWM to abs controller
             {
                 // Notify PWM task to update brake pwm as pedal is activated
-                pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, pwmBrake};
+                pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
             }
             change = true;
@@ -346,14 +166,14 @@ void readInputsTask(void* args)
                 vTaskResume(decelerationTaskHandle);
 
                 // Notify PWM task to update brake pwm as pedal is activated
-                pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, pwmBrake};
+                pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
             } else {
                 // Stop deceleration Task
                 vTaskSuspend(decelerationTaskHandle);
 
                 // Set brake pwm to 5% duty (0 pressure)
-                pwmOutputUpdate_t brakePWM = {5, PWM_BRAKE_FIXED_HZ, pwmBrake};
+                pwmOutputUpdate_t brakePWM = {5, PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
 
                 setPedalState(0);
@@ -378,23 +198,41 @@ void readInputsTask(void* args)
 void processABSPWMInputTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 330 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 250 / portTICK_PERIOD_MS;
     PWMSignal_t pwmDetails;
+    uint8_t changeABSStateCount = 0;
+    bool ABSOn = false;
+    int NORMAL_BRAKE_HZ = 500;
+    int ABS_PULE_HZ = 50;
 
     while (true) 
     {
-        bool ABSOn = false;
-        // TO DO: maybe make this reading of pwm a critcal section so wont cause unwanted timeouts
-        for (int i = 0; i<15; i++) // Could be 10, testing with 15 for safety
+        bool timeoutOccurred = false;
+        // Read 2x periods of the 50 Hz ABS pulse to ensure the long low signal will be read at some point
+        for (int i = 0; i<(2*(NORMAL_BRAKE_HZ/ABS_PULE_HZ)); i++)
         {
             if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS might be on
             {
-                ABSOn = true;
+                timeoutOccurred = true;
                 break;
             } else{
                 pwmDetails = getPWMInputSignal(ABSPWM_ID);
             }
         }
+
+        // If ABS input is different to the current state (timeout while ABS off or no timeout while on)
+        if (ABSOn ^ timeoutOccurred)
+        {
+            changeABSStateCount++; // Increment count
+            if (changeABSStateCount >= 2) // If N number of different inputs in a row, assume state has actually changed and change ABS state
+            {
+                ABSOn = !ABSOn;
+                changeABSStateCount = 0;
+            }
+        } else{ // Reset count if same input condition shows again
+            changeABSStateCount = 0;
+        }
+
         /*
         if (ABSOn)
         {
@@ -415,8 +253,8 @@ void processABSPWMInputTask(void* args)
         sprintf(string, "D: %02ld F: %03ld", pwmDetails.duty, pwmDetails.frequency);
         OLEDStringDraw (string, 0, 3);*/
 
-
-        /*char ANSIString[MAX_STR_LEN + 1]; // For uart message
+        /*
+        char ANSIString[MAX_STR_LEN + 1]; // For uart message
         vt100_set_line_number(21);
         vt100_set_white();
         sprintf(ANSIString, "Duty: %lu  Freq %lu", pwmDetails.duty, pwmDetails.frequency);
@@ -430,7 +268,7 @@ void decelerationTask (void* args)
 {
     (void)args;
     const float maxDecel = 5; // m/s^2
-    const float taskPeriodms = 50; //ms
+    const float taskPeriodms = 100; //ms
     TickType_t wake_time = xTaskGetTickCount();     
     
     while (true)
@@ -481,7 +319,7 @@ int main(void) {
     initialiseUSB_UART ();
     initializeCarPWMOutputs();
 
-
+    // Create and register input ABS pwm
     PWMSignal_t ABSPWM = {.id = ABSPWM_ID, .gpioPort = GPIO_PORTB_BASE, .gpioPin = GPIO_PIN_0};
     registerPWMSignal(ABSPWM);
 

@@ -11,6 +11,7 @@
 #include <task.h>
 #include <queue.h>
 #include "car_state.h"
+#include "car_pwm.h"
 #include "utils/ustdlib.h"
 #include "libs/lib_pwm/ap_pwm_output.h"
 #include "ui.h"
@@ -150,7 +151,8 @@ bool detectWheelSlip(Wheel* wheel, uint8_t condition, uint8_t pressure)
  */
 void updateWheelInfoTask(void* args)
 {
-    (void)args; // unused   
+    (void)args; // unused
+    const TickType_t xDelay = 100 / portTICK_PERIOD_MS;
     while(true) {
         // Wait until a task has notified it to run, when the car state has changed
         ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
@@ -226,20 +228,23 @@ void updateWheelInfoTask(void* args)
 
         /* Sending wheel pwms 1 at a time may cause issues as it updates them one at a time so abs
         controller might think its slipping whne it just hasnt updated all wheels yet*/
-        pwmOutputUpdate_t leftFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, pwmLF};
+        pwmOutputUpdate_t leftFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftFront.pulseHz, PWMHardwareDetailsLF};
         xQueueSendToBack(updatePWMQueue, &leftFrontPWM, 0);
 
-        pwmOutputUpdate_t leftRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftRear.pulseHz, pwmLR};
+        pwmOutputUpdate_t leftRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)leftRear.pulseHz, PWMHardwareDetailsLR};
         xQueueSendToBack(updatePWMQueue, &leftRearPWM, 0);
 
-        pwmOutputUpdate_t rightFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightFront.pulseHz, pwmRF};
+        pwmOutputUpdate_t rightFrontPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightFront.pulseHz, PWMHardwareDetailsRF};
         xQueueSendToBack(updatePWMQueue, &rightFrontPWM, 0);
 
-        pwmOutputUpdate_t rightRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightRear.pulseHz, pwmRR};
+        pwmOutputUpdate_t rightRearPWM = {PWM_WHEEL_FIXED_DUTY, (uint32_t)rightRear.pulseHz, PWMHardwareDetailsRR};
         xQueueSendToBack(updatePWMQueue, &rightRearPWM, 0);
 
         // Give the mutex back
         xSemaphoreGive(carStateMutex);
+
+        vTaskDelay(xDelay);
+
 
     }
 }
