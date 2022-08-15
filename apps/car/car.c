@@ -173,7 +173,7 @@ void readInputsTask(void* args)
                 vTaskSuspend(decelerationTaskHandle);
 
                 // Set brake pwm to 0% duty
-                pwmOutputUpdate_t brakePWM = {0, PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
+                pwmOutputUpdate_t brakePWM = {5, PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
 
                 setPedalState(0);
@@ -209,18 +209,14 @@ void processABSPWMInputTask(void* args)
     {
         bool timeoutOccurred = false;
         // Read a whole period of the 50 Hz ABS pulse to ensure the long low signal will be read at some point
-        for (int i = 0; i<((NORMAL_BRAKE_HZ/ABS_PULE_HZ + 5)); i++)
+        for (int i = 0; i<(2*(NORMAL_BRAKE_HZ/ABS_PULE_HZ)); i++)
+
         {
             if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS might be on
             {
-                for (int i = 0; i<((NORMAL_BRAKE_HZ/ABS_PULE_HZ + 5)); i++)
-                {
-                    if(updatePWMInput(ABSPWM_ID)) // Timeout again, ABS must be on
-                    {
-                        timeoutOccurred = true;
-                        break;
-                    }
-                }
+                timeoutOccurred = true;
+                break;
+
                 
             } else{
                 pwmDetails = getPWMInputSignal(ABSPWM_ID);
@@ -230,13 +226,13 @@ void processABSPWMInputTask(void* args)
         // If ABS input is different to the current state (timeout while ABS off or no timeout while on)
         if (ABSOn ^ timeoutOccurred)
         {
-            ABSOn = !ABSOn;
-            /*changeABSStateCount++; // Increment count
+            //changeABSStateCount++; 
+            changeABSStateCount++; // Increment count
             if (changeABSStateCount >= 2) // If N number of different inputs in a row, assume state has actually changed and change ABS state
             {
                 ABSOn = !ABSOn;
                 changeABSStateCount = 0;
-            }*/
+            }
         } else{ // Reset count if same input condition shows again
             changeABSStateCount = 0;
         }
@@ -277,7 +273,7 @@ void decelerationTask (void* args)
 {
     (void)args;
     const float maxDecel = 5; // m/s^2
-    const float taskPeriodms = 500; //ms
+    const float taskPeriodms = 100; //ms
     TickType_t wake_time = xTaskGetTickCount();     
     
     while (true)

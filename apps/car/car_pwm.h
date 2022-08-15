@@ -69,7 +69,7 @@
 #define PWM_BRAKE_GPIO_BASE     GPIO_PORTF_BASE
 #define PWM_BRAKE_GPIO_CONFIG   GPIO_PF2_M1PWM6
 #define PWM_BRAKE_GPIO_PIN      GPIO_PIN_2
-#define PWM_BRAKE_FIXED_HZ      200
+#define PWM_BRAKE_FIXED_HZ      500
 #define PWM_BRAKE_START_DUTY    5
 
 //Steering wheel output PWM hardware details
