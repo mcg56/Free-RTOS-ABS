@@ -172,8 +172,8 @@ void readInputsTask(void* args)
                 // Stop deceleration Task
                 vTaskSuspend(decelerationTaskHandle);
 
-                // Set brake pwm to 5% duty (0 pressure)
-                pwmOutputUpdate_t brakePWM = {5, PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
+                // Set brake pwm to 0% duty
+                pwmOutputUpdate_t brakePWM = {0, PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
 
                 setPedalState(0);
@@ -198,7 +198,7 @@ void readInputsTask(void* args)
 void processABSPWMInputTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 250 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 25 / portTICK_PERIOD_MS;
     PWMSignal_t pwmDetails;
     uint8_t changeABSStateCount = 0;
     bool ABSOn = false;
@@ -208,13 +208,20 @@ void processABSPWMInputTask(void* args)
     while (true) 
     {
         bool timeoutOccurred = false;
-        // Read 2x periods of the 50 Hz ABS pulse to ensure the long low signal will be read at some point
-        for (int i = 0; i<(2*(NORMAL_BRAKE_HZ/ABS_PULE_HZ)); i++)
+        // Read a whole period of the 50 Hz ABS pulse to ensure the long low signal will be read at some point
+        for (int i = 0; i<((NORMAL_BRAKE_HZ/ABS_PULE_HZ + 5)); i++)
         {
             if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS might be on
             {
-                timeoutOccurred = true;
-                break;
+                for (int i = 0; i<((NORMAL_BRAKE_HZ/ABS_PULE_HZ + 5)); i++)
+                {
+                    if(updatePWMInput(ABSPWM_ID)) // Timeout again, ABS must be on
+                    {
+                        timeoutOccurred = true;
+                        break;
+                    }
+                }
+                
             } else{
                 pwmDetails = getPWMInputSignal(ABSPWM_ID);
             }
@@ -223,23 +230,25 @@ void processABSPWMInputTask(void* args)
         // If ABS input is different to the current state (timeout while ABS off or no timeout while on)
         if (ABSOn ^ timeoutOccurred)
         {
-            changeABSStateCount++; // Increment count
+            ABSOn = !ABSOn;
+            /*changeABSStateCount++; // Increment count
             if (changeABSStateCount >= 2) // If N number of different inputs in a row, assume state has actually changed and change ABS state
             {
                 ABSOn = !ABSOn;
                 changeABSStateCount = 0;
-            }
+            }*/
         } else{ // Reset count if same input condition shows again
             changeABSStateCount = 0;
         }
 
-        /*
+        
         if (ABSOn)
         {
-            OLEDStringDraw("ABS on ", 0, 1);
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, GPIO_PIN_1);
+
         }else{
-            OLEDStringDraw("ABS off", 0, 1);
-        }*/
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIO_PIN_1);
+        }
 
 
         // NEW
@@ -268,7 +277,7 @@ void decelerationTask (void* args)
 {
     (void)args;
     const float maxDecel = 5; // m/s^2
-    const float taskPeriodms = 100; //ms
+    const float taskPeriodms = 500; //ms
     TickType_t wake_time = xTaskGetTickCount();     
     
     while (true)
@@ -330,7 +339,7 @@ int main(void) {
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
-    xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
+    xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 1, NULL);
     xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 0, &decelerationTaskHandle);
     vTaskSuspend(decelerationTaskHandle);
 
