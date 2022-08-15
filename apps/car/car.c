@@ -332,6 +332,8 @@ DelayTimerInit()
 	TimerConfigure(DELAY_TIMER_BASE, DELAY_TIMER_CONFIG);
 	TimerEnable(DELAY_TIMER_BASE, DELAY_TIMER);
 }
+
+
 static void ABSTimerHandler(void)
 {
     //Local variables
@@ -339,8 +341,11 @@ static void ABSTimerHandler(void)
     static uint8_t brakeOnCount = 0;
     static float maxDecel = 5; // m/s^2
 
+    // Clear interrupt
     TimerIntClear(ABS_TIMER_BASE, ABS_TIMER_INT_FLAG);
 
+    // Debugging only
+    /*
     static int intCount = 0;
     intCount++;
     if (intCount % 20 == 0)
@@ -348,18 +353,22 @@ static void ABSTimerHandler(void)
         char string[17]; // Display fits 16 characters wide.
         sprintf(string, "Count = %d", intCount);
         OLEDStringDraw (string, 0, 3);
-    }
+    }*/
 
+    // Determine brake duty to use for deceleration, based on if abs is toggled on or off
     uint8_t currentABSBrakeDuty;
-    HWREG(DELAY_TIMER_BASE + TIMER_O_TAV) = 0;
+    HWREG(DELAY_TIMER_BASE + TIMER_O_TAV) = 0; // Reset delay timer
     bool highEdgeFound = false;
+
+    // for 1/500s read the input pin level, if there is no high then ABS is on
+    // sysclock is 80 mHz
     while(TimerValueGet(DELAY_TIMER_BASE, DELAY_TIMER) < 80000000/500)
     {
-        if (GPIOPinRead(GPIO_PORTB_BASE, GPIO_PIN_0))
+        if (GPIOPinRead(GPIO_PORTB_BASE, GPIO_PIN_0)) // Found high edge, use brake duty accordingly
         {
             brakeOnCount++;
             currentABSBrakeDuty = getBrakePedalPressureDuty();
-            if (brakeOnCount >= 4)
+            if (brakeOnCount >= 4) // 4 kinda arbitrary
             {
                 ABSState = false;
             }
@@ -369,7 +378,7 @@ static void ABSTimerHandler(void)
         }
     }
     
-    // No high edge found in 1/500 s, ABS must be toggled on
+    // No high edge found in 1/500 s, ABS must be toggled on. 0 duty
     if (!highEdgeFound)
     {
         OLEDStringDraw ("On ", 0, 3);
