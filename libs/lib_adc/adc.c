@@ -19,7 +19,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "ap_adc.h"
+#include "adc.h"
 
 
 /*****************************************************************************

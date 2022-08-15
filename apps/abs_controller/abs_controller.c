@@ -40,11 +40,11 @@
 #include "driverlib/pwm.h"
 #include "driverlib/timer.h"
 
-#include "libs/lib_buttons/ap_buttons.h"
-#include "libs/lib_uart/ap_uart.h"
-#include "libs/lib_system/ap_system.h"
-#include "libs/lib_pwm/ap_pwm_input.h"
-#include "libs/lib_pwm/ap_pwm_output.h"
+#include "libs/lib_buttons/buttons.h"
+#include "libs/lib_uart/uart.h"
+#include "libs/lib_system/system.h"
+#include "libs/lib_pwm/pwm_input.h"
+#include "libs/lib_pwm/pwm_output.h"
 #include "abs_manager.h"
 
 #include "brake_output.h"

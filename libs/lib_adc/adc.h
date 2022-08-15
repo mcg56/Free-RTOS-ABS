@@ -26,7 +26,7 @@
 #include "driverlib/sysctl.h"
 #include "inc/hw_memmap.h"
 #include <math.h>
-#include "libs/lib_adc/ap_circBufT.h"
+#include "libs/lib_adc/circBufT.h"
 
 /******************************************************************************
  Constants

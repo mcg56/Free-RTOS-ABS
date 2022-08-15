@@ -19,7 +19,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-#include "libs/lib_pwm/ap_pwm_output.h"
+#include "libs/lib_pwm/pwm_output.h"
 #include "brake_output.h"
 #include "status_led.h"
 

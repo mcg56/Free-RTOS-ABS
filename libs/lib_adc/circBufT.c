@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 #include "stdlib.h"
-#include "ap_circBufT.h"
+#include "circBufT.h"
 
 /****************************************************************************
  initCircBuf: Initialise the circBuf instance. Reset both indices to

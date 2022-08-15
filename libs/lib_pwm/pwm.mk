@@ -5,4 +5,4 @@ INCLUDES += -I"$(LIBS_PWM_DIR)"
 
 LDLIBS = -lm
 
-SRC += ap_pwm_input.c ap_pwm_output.c
+SRC += pwm_input.c pwm_output.c

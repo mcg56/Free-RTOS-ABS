@@ -28,7 +28,7 @@
 #include "driverlib/gpio.h"
 #include "driverlib/uart.h"
 #include "driverlib/sysctl.h"
-#include "ap_uart.h"
+#include "uart.h"
 
 /**********************************************************************
  initialiseUSB_UART: The UART is responsible for transmitting

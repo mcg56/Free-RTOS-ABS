@@ -26,7 +26,7 @@
 
 #include "driverlib/timer.h"
 
-#include "ap_pwm_input.h"
+#include "pwm_input.h"
 
 //*************************************************************
 // Constant Definitions

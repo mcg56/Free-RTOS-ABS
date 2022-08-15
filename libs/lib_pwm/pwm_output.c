@@ -22,7 +22,7 @@
 #include "driverlib/systick.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/interrupt.h"
-#include "ap_pwm_output.h"
+#include "pwm_output.h"
 #include <FreeRTOS.h>
 #include <queue.h>
 #include "libs/lib_OrbitOled/OrbitOLEDInterface.h"

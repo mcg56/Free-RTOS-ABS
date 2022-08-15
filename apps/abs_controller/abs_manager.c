@@ -6,7 +6,7 @@
  * T.R Peterson, M.C Gardyne
  * Last modified:  24.7.22
  **********************************************************/
-#include "libs/lib_pwm/ap_pwm_input.h"
+#include "libs/lib_pwm/pwm_input.h"
 #include "abs_manager.h"
 #include "math.h"
 #include <FreeRTOS.h>

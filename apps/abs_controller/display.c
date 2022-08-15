@@ -23,9 +23,9 @@
 
 #include "utils/ustdlib.h"
 
-#include "libs/lib_buttons/ap_buttons.h"
+#include "libs/lib_buttons/buttons.h"
 #include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
-#include "libs/lib_pwm/ap_pwm_input.h"
+#include "libs/lib_pwm/pwm_input.h"
 
 #include "display.h"
 #include "brake_output.h"
