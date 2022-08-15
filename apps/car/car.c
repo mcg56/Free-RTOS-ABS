@@ -198,7 +198,7 @@ void readInputsTask(void* args)
 void processABSPWMInputTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 25 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 250 / portTICK_PERIOD_MS;
     PWMSignal_t pwmDetails;
     uint8_t changeABSStateCount = 0;
     bool ABSOn = false;
@@ -242,13 +242,13 @@ void processABSPWMInputTask(void* args)
         }
 
         
-        if (ABSOn)
-        {
-            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, GPIO_PIN_1);
+        // if (ABSOn)
+        // {
+        //     GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, GPIO_PIN_1);
 
-        }else{
-            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIO_PIN_1);
-        }
+        // }else{
+        //     GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIO_PIN_1);
+        // }
 
 
         // NEW
@@ -339,7 +339,7 @@ int main(void) {
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
-    xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 1, NULL);
+    xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
     xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 0, &decelerationTaskHandle);
     vTaskSuspend(decelerationTaskHandle);
 
