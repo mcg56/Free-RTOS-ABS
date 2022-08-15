@@ -76,8 +76,6 @@ DelayInit()
 
 	TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC_UP);
 	TimerEnable(TIMER1_BASE, TIMER_A);
-
-
 }
 
 /* ------------------------------------------------------------ */

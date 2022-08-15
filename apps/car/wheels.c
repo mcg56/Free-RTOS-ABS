@@ -152,7 +152,6 @@ bool detectWheelSlip(Wheel* wheel, uint8_t condition, uint8_t pressure)
 void updateWheelInfoTask(void* args)
 {
     (void)args; // unused
-    const TickType_t xDelay = 100 / portTICK_PERIOD_MS;
     while(true) {
         // Wait until a task has notified it to run, when the car state has changed
         ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
@@ -248,9 +247,5 @@ void updateWheelInfoTask(void* args)
 
         // Give the mutex back
         xSemaphoreGive(carStateMutex);
-
-        vTaskDelay(xDelay);
-
-
     }
 }

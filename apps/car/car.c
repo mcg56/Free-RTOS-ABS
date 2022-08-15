@@ -15,6 +15,7 @@
 #include <semphr.h>
 
 #include "driverlib/uart.h"
+#include "driverlib/timer.h"
 #include "libs/lib_buttons/buttons.h"
 #include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 #include "stdlib.h"
@@ -29,6 +30,13 @@
 #include "car_state.h"
 #include "car_pwm.h"
 
+// TO DO: move into own timer module
+#define ABS_TIMER_PERIPH        SYSCTL_PERIPH_TIMER3
+#define ABS_TIMER_BASE          TIMER3_BASE
+#define ABS_TIMER               TIMER_A
+#define ABS_TIMER_CONFIG        TIMER_CFG_A_PERIODIC
+#define ABS_TIMER_INT_FLAG      TIMER_TIMA_TIMEOUT
+#define ABS_TIMER_DEFAULT_RATE  20 // [Hz]
 
 //Task handles
 TaskHandle_t updateWheelInfoHandle;
@@ -71,7 +79,7 @@ void createSempahores(void)
 void readInputsTask(void* args)
 {
     (void)args; // unused
-    const TickType_t xDelay = 10 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 333 / portTICK_PERIOD_MS;
     while (true) 
     {
         updateButtons();
@@ -163,17 +171,19 @@ void readInputsTask(void* args)
             {
                 setPedalState(1);
                 // Start decleration task
-                vTaskResume(decelerationTaskHandle);
+                //vTaskResume(decelerationTaskHandle);
+                TimerEnable(ABS_TIMER_BASE, ABS_TIMER);
 
                 // Notify PWM task to update brake pwm as pedal is activated
                 pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
             } else {
                 // Stop deceleration Task
-                vTaskSuspend(decelerationTaskHandle);
+                // vTaskSuspend(decelerationTaskHandle);
+                TimerDisable(ABS_TIMER_BASE, ABS_TIMER);
 
                 // Set brake pwm to 0% duty
-                pwmOutputUpdate_t brakePWM = {5, PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
+                pwmOutputUpdate_t brakePWM = {0, PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
 
                 setPedalState(0);
@@ -306,6 +316,82 @@ void decelerationTask (void* args)
 }
 
 
+static void ABSTimerHandler(void)
+{
+    //Local variables
+    static bool ABSState = false;
+    static uint8_t brakeOnCount = 0;
+    static float maxDecel = 5; // m/s^2
+
+    TimerIntClear(ABS_TIMER_BASE, ABS_TIMER_INT_FLAG);
+
+    static int intCount = 0;
+    intCount++;
+    if (intCount % 20 == 0)
+    {
+        char string[17]; // Display fits 16 characters wide.
+        sprintf(string, "Count = %d", intCount);
+        OLEDStringDraw (string, 0, 3);
+    }
+
+    
+    uint8_t currentABSBrakeDuty;
+
+    // TO DO: maybe implement read 3 abs in a row to change state? (3 on-off correct sequences)
+    /*if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS will be on
+    {
+        brakeOnCount = 0;
+        currentABSBrakeDuty = 0;
+    } else 
+    {
+        brakeOnCount++;
+        currentABSBrakeDuty = getBrakePedalPressureDuty();
+        if (brakeOnCount >= 3)
+        {
+            ABSState = true;
+        }
+    }*/
+    /*
+    // Wait until we can take the mutex to be able to use car state shared resource
+    xSemaphoreTake(carStateMutex, portMAX_DELAY);
+    float currentSpeed = getCarSpeed();
+    // Modify the speed dependant on brake pressure
+    float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel/ABS_TIMER_DEFAULT_RATE/100.0;
+    if (newSpeed <= 0) {
+            newSpeed = 0;
+    }
+    setCarSpeed(newSpeed);
+    setABSState(ABSState); // TO DO: maybe only set abs state if it changes, save a bit of time
+
+    // Give the mutex back
+    xSemaphoreGive(carStateMutex);
+
+    // Tell the wheel update task to run
+    xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);*/
+}
+
+/**
+ * @brief Initialise the timer for reading ABS input
+ * 
+ * @return None
+ */
+static void initABSReadTimer (void)
+{
+    SysCtlPeripheralEnable(ABS_TIMER_PERIPH);
+
+    TimerDisable(ABS_TIMER_BASE, ABS_TIMER);
+
+    TimerConfigure(ABS_TIMER_BASE, ABS_TIMER_CONFIG);
+
+    TimerIntRegister(ABS_TIMER_BASE, ABS_TIMER, ABSTimerHandler);
+
+    TimerLoadSet(ABS_TIMER_BASE, ABS_TIMER, SysCtlClockGet() / ABS_TIMER_DEFAULT_RATE);
+
+    TimerIntEnable(ABS_TIMER_BASE, ABS_TIMER_INT_FLAG);
+
+    //TimerEnable(ABS_TIMER_BASE, ABS_TIMER);
+}
+
 
 
 
@@ -331,12 +417,14 @@ int main(void) {
     createQueues();
     createSempahores();
 
+    initABSReadTimer();
+
     xTaskCreate(&readInputsTask, "read inputs", 150, NULL, 0, &readInputsHandle);
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
-    xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
-    xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 0, &decelerationTaskHandle);
+    //xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
+    // xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 0, &decelerationTaskHandle);
     vTaskSuspend(decelerationTaskHandle);
 
     // Tell the wheel update task to run, which fills out the wheels speeds with starting info
