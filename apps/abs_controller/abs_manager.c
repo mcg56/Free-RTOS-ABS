@@ -27,12 +27,23 @@
 #define FACTOR                  3.6     // m/s to km/h
 #define SCALE_FACTOR            100     // Scale result to percentage
 #define MIN_VELOCITY            10      // Minimum required velocity for ABS to function (m/s)
-#define NUM_ABS_POLLS           2
+#define NUM_ABS_POLLS           2       //
+#define MIN_BRAKE_DUTY          5       //
 
 #define UPDATE_CAR_TASK_RATE    50     // [ms]
 
+//*************************************************************
+// Function prototype
+//*************************************************************
 void checkVelTask(void* args);
 void updateCarTask(void* args);
+void updateCar(void);
+void checkVelTask(void* args);
+int getSteeringAngle (void);
+uint32_t calcCarVel(uint32_t wheel);
+uint32_t calcWheelVel(uint32_t frequency);
+float calcAngle(int32_t duty);
+
 
 CarAttributes_t mondeo; // Probably not very reliable
 TaskHandle_t checkVelHandle;
@@ -46,11 +57,18 @@ typedef enum {
 } Wheels;
 
 
-void initABSManager (void)
+void
+initABSManager (void)
 {
     mondeo.absState = ABS_OFF;
     xTaskCreate(&updateCarTask, "updateCar", 256, NULL, 0, &updateCarHandle);
     xTaskCreate(&checkVelTask, "checkVel", 256, NULL, 0, &checkVelHandle);
+}
+
+int 
+getSteeringAngle (void)
+{
+    return mondeo.steeringAngle;
 }
 
 
@@ -59,7 +77,8 @@ void initABSManager (void)
  * @param - Target wheel
  * @return - Hypothetical vehicle velocity
  */
-uint32_t calcCarVel(uint32_t wheel)
+uint32_t 
+calcCarVel(uint32_t wheel)
 {
     // Radians conversion for math.h
     float alpha = mondeo.steeringAngle*(M_PI/180);
@@ -105,7 +124,8 @@ uint32_t calcCarVel(uint32_t wheel)
  * @param frequency Duty cycle of steering input
  * @return Int (wheel speed)
  */
-uint32_t calcWheelVel(uint32_t frequency)
+uint32_t 
+calcWheelVel(uint32_t frequency)
 {
     return (FACTOR*DIAMETER*M_PI*frequency)/(TICKS_PER_REV);
 }
@@ -115,7 +135,8 @@ uint32_t calcWheelVel(uint32_t frequency)
  * @param duty Duty cycle of steering input
  * @return Float (steering angle)
  */
-float calcAngle(int32_t duty)
+float 
+calcAngle(int32_t duty)
 {   
     return (MID_DUTY-duty-1)*(MAX_ANGLE / HALF_DUTY);
 }
@@ -125,7 +146,8 @@ float calcAngle(int32_t duty)
  * @param 
  * @return 
  */
-void updateCar( void)
+void 
+updateCar(void)
 {   
 
     // GIGITY GIGITY
@@ -146,18 +168,13 @@ void updateCar( void)
     
 }
 
-int 
-getSteeringAngle (void)
-{
-    return mondeo.steeringAngle;
-}
-
 /**
  * @brief Updates car attributes
  * @param void
  * @return 
  */
-void checkVelTask(void* args)
+void 
+checkVelTask(void* args)
 {   
     (void)args; 
 
@@ -188,13 +205,11 @@ void checkVelTask(void* args)
         }
 
         // Loop through each hypotheticle car velocity and compare to maximum car velocity.
-        // If absolute differnce greater than 10% and car velocity greater than 10 m/s turn ABS on
+        // If absolute differnce greater than 10% and car velocity greater than 10 m/s turn ABS on and if the brakes are on
         for (uint32_t i = 0; i < NUM_WHEELS; i++){
             float diff = ((mondeo.carVel - calcHypoVel[i])*SCALE_FACTOR)/mondeo.carVel;
-            if ((diff > TOLERANCE) && (mondeo.carVel > MIN_VELOCITY)) {
-                //mondeo.absState = ABS_ON;
+            if ((diff > TOLERANCE) && (mondeo.carVel > MIN_VELOCITY) && (mondeo.brake > MIN_BRAKE_DUTY)) {
                 absValue = ABS_ON;
-                //TODO ABS state debouncing (make sure can activate within 0.5 sec)
             } 
         }
 
@@ -225,7 +240,8 @@ void checkVelTask(void* args)
  * @brief Regularly scheduled task for updating all PWM signals
  * @return None
  */
-void updateCarTask(void* args)
+void 
+updateCarTask(void* args)
 {
     (void)args;
     const TickType_t xDelay = UPDATE_CAR_TASK_RATE / portTICK_PERIOD_MS; // TO DO: magic number
@@ -236,13 +252,4 @@ void updateCarTask(void* args)
     }   
 }
 
-// TO DO: Make a get steering angle function
-// TO DO: abs turns on when brake pedal not pressed
 
-// TESTING
-// char str[100];
-// gcvt(diff, 3, str);
-// sprintf(str, "diff %d\r\n\n", ((mondeo.carVel - calcHypoVel[i])/mondeo.carVel)*100);
-// UARTSend(str); 
-// sprintf(str, "\r\n\n");
-// UARTSend(str)
