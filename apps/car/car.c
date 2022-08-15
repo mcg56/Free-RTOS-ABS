@@ -16,6 +16,7 @@
 
 #include "driverlib/uart.h"
 #include "driverlib/timer.h"
+#include "SW-TM4C-2.2.0.295/inc/hw_timer.h"
 #include "libs/lib_buttons/buttons.h"
 #include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 #include "stdlib.h"
@@ -316,6 +317,21 @@ void decelerationTask (void* args)
 }
 
 
+#define DELAY_PERIPHERAL    SYSCTL_PERIPH_TIMER4
+#define DELAY_TIMER_BASE    TIMER4_BASE
+#define DELAY_TIMER         TIMER_A
+#define DELAY_TIMER_CONFIG  TIMER_CFG_PERIODIC_UP
+
+void
+DelayTimerInit()	
+	{
+	/* Configure Timer 1. 
+	*/
+	SysCtlPeripheralEnable(DELAY_PERIPHERAL);
+
+	TimerConfigure(DELAY_TIMER_BASE, DELAY_TIMER_CONFIG);
+	TimerEnable(DELAY_TIMER_BASE, DELAY_TIMER);
+}
 static void ABSTimerHandler(void)
 {
     //Local variables
@@ -334,9 +350,33 @@ static void ABSTimerHandler(void)
         OLEDStringDraw (string, 0, 3);
     }
 
-    
     uint8_t currentABSBrakeDuty;
-
+    HWREG(DELAY_TIMER_BASE + TIMER_O_TAV) = 0;
+    bool highEdgeFound = false;
+    while(TimerValueGet(DELAY_TIMER_BASE, DELAY_TIMER) < 80000000/500)
+    {
+        if (GPIOPinRead(GPIO_PORTB_BASE, GPIO_PIN_0))
+        {
+            brakeOnCount++;
+            currentABSBrakeDuty = getBrakePedalPressureDuty();
+            if (brakeOnCount >= 4)
+            {
+                ABSState = false;
+            }
+            highEdgeFound = true;
+            OLEDStringDraw ("Off", 0, 3);
+            break;
+        }
+    }
+    
+    // No high edge found in 1/500 s, ABS must be toggled on
+    if (!highEdgeFound)
+    {
+        OLEDStringDraw ("On ", 0, 3);
+        ABSState = true;
+        brakeOnCount = 0;
+        currentABSBrakeDuty = 0;
+    }
     // TO DO: maybe implement read 3 abs in a row to change state? (3 on-off correct sequences)
     /*if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS will be on
     {
@@ -418,6 +458,7 @@ int main(void) {
     createSempahores();
 
     initABSReadTimer();
+    DelayTimerInit();
 
     xTaskCreate(&readInputsTask, "read inputs", 150, NULL, 0, &readInputsHandle);
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
