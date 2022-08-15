@@ -12,10 +12,8 @@
 #include <FreeRTOS.h>
 #include <stdio.h>
 #include <queue.h>
-#include "driverlib/timer.h"
 #include "brake_output.h"
 #include "pwm_info.h"
-
 
 #define DIAMETER                0.5     // Wheel diameter (m)
 #define HALF_DUTY               45      // Half of duty range (95-5)/2
@@ -27,10 +25,9 @@
 #define FACTOR                  3.6     // m/s to km/h
 #define SCALE_FACTOR            100     // Scale result to percentage
 #define MIN_VELOCITY            10      // Minimum required velocity for ABS to function (m/s)
-#define NUM_ABS_POLLS           2       //
-#define MIN_BRAKE_DUTY          5       //
-
-#define UPDATE_CAR_TASK_RATE    50     // [ms]
+#define NUM_ABS_POLLS           2       // Number of times to check ABS state before changing (debouncing)
+#define MIN_BRAKE_DUTY          5       // Minimum duty cycle of brake signal while on
+#define UPDATE_CAR_TASK_RATE    50      // [ms]
 
 //*************************************************************
 // Function prototype
@@ -45,22 +42,14 @@ uint32_t calcWheelVel(uint32_t frequency);
 float calcAngle(int32_t duty);
 
 
-CarAttributes_t mondeo; // Probably not very reliable
+CarAttributes_t car; // Probably not very reliable
 TaskHandle_t checkVelHandle;
 TaskHandle_t updateCarHandle;
-
-typedef enum {
-    REAR_LEFT = 0, 
-    REAR_RIGHT, 
-    FRONT_LEFT, 
-    FRONT_RIGHT
-} Wheels;
-
 
 void
 initABSManager (void)
 {
-    mondeo.absState = ABS_OFF;
+    car.absState = ABS_OFF;
     xTaskCreate(&updateCarTask, "updateCar", 256, NULL, 0, &updateCarHandle);
     xTaskCreate(&checkVelTask, "checkVel", 256, NULL, 0, &checkVelHandle);
 }
@@ -68,7 +57,7 @@ initABSManager (void)
 int 
 getSteeringAngle (void)
 {
-    return mondeo.steeringAngle;
+    return car.steeringAngle;
 }
 
 
@@ -81,7 +70,7 @@ uint32_t
 calcCarVel(uint32_t wheel)
 {
     // Radians conversion for math.h
-    float alpha = mondeo.steeringAngle*(M_PI/180);
+    float alpha = car.steeringAngle*(M_PI/180);
 
     // Initialise values to zero 
     float innerRear = 0;
@@ -90,7 +79,7 @@ calcCarVel(uint32_t wheel)
     float outerFront = 0;
 
     // If alpha equals zero no conversion required
-    uint32_t velocity = mondeo.wheelVel[wheel];
+    uint32_t velocity = car.wheelVel[wheel];
 
     if (alpha != 0) {
         // Radii calculations (Definition of turn radii from wheels.c may try combine later )
@@ -114,7 +103,7 @@ calcCarVel(uint32_t wheel)
             }
         }
         // Apply normalisation factor to standardise outer most wheel as vehicle velocity
-        velocity = mondeo.wheelVel[wheel]*(outerFront/currentRadii);
+        velocity = car.wheelVel[wheel]*(outerFront/currentRadii);
     }
     return velocity;
 }
@@ -149,23 +138,18 @@ calcAngle(int32_t duty)
 void 
 updateCar(void)
 {   
-
-    // GIGITY GIGITY
-    mondeo.sold = false; 
-
     // Update steering angle
-    mondeo.steeringAngle = calcAngle(getPWMInputSignal(STEERING_ID).duty);
-    mondeo.brake = getPWMInputSignal(BRAKE_PEDAL_ID).duty;
+    car.steeringAngle = calcAngle(getPWMInputSignal(STEERING_ID).duty);
+    car.brake = getPWMInputSignal(BRAKE_PEDAL_ID).duty;
 
 
     // Calculate individual wheel velocities
-    mondeo.wheelVel[REAR_LEFT] = calcWheelVel(getPWMInputSignal(RL_WHEEL_ID).frequency);
-    mondeo.wheelVel[REAR_RIGHT] = calcWheelVel(getPWMInputSignal(RR_WHEEL_ID).frequency);
-    mondeo.wheelVel[FRONT_LEFT] = calcWheelVel(getPWMInputSignal(FL_WHEEL_ID).frequency);
-    mondeo.wheelVel[FRONT_RIGHT] = calcWheelVel(getPWMInputSignal(FR_WHEEL_ID).frequency);
+    car.wheelVel[REAR_LEFT] = calcWheelVel(getPWMInputSignal(RL_WHEEL_ID).frequency);
+    car.wheelVel[REAR_RIGHT] = calcWheelVel(getPWMInputSignal(RR_WHEEL_ID).frequency);
+    car.wheelVel[FRONT_LEFT] = calcWheelVel(getPWMInputSignal(FL_WHEEL_ID).frequency);
+    car.wheelVel[FRONT_RIGHT] = calcWheelVel(getPWMInputSignal(FR_WHEEL_ID).frequency);
     // Tell checkVel to compare speeds
-    xTaskNotifyGiveIndexed( checkVelHandle, 0 );
-    
+    xTaskNotifyGiveIndexed( checkVelHandle, 0 ); 
 }
 
 /**
@@ -184,9 +168,15 @@ checkVelTask(void* args)
         ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
         
         static uint8_t absCount = 0;
-        uint8_t absValue = ABS_OFF;
-        
+        static uint8_t absValue = ABS_OFF;
 
+        // Keep ABS state on if triggered and brake remains depressed as per requirements
+        if ((absValue == ABS_ON) && (car.brake > MIN_BRAKE_DUTY)) {
+            absValue = ABS_ON;
+        } else {
+            absValue = ABS_OFF;
+        }
+        
         // Calculate hypothetical speed
         int32_t calcHypoVel[NUM_WHEELS];
         calcHypoVel[REAR_LEFT] = calcCarVel(REAR_LEFT);
@@ -195,30 +185,30 @@ checkVelTask(void* args)
         calcHypoVel[FRONT_RIGHT] = calcCarVel(FRONT_RIGHT);
 
         // Reset velocity for next computation
-        mondeo.carVel = 0;
+        car.carVel = 0;
 
         // Loop through each hypotheticle car velocity and update car velocity to maximum value
         for (uint32_t i = 0; i < NUM_WHEELS; i++){
-            if (calcHypoVel[i] > mondeo.carVel) {
-                mondeo.carVel = calcHypoVel[i];
+            if (calcHypoVel[i] > car.carVel) {
+                car.carVel = calcHypoVel[i];
             }
         }
 
         // Loop through each hypotheticle car velocity and compare to maximum car velocity.
         // If absolute differnce greater than 10% and car velocity greater than 10 m/s turn ABS on and if the brakes are on
         for (uint32_t i = 0; i < NUM_WHEELS; i++){
-            float diff = ((mondeo.carVel - calcHypoVel[i])*SCALE_FACTOR)/mondeo.carVel;
-            if ((diff > TOLERANCE) && (mondeo.carVel > MIN_VELOCITY) && (mondeo.brake > MIN_BRAKE_DUTY)) {
+            float diff = ((car.carVel - calcHypoVel[i])*SCALE_FACTOR)/car.carVel;
+            if ((diff > TOLERANCE) && (car.carVel > MIN_VELOCITY) && (car.brake > MIN_BRAKE_DUTY)) {
                 absValue = ABS_ON;
             } 
         }
 
-        if (absValue != mondeo.absState)
+        if (absValue != car.absState)
         {
         	absCount++;
         	if (absCount >= NUM_ABS_POLLS)
         	{
-        		mondeo.absState = absValue;
+        		car.absState = absValue;
         		absCount = 0;
         	}
         }
@@ -226,15 +216,14 @@ checkVelTask(void* args)
         	absCount = 0;
 
 
-        setABS(mondeo.absState);
-        setABSDuty (mondeo.brake);
+        setABS(car.absState);
+        setABSDuty (car.brake);
         // char str[100];
-        // sprintf(str, "Abs state %d\r\n\n", mondeo.absState);
+        // sprintf(str, "Abs state %d\r\n\n", car.absState);
         // UARTSend(str); 
 
     }
 }
-
 
 /**
  * @brief Regularly scheduled task for updating all PWM signals

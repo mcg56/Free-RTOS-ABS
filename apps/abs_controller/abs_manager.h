@@ -18,12 +18,18 @@
  */
 typedef struct {
     int32_t wheelVel[NUM_WHEELS];
-    float steeringAngle;
     int32_t carVel;
-    bool sold;
     uint8_t absState;
     uint32_t brake;
+    float steeringAngle;
 } CarAttributes_t;
+
+typedef enum {
+    REAR_LEFT = 0, 
+    REAR_RIGHT, 
+    FRONT_LEFT, 
+    FRONT_RIGHT
+} Wheels;
 
 
 /**
