@@ -32,7 +32,8 @@
         "hw_types.h": "c",
         "car_state.h": "c",
         "string.h": "c",
-        "semphr.h": "c"
+        "semphr.h": "c",
+        "pwm_output.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

@@ -10,7 +10,7 @@
 #include <driverlib/gpio.h>
 #include "driverlib/pwm.h"
 #include "driverlib/pin_map.h" //Needed for pin configure
-#include "ap_pwm_output.h"
+#include "pwm_output.h"
 
 #define PWM_WHEEL_FIXED_DUTY    50
 #define PWM_WHEEL_START_HZ      0

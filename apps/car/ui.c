@@ -9,7 +9,7 @@
 #include <task.h>
 #include <queue.h>
 #include <semphr.h>
-#include "libs/lib_uart/ap_uart.h"
+#include "libs/lib_uart/uart.h"
 #include "driverlib/uart.h"
 #include "car_state.h"
 

@@ -13,7 +13,7 @@
 #include "car_state.h"
 #include "car_pwm.h"
 #include "utils/ustdlib.h"
-#include "libs/lib_pwm/ap_pwm_output.h"
+#include "libs/lib_pwm/pwm_output.h"
 #include "ui.h"
 
 #define ALPHA_MAX 29.1
