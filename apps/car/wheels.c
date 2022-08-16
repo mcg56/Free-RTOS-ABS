@@ -206,12 +206,12 @@ void updateWheelInfoTask(void* args)
             {
                 detectWheelSlip(wheelArray[i], roadCondition, brakePedalPressure);
             }
-            // If all wheels slipping, need to artificially unslip one of them else the ABS wont be able to detect slip
-            // if (leftFront.slipping && rightFront.slipping &&  leftRear.slipping && rightRear.slipping)
-            // {
-            //     leftFront.slipping = false;
-            //     leftFront.speed = carSpeed;
-            // }
+            //If all wheels slipping, need to artificially unslip one of them else the ABS wont be able to detect slip
+            if (leftFront.slipping && rightFront.slipping &&  leftRear.slipping && rightRear.slipping)
+            {
+                leftFront.slipping = false;
+                leftFront.speed = carSpeed;
+            }
         } else // Not braking, reset slips
         {
             for (int i=0; i < 4; i++)

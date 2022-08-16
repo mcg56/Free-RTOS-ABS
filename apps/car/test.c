@@ -11,6 +11,7 @@
 
 #include <FreeRTOS.h>
 #include <task.h>
+#include <timers.h>
 #include <queue.h>
 #include <semphr.h>
 
@@ -39,6 +40,10 @@
 #define ABS_TIMER_INT_FLAG      TIMER_TIMA_TIMEOUT
 #define ABS_TIMER_DEFAULT_RATE  20 // [Hz]
 
+#define STATUS_LED_PERIPH   SYSCTL_PERIPH_GPIOF
+#define STATUS_LED_BASE     GPIO_PORTF_BASE
+#define STATUS_LED_PIN      GPIO_PIN_1
+
 //Task handles
 TaskHandle_t updateWheelInfoHandle;
 TaskHandle_t readInputsHandle;
@@ -46,7 +51,11 @@ TaskHandle_t updateUARTHandle;
 TaskHandle_t updatePWMOutputsTaskHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 TaskHandle_t decelerationTaskHandle;
-TaskHandle_t processBrakeSignalTaskHandle;
+
+TimerHandle_t xTimer_ReadABS;
+TimerHandle_t xTimer_Delay;
+
+
 
 /**
  * @brief Creates instances of all queues
@@ -96,7 +105,7 @@ void readInputsTask(void* args)
         if (checkButton(UP) == PUSHED || c == 'w')
         {
             float currentSpeed = getCarSpeed();
-            setCarSpeed(currentSpeed + 50);
+            setCarSpeed(currentSpeed + 5);
             change = true;            
         }
         if (checkButton(DOWN) == PUSHED || c == 's')
@@ -285,7 +294,7 @@ void decelerationTask (void* args)
 {
     (void)args;
     const float maxDecel = 5; // m/s^2
-    const float taskPeriodms = 15; //ms
+    const float taskPeriodms = 100; //ms
     TickType_t wake_time = xTaskGetTickCount();     
     
     while (true)
@@ -298,7 +307,7 @@ void decelerationTask (void* args)
             float currentSpeed = getCarSpeed();
             // TO DO: Change to getABSBrakePressureDuty when using with ABS controller 
             //(Doesnt make a difference to output but shows we actually use the ABS duty not just our own)
-            uint8_t currentABSBrakeDuty = getABSBrakePressureDuty();
+            uint8_t currentABSBrakeDuty = getBrakePedalPressureDuty(); // = getABSBrakePressureDuty();
             
             // Modify the speed dependant on brake pressure
             float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel*taskPeriodms/1000.0/100.0;
@@ -308,211 +317,106 @@ void decelerationTask (void* args)
 
             setCarSpeed(newSpeed);
 
-            // Tell the wheel update task to run
-            xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
             // Give the mutex back
             xSemaphoreGive(carStateMutex);
-            
+
+            // Tell the wheel update task to run
+            xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
             vTaskDelayUntil(&wake_time, taskPeriodms);
     }   
 }
 
 
-#define DELAY_PERIPHERAL    SYSCTL_PERIPH_TIMER4
-#define DELAY_TIMER_BASE    TIMER4_BASE
-#define DELAY_TIMER         TIMER_A
-#define DELAY_TIMER_CONFIG  TIMER_CFG_PERIODIC_UP
 
-void
-DelayTimerInit()	
-	{
-	/* Configure Timer 1. 
-	*/
-	SysCtlPeripheralEnable(DELAY_PERIPHERAL);
+void vTimerCallback( TimerHandle_t xTimer )
+ {
+uint32_t ulMaxExpiryCountBeforeStopping;
+uint32_t ulCount;
+uint32_t ulCount_delay;
+bool highEdgeFound = false;
+static bool ABSState = false;
+static uint8_t brakeOnCount = 0;
+static float maxDecel = 5; // m/s^2
+uint8_t currentABSBrakeDuty;
 
-	TimerConfigure(DELAY_TIMER_BASE, DELAY_TIMER_CONFIG);
-	TimerEnable(DELAY_TIMER_BASE, DELAY_TIMER);
+if (xTimer == xTimer_ReadABS){
+    ulMaxExpiryCountBeforeStopping = 5000;
+}
+if (xTimer == xTimer_Delay){
+    ulMaxExpiryCountBeforeStopping = 5000;
 }
 
+    /* Optionally do something if the pxTimer parameter is NULL. */
+    configASSERT( xTimer );
 
-static void ABSTimerHandler(void)
-{
-    //Local variables
-    static bool ABSState = false;
-    static uint8_t brakeOnCount = 0;
-    static float maxDecel = 5; // m/s^2
-
-    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, GPIO_PIN_1);
-    // Clear interrupt
-    TimerIntClear(ABS_TIMER_BASE, ABS_TIMER_INT_FLAG);
-
-    // Debugging only
-    /*
-    static int intCount = 0;
-    intCount++;
-    if (intCount % 20 == 0)
-    {
-        char string[17]; // Display fits 16 characters wide.
-        sprintf(string, "Count = %d", intCount);
-        OLEDStringDraw (string, 0, 3);
-    }*/
-
-    // Determine brake duty to use for deceleration, based on if abs is toggled on or off
-    uint8_t currentABSBrakeDuty;
-    HWREG(DELAY_TIMER_BASE + TIMER_O_TAV) = 0; // Reset delay timer
-    bool highEdgeFound = false;
-
-    // for 1/500s read the input pin level, if there is no high then ABS is on
-    // sysclock is 80 mHz
-    while(TimerValueGet(DELAY_TIMER_BASE, DELAY_TIMER) < 80000000/500)
-    {
-        if (GPIOPinRead(GPIO_PORTB_BASE, GPIO_PIN_0)) // Found high edge, use brake duty accordingly
-        {
-            brakeOnCount++;
-            currentABSBrakeDuty = getBrakePedalPressureDuty();
-            if (brakeOnCount >= 4) // 4 kinda arbitrary
-            {
-                ABSState = false;
-            }
-            highEdgeFound = true;
-            //OLEDStringDraw ("Off", 0, 3);
-            break;
-        }
-    }
+    /* The number of times this timer has expired is saved as the
+    timer's ID.  Obtain the count. */
+    ulCount = ( uint32_t ) pvTimerGetTimerID( xTimer );
     
-    // No high edge found in 1/500 s, ABS must be toggled on. 0 duty
-    if (!highEdgeFound)
-    {
-        //OLEDStringDraw ("On ", 0, 3);
-        ABSState = true;
-        brakeOnCount = 0;
-        currentABSBrakeDuty = 0;
-    }
+
     
-    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
-    // TO DO: maybe implement read 3 abs in a row to change state? (3 on-off correct sequences)
-    /*if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS will be on
+    /* Increment the count, then test to see if the timer has expired
+    ulMaxExpiryCountBeforeStopping yet. */
+    ulCount++;
+    
+    if (xTimer == xTimer_ReadABS)
     {
-        brakeOnCount = 0;
-        currentABSBrakeDuty = 0;
-    } else 
-    {
-        brakeOnCount++;
-        currentABSBrakeDuty = getBrakePedalPressureDuty();
-        if (brakeOnCount >= 3)
-        {
-            ABSState = true;
-        }
-    }*/
-    /*
-    // Wait until we can take the mutex to be able to use car state shared resource
-    xSemaphoreTake(carStateMutex, portMAX_DELAY);
-    float currentSpeed = getCarSpeed();
-    // Modify the speed dependant on brake pressure
-    float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel/ABS_TIMER_DEFAULT_RATE/100.0;
-    if (newSpeed <= 0) {
-            newSpeed = 0;
-    }
-    setCarSpeed(newSpeed);
-    setABSState(ABSState); // TO DO: maybe only set abs state if it changes, save a bit of time
-
-    // Give the mutex back
-    xSemaphoreGive(carStateMutex);
-
-    // Tell the wheel update task to run
-    xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);*/
-}
-
-/**
- * @brief Initialise the timer for reading ABS input
- * 
- * @return None
- */
-static void initABSReadTimer (void)
-{
-    SysCtlPeripheralEnable(ABS_TIMER_PERIPH);
-
-    TimerDisable(ABS_TIMER_BASE, ABS_TIMER);
-
-    TimerConfigure(ABS_TIMER_BASE, ABS_TIMER_CONFIG);
-
-    TimerIntRegister(ABS_TIMER_BASE, ABS_TIMER, ABSTimerHandler);
-
-    TimerLoadSet(ABS_TIMER_BASE, ABS_TIMER, SysCtlClockGet() / ABS_TIMER_DEFAULT_RATE);
-
-    TimerIntEnable(ABS_TIMER_BASE, ABS_TIMER_INT_FLAG);
-
-    //TimerEnable(ABS_TIMER_BASE, ABS_TIMER);
-}
-
-void processBrakeSignalTask(void* args)
-{
-    (void)args; // unused
-    TickType_t wake_time = xTaskGetTickCount();  
-    //Local variables
-    static bool ABSState = false;
-    static uint8_t brakeOnCount = 0;
-    static float maxDecel = 5; // m/s^2
-    while(1)
-    {
-        //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
-        uint8_t currentABSBrakeDuty;
-        HWREG(DELAY_TIMER_BASE + TIMER_O_TAV) = 0; // Reset delay timer
-        bool highEdgeFound = false;
-
-        // for 1/500s read the input pin level, if there is no high then ABS is on
-        // sysclock is 80 mHz
-        while(TimerValueGet(DELAY_TIMER_BASE, DELAY_TIMER) < 80000000/500)
-        {
+        ulCount_delay = 0;
+        xTimerStop( xTimer_Delay, 0);
+        vTimerSetTimerID( xTimer_Delay, ( void * ) ulCount_delay );
+        xTimerStart( xTimer_Delay, 0);
+        uint8_t brakeOnCount = 0;
+        while (( uint32_t ) pvTimerGetTimerID( xTimer_Delay ) < 5) {
             if (GPIOPinRead(GPIO_PORTB_BASE, GPIO_PIN_0)) // Found high edge, use brake duty accordingly
             {
                 brakeOnCount++;
-                currentABSBrakeDuty = getBrakePedalPressureDuty();
+                
                 if (brakeOnCount >= 4) // 4 kinda arbitrary
                 {
                     ABSState = false;
                 }
                 highEdgeFound = true;
-                //OLEDStringDraw ("Off", 0, 3);
+                OLEDStringDraw ("Off", 0, 2);
                 break;
             }
+    
         }
-        
-        // No high edge found in 1/500 s, ABS must be toggled on. 0 duty
-        if (!highEdgeFound)
-        {
-            //OLEDStringDraw ("On ", 0, 3);
-            ABSState = true;
-            brakeOnCount = 0;
-            currentABSBrakeDuty = 0;
-        }
-
-        // Wait until we can take the mutex to be able to use car state shared resource
-        xSemaphoreTake(carStateMutex, portMAX_DELAY);
-        setABSBrakePressureDuty(currentABSBrakeDuty);
-        setABSState(ABSState);
-        xSemaphoreGive(carStateMutex);
-
-        /*float currentSpeed = getCarSpeed();
-        // Modify the speed dependant on brake pressure
-        float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel/ABS_TIMER_DEFAULT_RATE/100.0;
-        if (newSpeed <= 0) {
-                newSpeed = 0;
-        }
-        setCarSpeed(newSpeed);
-        setABSState(ABSState); // TO DO: maybe only set abs state if it changes, save a bit of time
-
-        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
-
-        // Give the mutex back
-        xSemaphoreGive(carStateMutex);
-
-        // Tell the wheel update task to run
-        xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);*/
-        vTaskDelayUntil(&wake_time, 50);
     }
-}
 
+    if (ulCount % 20 == 0 && xTimer == xTimer_ReadABS)
+    {
+        char string[17]; // Display fits 16 characters wide.
+        sprintf(string, "Count = %ld", ulCount);
+        OLEDStringDraw (string, 0, 1);
+    
+       
+    }
+    if (ulCount % 1 == 0 && xTimer == xTimer_Delay)
+    {
+        char string[17]; // Display fits 16 charactersde.
+
+        sprintf(string, "Count = %ld", ulCount);
+        OLEDStringDraw (string, 0, 3);
+        
+    }
+
+    /* If the timer has expired 10 times then stop it from running. */
+    if( ulCount >= ulMaxExpiryCountBeforeStopping )
+    {
+        /* Do not use a block time if calling a timer API function
+        from a timer callback function, as doing so could cause a
+        deadlock! */
+        xTimerStop( xTimer, 0 );
+
+    }
+    else
+    {
+       /* Store the incremented count back into the timer's ID field
+       so it can be read back again the next time this software timer
+       expires. */
+       vTimerSetTimerID( xTimer, ( void * ) ulCount );
+    }
+ }
 
 
 int main(void) {
@@ -537,15 +441,51 @@ int main(void) {
     createQueues();
     createSempahores();
 
-    initABSReadTimer();
-    DelayTimerInit();
+    xTimer_ReadABS = xTimerCreate
+                   ( /* Just a text name, not used by the RTOS
+                     kernel. */
+                     "ABS Timer",
+                     /* The timer period in ticks, 50ms */
+                     pdMS_TO_TICKS(50) ,
+                     /* The timers will auto-reload themselves
+                     when they expire. */
+                     pdTRUE,
+                     /* The ID is used to store a count of the
+                     number of times the timer has expired, which
+                     is initialised to 0. */
+                     ( void * ) 0,
+                     /* Each timer calls the same callback when
+                     it expires. */
+                     vTimerCallback
+                   );
+
+    xTimer_Delay = xTimerCreate
+                   ( /* Just a text name, not used by the RTOS
+                     kernel. */
+                     "Delay Timer",
+                     /* The timer period in ticks, 1ms */
+                     pdMS_TO_TICKS(2) ,
+                     /* The timers will auto-reload themselves
+                     when they expire. */
+                     pdTRUE,
+                     /* The ID is used to store a count of the
+                     number of times the timer has expired, which
+                     is initialised to 0. */
+                     ( void * ) 0,
+                     /* Each timer calls the same callback when
+                     it expires. */
+                     vTimerCallback
+                   );
+
+    xTimerStart( xTimer_ReadABS, 0 );
+    xTimerStart( xTimer_Delay, 0 );
+    
 
     xTaskCreate(&readInputsTask, "read inputs", 150, NULL, 0, &readInputsHandle);
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
-    xTaskCreate(&processBrakeSignalTask, "dummy", 256, NULL, 1, &processBrakeSignalTaskHandle);
-    //xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
+    xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
     xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 0, &decelerationTaskHandle);
     vTaskSuspend(decelerationTaskHandle);
 
