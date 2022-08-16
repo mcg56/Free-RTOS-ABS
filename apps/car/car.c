@@ -490,9 +490,10 @@ void processBrakeSignalTask(void* args)
         // Wait until we can take the mutex to be able to use car state shared resource
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
         setABSBrakePressureDuty(currentABSBrakeDuty);
+        setABSState(ABSState);
         xSemaphoreGive(carStateMutex);
 
-        float currentSpeed = getCarSpeed();
+        /*float currentSpeed = getCarSpeed();
         // Modify the speed dependant on brake pressure
         float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel/ABS_TIMER_DEFAULT_RATE/100.0;
         if (newSpeed <= 0) {
@@ -507,7 +508,7 @@ void processBrakeSignalTask(void* args)
         xSemaphoreGive(carStateMutex);
 
         // Tell the wheel update task to run
-        xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
+        xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);*/
         vTaskDelayUntil(&wake_time, 50);
     }
 }
