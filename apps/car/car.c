@@ -95,8 +95,8 @@ void readInputsTask(void* args)
 
         if (checkButton(UP) == PUSHED || c == 'w')
         {
-            float currentSpeed = getCarSpeed();
-            setCarSpeed(currentSpeed + 50);
+            float currentSpeed = getCarSpeed(); //TODO limit to 120
+            setCarSpeed(currentSpeed + 20);
             change = true;            
         }
         if (checkButton(DOWN) == PUSHED || c == 's')
