@@ -173,7 +173,7 @@ void readInputsTask(void* args)
             {
                 setPedalState(1);
                 // Start decleration task
-                vTaskResume(processBrakeSignalTaskHandle);
+                vTaskResume(decelerationTaskHandle);
                 //TimerEnable(ABS_TIMER_BASE, ABS_TIMER);
 
                 // Notify PWM task to update brake pwm as pedal is activated
@@ -181,7 +181,7 @@ void readInputsTask(void* args)
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
             } else {
                 // Stop deceleration Task
-                vTaskSuspend(processBrakeSignalTaskHandle);
+                vTaskSuspend(decelerationTaskHandle);
                 //TimerDisable(ABS_TIMER_BASE, ABS_TIMER);
 
                 // Set brake pwm to 0% duty
@@ -285,7 +285,7 @@ void decelerationTask (void* args)
 {
     (void)args;
     const float maxDecel = 5; // m/s^2
-    const float taskPeriodms = 100; //ms
+    const float taskPeriodms = 15; //ms
     TickType_t wake_time = xTaskGetTickCount();     
     
     while (true)
@@ -298,7 +298,7 @@ void decelerationTask (void* args)
             float currentSpeed = getCarSpeed();
             // TO DO: Change to getABSBrakePressureDuty when using with ABS controller 
             //(Doesnt make a difference to output but shows we actually use the ABS duty not just our own)
-            uint8_t currentABSBrakeDuty = getBrakePedalPressureDuty(); // = getABSBrakePressureDuty();
+            uint8_t currentABSBrakeDuty = getABSBrakePressureDuty();
             
             // Modify the speed dependant on brake pressure
             float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel*taskPeriodms/1000.0/100.0;
@@ -308,11 +308,11 @@ void decelerationTask (void* args)
 
             setCarSpeed(newSpeed);
 
-            // Give the mutex back
-            xSemaphoreGive(carStateMutex);
-
             // Tell the wheel update task to run
             xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
+            // Give the mutex back
+            xSemaphoreGive(carStateMutex);
+            
             vTaskDelayUntil(&wake_time, taskPeriodms);
     }   
 }
@@ -489,6 +489,9 @@ void processBrakeSignalTask(void* args)
 
         // Wait until we can take the mutex to be able to use car state shared resource
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
+        setABSBrakePressureDuty(currentABSBrakeDuty);
+        xSemaphoreGive(carStateMutex);
+
         float currentSpeed = getCarSpeed();
         // Modify the speed dependant on brake pressure
         float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel/ABS_TIMER_DEFAULT_RATE/100.0;
@@ -542,7 +545,7 @@ int main(void) {
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
     xTaskCreate(&processBrakeSignalTask, "dummy", 256, NULL, 1, &processBrakeSignalTaskHandle);
     //xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
-    // xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 0, &decelerationTaskHandle);
+    xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 0, &decelerationTaskHandle);
     vTaskSuspend(processBrakeSignalTaskHandle);
 
     // Tell the wheel update task to run, which fills out the wheels speeds with starting info
