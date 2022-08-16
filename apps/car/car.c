@@ -46,6 +46,7 @@ TaskHandle_t updateUARTHandle;
 TaskHandle_t updatePWMOutputsTaskHandle;
 TaskHandle_t updateAllPWMInputsHandle;
 TaskHandle_t decelerationTaskHandle;
+TaskHandle_t processBrakeSignalTaskHandle;
 
 /**
  * @brief Creates instances of all queues
@@ -341,6 +342,7 @@ static void ABSTimerHandler(void)
     static uint8_t brakeOnCount = 0;
     static float maxDecel = 5; // m/s^2
 
+    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, GPIO_PIN_1);
     // Clear interrupt
     TimerIntClear(ABS_TIMER_BASE, ABS_TIMER_INT_FLAG);
 
@@ -373,7 +375,7 @@ static void ABSTimerHandler(void)
                 ABSState = false;
             }
             highEdgeFound = true;
-            OLEDStringDraw ("Off", 0, 3);
+            //OLEDStringDraw ("Off", 0, 3);
             break;
         }
     }
@@ -381,11 +383,13 @@ static void ABSTimerHandler(void)
     // No high edge found in 1/500 s, ABS must be toggled on. 0 duty
     if (!highEdgeFound)
     {
-        OLEDStringDraw ("On ", 0, 3);
+        //OLEDStringDraw ("On ", 0, 3);
         ABSState = true;
         brakeOnCount = 0;
         currentABSBrakeDuty = 0;
     }
+    
+    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
     // TO DO: maybe implement read 3 abs in a row to change state? (3 on-off correct sequences)
     /*if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS will be on
     {
@@ -441,6 +445,51 @@ static void initABSReadTimer (void)
     //TimerEnable(ABS_TIMER_BASE, ABS_TIMER);
 }
 
+void processBrakeSignalTask(void* args)
+{
+    (void)args; // unused
+    TickType_t wake_time = xTaskGetTickCount();  
+    //Local variables
+    static bool ABSState = false;
+    static uint8_t brakeOnCount = 0;
+    static float maxDecel = 5; // m/s^2
+    while(1)
+    {
+        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+        uint8_t currentABSBrakeDuty;
+        HWREG(DELAY_TIMER_BASE + TIMER_O_TAV) = 0; // Reset delay timer
+        bool highEdgeFound = false;
+
+        // for 1/500s read the input pin level, if there is no high then ABS is on
+        // sysclock is 80 mHz
+        while(TimerValueGet(DELAY_TIMER_BASE, DELAY_TIMER) < 80000000/500)
+        {
+            if (GPIOPinRead(GPIO_PORTB_BASE, GPIO_PIN_0)) // Found high edge, use brake duty accordingly
+            {
+                brakeOnCount++;
+                currentABSBrakeDuty = getBrakePedalPressureDuty();
+                if (brakeOnCount >= 4) // 4 kinda arbitrary
+                {
+                    ABSState = false;
+                }
+                highEdgeFound = true;
+                //OLEDStringDraw ("Off", 0, 3);
+                break;
+            }
+        }
+        
+        // No high edge found in 1/500 s, ABS must be toggled on. 0 duty
+        if (!highEdgeFound)
+        {
+            //OLEDStringDraw ("On ", 0, 3);
+            ABSState = true;
+            brakeOnCount = 0;
+            currentABSBrakeDuty = 0;
+        }
+        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+        vTaskDelayUntil(&wake_time, 50);
+    }
+}
 
 
 
@@ -473,9 +522,10 @@ int main(void) {
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
+    //xTaskCreate(&processBrakeSignalTask, "dummy", 256, NULL, 1, &processBrakeSignalTaskHandle);
     //xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
     // xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 0, &decelerationTaskHandle);
-    vTaskSuspend(decelerationTaskHandle);
+    //vTaskSuspend(decelerationTaskHandle);
 
     // Tell the wheel update task to run, which fills out the wheels speeds with starting info
     xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);

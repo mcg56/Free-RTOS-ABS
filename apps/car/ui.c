@@ -243,32 +243,39 @@ void updateUARTTask(void* args)
     {
         // Wait until we can take the mutex to be able to use car state shared resource
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
-        // We have obtained the mutex, now can run the task
+        // We have obtained the mutex, now get all car state variables
+        float speed = getCarSpeed(void);
+        uint8_t steeringDuty = getSteeringDuty(void);
+        float alpha = getSteeringAngle(void);
+        uint8_t roadCondition = getRoadCondition(void);
+        bool pedalState = getPedalState(void);
+        uint8_t brakeDuty = getBrakePedalPressureDuty(void);
+        bool absState = getABSState(void);
+        Wheel LF = getleftFront();
+        Wheel LR = getleftRear();
+        Wheel RF = getRightFront();
+        Wheel RR = getRightRear();
+        xSemaphoreGive(carStateMutex);
 
         //Steering line
-        uint8_t steeringDuty = getSteeringDuty();
         if (steeringDuty != prevSteeringDuty) // Only write line if there was a change
         {      
-            gcvt (getSteeringAngle(), 4, &floatBuff);
+            gcvt (alpha, 4, &floatBuff);
             vt100_print_steering_angle(getSteeringDuty(), floatBuff);
             prevSteeringDuty = steeringDuty;
         }
         
         // Car speed line
-        float speed = getCarSpeed();
         if (speed != prevSpeed) // Only write line if there was a change
         {
-            gcvt (getCarSpeed(), 4, &floatBuff);
+            gcvt (speed, 4, &floatBuff);
             vt100_print_car_speed(floatBuff);
             prevSpeed = speed;
         }
         
         // Wheel information lines
         // First get the wheel structs
-        Wheel LF = getleftFront();
-        Wheel LR = getleftRear();
-        Wheel RF = getRightFront();
-        Wheel RR = getRightRear();
+        
         
         // Wheel speed and PRR lines
         // If one wheel changed speed, they will all have changed speed and PRR.
