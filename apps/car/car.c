@@ -173,16 +173,16 @@ void readInputsTask(void* args)
             {
                 setPedalState(1);
                 // Start decleration task
-                //vTaskResume(decelerationTaskHandle);
-                TimerEnable(ABS_TIMER_BASE, ABS_TIMER);
+                vTaskResume(processBrakeSignalTaskHandle);
+                //TimerEnable(ABS_TIMER_BASE, ABS_TIMER);
 
                 // Notify PWM task to update brake pwm as pedal is activated
                 pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
             } else {
                 // Stop deceleration Task
-                // vTaskSuspend(decelerationTaskHandle);
-                TimerDisable(ABS_TIMER_BASE, ABS_TIMER);
+                vTaskSuspend(processBrakeSignalTaskHandle);
+                //TimerDisable(ABS_TIMER_BASE, ABS_TIMER);
 
                 // Set brake pwm to 0% duty
                 pwmOutputUpdate_t brakePWM = {0, PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
@@ -486,7 +486,25 @@ void processBrakeSignalTask(void* args)
             brakeOnCount = 0;
             currentABSBrakeDuty = 0;
         }
+
+        // Wait until we can take the mutex to be able to use car state shared resource
+        xSemaphoreTake(carStateMutex, portMAX_DELAY);
+        float currentSpeed = getCarSpeed();
+        // Modify the speed dependant on brake pressure
+        float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel/ABS_TIMER_DEFAULT_RATE/100.0;
+        if (newSpeed <= 0) {
+                newSpeed = 0;
+        }
+        setCarSpeed(newSpeed);
+        setABSState(ABSState); // TO DO: maybe only set abs state if it changes, save a bit of time
+
         GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+
+        // Give the mutex back
+        xSemaphoreGive(carStateMutex);
+
+        // Tell the wheel update task to run
+        xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
         vTaskDelayUntil(&wake_time, 50);
     }
 }
@@ -522,10 +540,10 @@ int main(void) {
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 0, &updatePWMOutputsTaskHandle);
-    //xTaskCreate(&processBrakeSignalTask, "dummy", 256, NULL, 1, &processBrakeSignalTaskHandle);
+    xTaskCreate(&processBrakeSignalTask, "dummy", 256, NULL, 1, &processBrakeSignalTaskHandle);
     //xTaskCreate(&processABSPWMInputTask, "Update abs pwm input", 256, NULL, 0, NULL);
     // xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 0, &decelerationTaskHandle);
-    //vTaskSuspend(decelerationTaskHandle);
+    vTaskSuspend(processBrakeSignalTaskHandle);
 
     // Tell the wheel update task to run, which fills out the wheels speeds with starting info
     xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);

@@ -244,13 +244,13 @@ void updateUARTTask(void* args)
         // Wait until we can take the mutex to be able to use car state shared resource
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
         // We have obtained the mutex, now get all car state variables
-        float speed = getCarSpeed(void);
-        uint8_t steeringDuty = getSteeringDuty(void);
-        float alpha = getSteeringAngle(void);
-        uint8_t roadCondition = getRoadCondition(void);
-        bool pedalState = getPedalState(void);
-        uint8_t brakeDuty = getBrakePedalPressureDuty(void);
-        bool absState = getABSState(void);
+        float speed = getCarSpeed();
+        uint8_t steeringDuty = getSteeringDuty();
+        float alpha = getSteeringAngle();
+        uint8_t roadCondition = getRoadCondition();
+        bool pedalState = getPedalState();
+        uint8_t brakeDuty = getBrakePedalPressureDuty();
+        bool absState = getABSState();
         Wheel LF = getleftFront();
         Wheel LR = getleftRear();
         Wheel RF = getRightFront();
@@ -261,7 +261,7 @@ void updateUARTTask(void* args)
         if (steeringDuty != prevSteeringDuty) // Only write line if there was a change
         {      
             gcvt (alpha, 4, &floatBuff);
-            vt100_print_steering_angle(getSteeringDuty(), floatBuff);
+            vt100_print_steering_angle(steeringDuty, floatBuff);
             prevSteeringDuty = steeringDuty;
         }
         
@@ -315,23 +315,18 @@ void updateUARTTask(void* args)
             prevLFRadius = LF.turnRadius;
         }
         
-        uint8_t brakeDuty = getBrakePedalPressureDuty();
         if (brakeDuty != prevBrakeDuty)
         {
             vt100_print_brake_pressure(brakeDuty);
             prevBrakeDuty = brakeDuty;
         }
 
-
-        uint8_t roadCondition  = getRoadCondition();
         if (roadCondition != prevRoadCondition)
         {
             vt100_print_condition(roadCondition);
             prevRoadCondition = roadCondition;
         }
         
-
-        bool pedalState = getPedalState();
         if (pedalState != prevPedalState)
         {   
             vt100_print_pedal(pedalState);
@@ -339,7 +334,6 @@ void updateUARTTask(void* args)
         }
         
         bool slipArray[4] = {LF.slipping, LR.slipping, RF.slipping, RR.slipping};
-        bool absState = getABSState();
         if((prevSlipArray[0] != slipArray[0]) || (prevSlipArray[1] != slipArray[1]) || (prevSlipArray[2] != slipArray[2]) || (prevSlipArray[3] != slipArray[3]) || (absState != prevABSState))
         {
             vt100_print_slipage(slipArray, absState);
@@ -349,9 +343,6 @@ void updateUARTTask(void* args)
             }
             prevABSState = absState;
         }
-
-        // Give the mutex back
-        xSemaphoreGive(carStateMutex);
 
         vTaskDelay(xDelay);
     }
