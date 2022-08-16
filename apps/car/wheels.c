@@ -155,7 +155,7 @@ void updateWheelInfoTask(void* args)
     while(true) {
         // Wait until a task has notified it to run, when the car state has changed
         ulTaskNotifyTake( pdTRUE, portMAX_DELAY );
-
+        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
         // Wait until we can take the mutex to be able to use car state shared resource
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
         // We have obtained the mutex, now can run the task

@@ -285,35 +285,34 @@ void decelerationTask (void* args)
 {
     (void)args;
     const float maxDecel = 5; // m/s^2
-    const float taskPeriodms = 15; //ms
+    const float taskPeriodms = 5; //ms
     TickType_t wake_time = xTaskGetTickCount();     
     
     while (true)
     {
-            // Wait until we can take the mutex to be able to use car state shared resource
-            //while(xSemaphoreTake( carStateMutex, ( TickType_t ) 10 ) != pdTRUE) continue;
-            xSemaphoreTake(carStateMutex, portMAX_DELAY);
-            // We have obtained the mutex, now can run the task
+        // Wait until we can take the mutex to be able to use car state shared resource
+        //while(xSemaphoreTake( carStateMutex, ( TickType_t ) 10 ) != pdTRUE) continue;
+        xSemaphoreTake(carStateMutex, portMAX_DELAY);
+        // We have obtained the mutex, now can run the task
 
-            float currentSpeed = getCarSpeed();
-            // TO DO: Change to getABSBrakePressureDuty when using with ABS controller 
-            //(Doesnt make a difference to output but shows we actually use the ABS duty not just our own)
-            uint8_t currentABSBrakeDuty = getABSBrakePressureDuty();
-            
-            // Modify the speed dependant on brake pressure
-            float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel*taskPeriodms/1000.0/100.0;
-            if (newSpeed <= 0) {
-                    newSpeed = 0;
-            }
+        float currentSpeed = getCarSpeed();
+        // TO DO: Change to getABSBrakePressureDuty when using with ABS controller 
+        //(Doesnt make a difference to output but shows we actually use the ABS duty not just our own)
+        uint8_t currentABSBrakeDuty = getABSBrakePressureDuty();
+        
+        // Modify the speed dependant on brake pressure
+        float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel*taskPeriodms/1000.0/100.0;
+        if (newSpeed <= 0) {
+                newSpeed = 0;
+        }
 
-            setCarSpeed(newSpeed);
+        setCarSpeed(newSpeed);
 
-            // Tell the wheel update task to run
-            xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
-            // Give the mutex back
-            xSemaphoreGive(carStateMutex);
-            
-            vTaskDelayUntil(&wake_time, taskPeriodms);
+        // Tell the wheel update task to run
+        xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
+        // Give the mutex back
+        xSemaphoreGive(carStateMutex);
+        vTaskDelayUntil(&wake_time, taskPeriodms);
     }   
 }
 
