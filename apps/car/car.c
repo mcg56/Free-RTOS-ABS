@@ -96,7 +96,7 @@ void readInputsTask(void* args)
         if (checkButton(UP) == PUSHED || c == 'w')
         {
             float currentSpeed = getCarSpeed(); //TODO limit to 120
-            setCarSpeed(currentSpeed + 20);
+            setCarSpeed(currentSpeed + 100);
             change = true;            
         }
         if (checkButton(DOWN) == PUSHED || c == 's')
@@ -284,7 +284,7 @@ void processABSPWMInputTask(void* args)
 void decelerationTask (void* args)
 {
     (void)args;
-    const float maxDecel = 5; // m/s^2
+    const float maxDecel = 75; // m/s^2
     const float taskPeriodms = 5; //ms
     TickType_t wake_time = xTaskGetTickCount();     
     
@@ -299,6 +299,10 @@ void decelerationTask (void* args)
         // TO DO: Change to getABSBrakePressureDuty when using with ABS controller 
         //(Doesnt make a difference to output but shows we actually use the ABS duty not just our own)
         uint8_t currentABSBrakeDuty = getABSBrakePressureDuty();
+        if (currentABSBrakeDuty == 0)
+        {
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+        }
         
         // Modify the speed dependant on brake pressure
         float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel*taskPeriodms/1000.0/100.0;
@@ -388,7 +392,7 @@ static void ABSTimerHandler(void)
         currentABSBrakeDuty = 0;
     }
     
-    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+    //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
     // TO DO: maybe implement read 3 abs in a row to change state? (3 on-off correct sequences)
     /*if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS will be on
     {
@@ -484,6 +488,7 @@ void processBrakeSignalTask(void* args)
             ABSState = true;
             brakeOnCount = 0;
             currentABSBrakeDuty = 0;
+            //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
         }
 
         // Wait until we can take the mutex to be able to use car state shared resource
