@@ -53,6 +53,8 @@ static Car_t carState = {.speed=50.0, .steeringWheelDuty=50, .alpha=0.0, .roadCo
 
 SemaphoreHandle_t carStateMutex = NULL;
 
+void decelerationTask (void* args);
+
 void initCarState(void)
 {
     // Create shared resource mutex

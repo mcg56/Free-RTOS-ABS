@@ -22,14 +22,6 @@ const char* get_condition(uint8_t condition);
 
 void initUserInterface(void);
 
-void processUserInputsTask(void* args);
-
-/**
- * @brief Update the UART terminal with data about the car.
- * @param args Unused
- * @return No return
- */
-void updateUARTTask(void* args);
 
 #endif
 

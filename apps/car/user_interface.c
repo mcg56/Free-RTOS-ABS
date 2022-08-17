@@ -20,6 +20,16 @@
 
 TaskHandle_t processUserInputsTaskHandle;
 TaskHandle_t updateUARTTaskHandle;
+
+void processUserInputsTask(void* args);
+
+/**
+ * @brief Update the UART terminal with data about the car.
+ * @param args Unused
+ * @return No return
+ */
+void updateUARTTask(void* args);
+
 void initUserInterface(void)
 {
     // Setup red LED on PF1

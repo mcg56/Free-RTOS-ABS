@@ -57,7 +57,6 @@ int main(void) {
 
 
 // This is an error handling function called when FreeRTOS asserts.
-// This should be used for debugging purposes
 void vAssertCalled( const char * pcFile, unsigned long ulLine ) {
     (void)pcFile; // unused
     (void)ulLine; // unused

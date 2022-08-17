@@ -9,14 +9,6 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
-
-/**
- * @brief Task to update the wheel information and signal to PWM generators to update the frequencies
- * @param args Unused
- * @return No return
- */
-void updateWheelInfoTask(void* args);
-
 void initWheels(void);
 
 extern TaskHandle_t updateWheelInfoHandle;

@@ -51,7 +51,7 @@ void setLeftRear(Wheel wheel);
 void setRightFront(Wheel wheel);
 void setRightRear(Wheel wheel);
 
-void decelerationTask (void* args);
+
 
 // Mutex to ensure only one task can access the shared resource car state struct at once (get/set etc)
 extern SemaphoreHandle_t carStateMutex;
