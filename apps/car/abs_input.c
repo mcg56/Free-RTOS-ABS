@@ -18,7 +18,7 @@
 #define ABS_DELAY_TIMER             TIMER_A
 #define ABS_DELAY_TIMER_CONFIG      TIMER_CFG_PERIODIC_UP
 
-TaskHandle_t processBrakeSignalTaskHandle;
+TaskHandle_t processABSInputSignalTaskHandle;
 
 void
 ABSDelayTimerInit()	
@@ -33,7 +33,7 @@ ABSDelayTimerInit()
 
 
 
-void processBrakeSignalTask(void* args)
+void processABSInputSignalTask(void* args)
 {
     (void)args; // unused
     //Local variables
@@ -67,7 +67,6 @@ void processBrakeSignalTask(void* args)
                 break;
             }
         }
-
         
         // No high edge found in 1/500 s, ABS must be toggled on. 0 duty
         if (!highEdgeFound)

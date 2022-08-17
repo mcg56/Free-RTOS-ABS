@@ -12,50 +12,15 @@
 #include <semphr.h>
 #include "libs/lib_uart/uart.h"
 #include "driverlib/uart.h"
-
 #include "car_state.h"
 #include "car_pwm.h"
 #include "libs/lib_buttons/buttons.h"
+#include "libs/lib_pwm/pwm_output.h"
 
-TaskHandle_t readInputsHandle;
-TaskHandle_t updateUARTHandle;
+TaskHandle_t processUserInputsTaskHandle;
+TaskHandle_t updateUARTTaskHandle;
 
-void vt100_set_yellow(void) {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    sprintf(ANSIString, "%c%s", VT100_ESC, VT100_FG_YELLOW);
-    UARTSend (ANSIString);
-}
-
-void vt100_set_white(void) {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    sprintf (ANSIString, "%c%s", VT100_ESC, VT100_FG_WHITE);
-    UARTSend (ANSIString);
-}
-
-void vt100_clear(void) {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    sprintf(ANSIString, "%c%s", VT100_ESC, VT100_HOME);
-    UARTSend (ANSIString);
-    sprintf(ANSIString,"%c%s", VT100_ESC, VT100_CLS);
-    UARTSend (ANSIString);
-    //printf("%c%s", VT100_ESC, VT100_BOLD);
-    sprintf(ANSIString, "%c%s", VT100_ESC, VT100_BG_BLACK);
-    UARTSend (ANSIString);
-    vt100_set_yellow();
-}
-
-
-void vt100_set_line_number(int line) {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    char buf[6] = {0};
-    sprintf(ANSIString, "%c%s", VT100_ESC, VT100_HOME);
-    UARTSend (ANSIString);
-    sprintf(buf, "[%dB", line);
-    sprintf(ANSIString, "%c%s", VT100_ESC, buf);
-    UARTSend (ANSIString);
-    sprintf(ANSIString, "%c%s", VT100_ESC, VT100_CLR);
-    UARTSend (ANSIString);
-}
+void printInitialInformation(void);
 
 void vt100_print_text(void) {
     vt100_clear();
@@ -82,26 +47,6 @@ void vt100_print_text(void) {
     vt100_set_white();
 }
 
-void vt100_print_steering_angle(uint8_t duty, char alphaStr[6]) {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    vt100_set_line_number(3);
-    sprintf (ANSIString, "Duty: %2d%%    Angle: %5s degrees\r\n\n", duty, alphaStr);
-    UARTSend (ANSIString);
-}
-
-void vt100_print_car_speed(char speedStr[6]) {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    vt100_set_line_number(5);
-    sprintf (ANSIString, "%5s km/h\r\n\n", speedStr);
-    UARTSend (ANSIString);
-}
-
-void vt100_print_wheel_speed(char LF[6],char LR[6],char RF[6],char RR[6]) {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    vt100_set_line_number(7);
-    sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LF, LR, RF, RR);
-    UARTSend (ANSIString);
-}
 
 void vt100_print_radii(char LF[6],char LR[6],char RF[6],char RR[6]) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
@@ -115,27 +60,6 @@ void vt100_print_prr(char LF[6],char LR[6],char RF[6],char RR[6]) {
     vt100_set_line_number(9);
     sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LF, LR, RF, RR);
     UARTSend (ANSIString);
-}
-
-
-
-void vt100_print_brake_pressure(uint8_t pressure) {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    vt100_set_line_number(13);
-    sprintf(ANSIString, "%d %%", pressure);
-    UARTSend (ANSIString);
-}
-
-
-void vt100_print_pedal(bool pedal) {
-    vt100_set_line_number(15);
-    if (pedal == 1)
-    {
-        UARTSend ("ON");
-    }
-    else{
-        UARTSend ("OFF");
-    }
 }
 
 void vt100_print_condition(uint8_t condition) {
@@ -160,27 +84,69 @@ const char* get_condition(uint8_t condition){
     }
 }
 
-void vt100_print_slipage(bool slipArray[4], bool ABSstate) 
+void printInitialInformation(void)
 {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    vt100_set_line_number(19);
-    char buf[4];
-    if (ABSstate)
-    {
-        strncpy(buf, "ON", 4);
-    } 
-    else
-    {
-        strncpy(buf, "OFF", 4);
-    } 
-    sprintf(ANSIString, "LF: %d LR: %d RF: %d RR: %d ABS: %s", slipArray[0], slipArray[1],slipArray[2], slipArray[3], buf);
-    UARTSend (ANSIString);
+    char LFbuff[6];
+    char LRbuff[6]; 
+    char RFbuff[6]; 
+    char RRbuff[6];
+    char floatBuff[6];
+    // Static text
+    vt100_print_text();
+
+    // Steering angle
+    gcvt (getSteeringAngle(), 4, &floatBuff);
+    vt100_print_steering_angle(getSteeringDuty(), floatBuff);
+
+    // Car speed
+    gcvt (getCarSpeed(), 4, &floatBuff);
+    vt100_print_car_speed(floatBuff);
+
+    // Wheel information
+    Wheel LF = getleftFront();
+    Wheel LR = getleftRear();
+    Wheel RF = getRightFront();
+    Wheel RR = getRightRear();
+    // Wheel speed line
+    //Convert floats to strings
+    gcvt (LF.speed, 4, &LFbuff);
+    gcvt (LR.speed, 4, &LRbuff);
+    gcvt (RF.speed, 4, &RFbuff);
+    gcvt (RR.speed, 4, &RRbuff);
+    vt100_print_wheel_speed(LFbuff, LRbuff, RFbuff, RRbuff);
+
+    //Wheel PRR line
+    //First, convert floats to strings
+    gcvt (LF.pulseHz, 4, &LFbuff);
+    gcvt (LR.pulseHz, 4, &LRbuff);
+    gcvt (RF.pulseHz, 4, &RFbuff);
+    gcvt (RR.pulseHz, 4, &RRbuff);
+    vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
+
+    //Radius line
+    //First, convert floats to strings
+    gcvt (LF.turnRadius, 4, &LFbuff);
+    gcvt (LR.turnRadius, 4, &LRbuff);
+    gcvt (RF.turnRadius, 4, &RFbuff);
+    gcvt (RR.turnRadius, 4, &RRbuff);
+    vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
+
+    // Brake pressure, road condition and pedal state
+    vt100_print_brake_pressure(getBrakePedalPressureDuty());
+    vt100_print_condition(getRoadCondition());
+    vt100_print_pedal(getPedalState());
+
+    // Wheel slip information
+    bool slipArray[4] = {LF.slipping, LR.slipping, RF.slipping, RR.slipping};
+    bool absState = getABSState();
+    vt100_print_slipage(slipArray, absState);
 }
+
 
 void updateUARTTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 333 / portTICK_PERIOD_MS;
 
     // Save previous writes to check if they need to be updated
     uint8_t prevSteeringDuty;
@@ -199,52 +165,7 @@ void updateUARTTask(void* args)
     char RRbuff[6];
     char floatBuff[6];
 
-    vt100_print_text();
-
-    // Print statting information first time task is run
-    gcvt (getSteeringAngle(), 4, &floatBuff);
-    vt100_print_steering_angle(getSteeringDuty(), floatBuff);
-
-    gcvt (getCarSpeed(), 4, &floatBuff);
-    vt100_print_car_speed(floatBuff);
-    Wheel LF = getleftFront();
-    Wheel LR = getleftRear();
-    Wheel RF = getRightFront();
-    Wheel RR = getRightRear();
-    // Wheel speed line
-    //Convert floats to strings
-    gcvt (LF.speed, 4, &LFbuff);
-    gcvt (LR.speed, 4, &LRbuff);
-    gcvt (RF.speed, 4, &RFbuff);
-    gcvt (RR.speed, 4, &RRbuff);
-
-    vt100_print_wheel_speed(LFbuff, LRbuff, RFbuff, RRbuff);
-
-    //Wheel PRR line
-    //First, convert floats to strings
-    gcvt (LF.pulseHz, 4, &LFbuff);
-    gcvt (LR.pulseHz, 4, &LRbuff);
-    gcvt (RF.pulseHz, 4, &RFbuff);
-    gcvt (RR.pulseHz, 4, &RRbuff);
-
-    vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
-
-    //Radius line
-    //First, convert floats to strings
-    gcvt (LF.turnRadius, 4, &LFbuff);
-    gcvt (LR.turnRadius, 4, &LRbuff);
-    gcvt (RF.turnRadius, 4, &RFbuff);
-    gcvt (RR.turnRadius, 4, &RRbuff);
-
-    vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
-    vt100_print_brake_pressure(getBrakePedalPressureDuty());
-    vt100_print_condition(getRoadCondition());
-    vt100_print_pedal(getPedalState());
-
-    bool slipArray[4] = {LF.slipping, LR.slipping, RF.slipping, RR.slipping};
-    bool absState = getABSState();
-    vt100_print_slipage(slipArray, absState);
-
+    printInitialInformation();
     
     while(true)
     {
@@ -281,9 +202,6 @@ void updateUARTTask(void* args)
         }
         
         // Wheel information lines
-        // First get the wheel structs
-        
-        
         // Wheel speed and PRR lines
         // If one wheel changed speed, they will all have changed speed and PRR.
         if (LF.speed != prevLFSpeed)// Only write line if there was a change
@@ -355,24 +273,25 @@ void updateUARTTask(void* args)
     }
 }
 
-
 /**
  * @brief Reads the buttons and uart input and changes car state values accordingly
  * @param args Unused
  * @return No return
  */
-void readUserInputsTask(void* args)
+void processUserInputsTask(void* args)
 {
     (void)args; // unused
-    const TickType_t xDelay = 333 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 100 / portTICK_PERIOD_MS;
     while (true) 
     {
         updateButtons();
+        int32_t c = tolower(UARTCharGetNonBlocking(UART_USB_BASE));
+
         // Wait until we can take the mutex to be able to use car state shared resource
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
         // We have obtained the mutex, now can run the task
 
-        int32_t c = tolower(UARTCharGetNonBlocking(UART_USB_BASE));
+        
         // Update values accodingly.
         bool change = false;
 
@@ -457,7 +376,6 @@ void readUserInputsTask(void* args)
                 setPedalState(1);
                 // Start decleration task
                 vTaskResume(decelerationTaskHandle);
-                //TimerEnable(ABS_TIMER_BASE, ABS_TIMER);
 
                 // Notify PWM task to update brake pwm as pedal is activated
                 pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
@@ -465,7 +383,6 @@ void readUserInputsTask(void* args)
             } else {
                 // Stop deceleration Task
                 vTaskSuspend(decelerationTaskHandle);
-                //TimerDisable(ABS_TIMER_BASE, ABS_TIMER);
 
                 // Set brake pwm to 0% duty
                 pwmOutputUpdate_t brakePWM = {0, PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};

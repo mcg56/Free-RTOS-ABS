@@ -6,9 +6,9 @@
 #include <semphr.h>
 
 
-extern TaskHandle_t processBrakeSignalTaskHandle;
+extern TaskHandle_t processABSInputSignalTaskHandle;
 
 void ABSDelayTimerInit();
-void processBrakeSignalTask(void* args);
+void processABSInputSignalTask(void* args);
 
 #endif

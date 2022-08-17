@@ -48,8 +48,6 @@ void createSempahores(void)
     carStateMutex = xSemaphoreCreateMutex();
 }
 
-
-
 int main(void) {
     SysCtlClockSet (SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
     
@@ -77,11 +75,11 @@ int main(void) {
     ABSDelayTimerInit();
 
     //Create tasks
-    xTaskCreate(&readUserInputsTask, "read inputs", 150, NULL, 0, &readInputsHandle);
+    xTaskCreate(&processUserInputsTask, "Process inputs", 150, NULL, 0, &processUserInputsTaskHandle);
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 2, &updateWheelInfoHandle);
-    xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTHandle);
+    xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTTaskHandle);
     xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 2, &updatePWMOutputsTaskHandle);
-    xTaskCreate(&processBrakeSignalTask, "dummy", 256, NULL, 3, &processBrakeSignalTaskHandle);
+    xTaskCreate(&processABSInputSignalTask, "dummy", 256, NULL, 3, &processABSInputSignalTaskHandle);
     xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 1, &decelerationTaskHandle);
     vTaskSuspend(decelerationTaskHandle);
 

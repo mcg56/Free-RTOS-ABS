@@ -39,7 +39,8 @@
         "buttons.h": "c",
         "abs_input.h": "c",
         "hw_timer.h": "c",
-        "system.h": "c"
+        "system.h": "c",
+        "uart.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

@@ -11,25 +11,17 @@
 #include <queue.h>
 #include "wheels.h"
 
-extern TaskHandle_t readInputsHandle;
-extern TaskHandle_t updateUARTHandle;
+extern TaskHandle_t processUserInputsTaskHandle;
+extern TaskHandle_t updateUARTTaskHandle;
 
-void vt100_set_yellow(void);
-void vt100_set_white(void);
-void vt100_set_line_number(int line);
 void vt100_print_text(void);
-void vt100_print_steering_angle(uint8_t duty, char alphaStr[6]);
-void vt100_print_car_speed(char speedStr[6]);
-void vt100_print_wheel_speed(char LF[6],char LR[6],char RF[6],char RR[6]);
 void vt100_print_radii(char LF[6],char LR[6],char RF[6],char RR[6]);
 void vt100_print_prr(char LF[6],char LR[6],char RF[6],char RR[6]);
-void vt100_print_brake_pressure(uint8_t pressure);
-void vt100_print_pedal(bool pedal);
 void vt100_print_condition(uint8_t condition);
 const char* get_condition(uint8_t condition);
-void vt100_print_slipage(bool slipArray[4], bool ABSstate);
 
-void readUserInputsTask(void* args);
+
+void processUserInputsTask(void* args);
 
 /**
  * @brief Update the UART terminal with data about the car.
