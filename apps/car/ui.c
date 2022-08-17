@@ -173,7 +173,7 @@ void vt100_print_slipage(bool slipArray[4], bool ABSstate)
 void updateUARTTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 333 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
 
     // Save previous writes to check if they need to be updated
     uint8_t prevSteeringDuty;
