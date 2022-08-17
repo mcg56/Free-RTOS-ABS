@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include "stdlib.h"
 #include "utils/ustdlib.h"
+#include <FreeRTOS.h>
+#include <task.h>
 
 
 /**
@@ -14,5 +16,7 @@
  * @return No return
  */
 void updateWheelInfoTask(void* args);
+
+extern TaskHandle_t updateWheelInfoHandle;
 
 #endif

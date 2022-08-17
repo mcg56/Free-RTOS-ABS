@@ -83,6 +83,7 @@ PWMOutputHardwareDetails_t pwmOutput;
 **********************************GLOBAL VARIABLES**********************************
 ************************************************************************************/
 extern QueueHandle_t updatePWMQueue;
+extern TaskHandle_t updatePWMOutputsTaskHandle;
 
 /************************************************************************************
 *****************************PUBLIC FUNCTION PROTOTYPES*****************************

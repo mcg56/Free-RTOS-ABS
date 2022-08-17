@@ -6,6 +6,7 @@
 #include "stdlib.h"
 #include <FreeRTOS.h>
 #include <semphr.h>
+#include "wheels.h"
 
 /**
  * @brief Structure for storing information about car wheels
@@ -48,7 +49,11 @@ void setLeftRear(Wheel wheel);
 void setRightFront(Wheel wheel);
 void setRightRear(Wheel wheel);
 
+void decelerationTask (void* args);
+
 // Mutex to ensure only one task can access the shared resource car state struct at once (get/set etc)
 extern SemaphoreHandle_t carStateMutex;
+
+extern TaskHandle_t decelerationTaskHandle;
 
 #endif

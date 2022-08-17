@@ -1,17 +1,24 @@
-#include "ui.h"
+#include "user_interface.h"
 #include <math.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include "stdlib.h"
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
 #include <semphr.h>
 #include "libs/lib_uart/uart.h"
 #include "driverlib/uart.h"
+
 #include "car_state.h"
+#include "car_pwm.h"
+#include "libs/lib_buttons/buttons.h"
+
+TaskHandle_t readInputsHandle;
+TaskHandle_t updateUARTHandle;
 
 void vt100_set_yellow(void) {
     char ANSIString[MAX_STR_LEN + 1]; // For uart message
@@ -344,6 +351,141 @@ void updateUARTTask(void* args)
             prevABSState = absState;
         }
 
+        vTaskDelay(xDelay);
+    }
+}
+
+
+/**
+ * @brief Reads the buttons and uart input and changes car state values accordingly
+ * @param args Unused
+ * @return No return
+ */
+void readUserInputsTask(void* args)
+{
+    (void)args; // unused
+    const TickType_t xDelay = 333 / portTICK_PERIOD_MS;
+    while (true) 
+    {
+        updateButtons();
+        // Wait until we can take the mutex to be able to use car state shared resource
+        xSemaphoreTake(carStateMutex, portMAX_DELAY);
+        // We have obtained the mutex, now can run the task
+
+        int32_t c = tolower(UARTCharGetNonBlocking(UART_USB_BASE));
+        // Update values accodingly.
+        bool change = false;
+
+        if (checkButton(UP) == PUSHED || c == 'w')
+        {
+            float currentSpeed = getCarSpeed(); //TO DO limit to 120
+            setCarSpeed(currentSpeed + 100);
+            change = true;            
+        }
+        if (checkButton(DOWN) == PUSHED || c == 's')
+        {
+            float currentSpeed = getCarSpeed();
+            if (currentSpeed != 0) {
+                setCarSpeed(currentSpeed - 5);
+            }
+            change = true;
+        }
+        if (checkButton(LEFT) == PUSHED || c == 'a')
+        {
+            uint8_t currentSteeringWheelDuty = getSteeringDuty();
+            if (currentSteeringWheelDuty > 5) {
+                setSteeringDuty(currentSteeringWheelDuty - 5);
+            }
+            // Notify PWM task to update steering PWM to new value
+            pwmOutputUpdate_t steeringPWM = {getSteeringDuty(), PWM_STEERING_FIXED_HZ, PWMHardwareDetailsSteering};
+            xQueueSendToBack(updatePWMQueue, &steeringPWM, 0);
+            change = true;
+        }
+        if (checkButton(RIGHT) == PUSHED|| c == 'd')
+        {
+            uint8_t currentSteeringWheelDuty = getSteeringDuty();
+            if (currentSteeringWheelDuty < 95) {
+                setSteeringDuty(currentSteeringWheelDuty + 5);
+            }
+            // Notify PWM task to update steering PWM to new value
+            pwmOutputUpdate_t steeringPWM = {getSteeringDuty(), PWM_STEERING_FIXED_HZ, PWMHardwareDetailsSteering};
+            xQueueSendToBack(updatePWMQueue, &steeringPWM, 0);
+            change = true;
+        }
+        if (c == '[')
+        {
+            uint8_t currentPedalBrakeDuty = getBrakePedalPressureDuty();
+            if (currentPedalBrakeDuty > 5) {
+                setBrakePedalPressureDuty(currentPedalBrakeDuty - 5);
+            }
+            if(getPedalState()) // Brake pedal pressed, need to update brake PWM to abs controller
+            {
+                // Notify PWM task to update brake pwm as pedal is activated
+                pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
+                xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
+            }
+            change = true;
+        }
+        if (c == ']')
+        {
+            uint8_t currentPedalBrakeDuty = getBrakePedalPressureDuty();
+            if (currentPedalBrakeDuty < 95) {
+                setBrakePedalPressureDuty(currentPedalBrakeDuty + 5);
+            }
+            if(getPedalState()) // Brake pedal pressed, need to update brake PWM to abs controller
+            {
+                // Notify PWM task to update brake pwm as pedal is activated
+                pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
+                xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
+            }
+            change = true;
+        }
+        if (c == 'r')
+        {
+            uint8_t currentRoadCondition = getRoadCondition(); 
+            if  (currentRoadCondition <= 2) setRoadCondition(currentRoadCondition + 1);
+            else setRoadCondition(0);
+            change = true;
+        }
+        
+
+        if (c == 'b')
+        {
+            bool pedalState = getPedalState();
+            if  (pedalState == 0)
+            {
+                setPedalState(1);
+                // Start decleration task
+                vTaskResume(decelerationTaskHandle);
+                //TimerEnable(ABS_TIMER_BASE, ABS_TIMER);
+
+                // Notify PWM task to update brake pwm as pedal is activated
+                pwmOutputUpdate_t brakePWM = {getBrakePedalPressureDuty(), PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
+                xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
+            } else {
+                // Stop deceleration Task
+                vTaskSuspend(decelerationTaskHandle);
+                //TimerDisable(ABS_TIMER_BASE, ABS_TIMER);
+
+                // Set brake pwm to 0% duty
+                pwmOutputUpdate_t brakePWM = {0, PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
+                xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
+
+                setPedalState(0);
+            }
+            change = true;
+        }
+
+        // Give the mutex back
+        xSemaphoreGive(carStateMutex);
+        
+        //Check if any buttons changed
+        if (change){
+            // Tell the wheel update task to run
+            xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
+        }
+
+        taskYIELD(); // Not sure if this is needed or not
         vTaskDelay(xDelay);
     }
 }

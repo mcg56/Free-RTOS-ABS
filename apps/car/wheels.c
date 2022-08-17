@@ -14,7 +14,7 @@
 #include "car_pwm.h"
 #include "utils/ustdlib.h"
 #include "libs/lib_pwm/pwm_output.h"
-#include "ui.h"
+#include "user_interface.h"
 
 #define ALPHA_MAX 29.1
 #define PULSES_PER_REV 20.0     // (#)
@@ -22,6 +22,8 @@
 #define KPH_TO_MS_SCALE_FACTOR (1000.0/3600.0)
 #define PI (3.141592653589793)
 
+
+TaskHandle_t updateWheelInfoHandle;
 
 //**********************Local function prototypes******************************
 

@@ -1,6 +1,6 @@
 PROJECT_DIR = ../..
 
-SRC = car.c wheels.c ui.c car_state.c car_pwm.c
+SRC = car.c wheels.c user_interface.c car_state.c car_pwm.c
 LDLIBS = -lm
 
 include $(PROJECT_DIR)/libs/libs.mk

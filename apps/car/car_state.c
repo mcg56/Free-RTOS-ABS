@@ -2,8 +2,14 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "stdlib.h"
+#include <inc/hw_memmap.h>
+#include <inc/hw_types.h>
+#include <driverlib/gpio.h>
+
 #include <FreeRTOS.h>
 #include <semphr.h>
+
+TaskHandle_t decelerationTaskHandle;
 
 /**
  * @brief Private struture for storing car state
@@ -168,4 +174,45 @@ void setRightFront(Wheel wheel)
 void setRightRear(Wheel wheel)
 {
     carState.rightRear = wheel;
+}
+
+void decelerationTask (void* args)
+{
+    (void)args;
+    const float maxDecel = 15; // m/s^2
+    const float taskPeriodms = 50; //ms
+     
+    
+    while (true)
+    {
+        TickType_t wake_time = xTaskGetTickCount();
+        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+        // Wait until we can take the mutex to be able to use car state shared resource
+        //while(xSemaphoreTake( carStateMutex, ( TickType_t ) 10 ) != pdTRUE) continue;
+        xSemaphoreTake(carStateMutex, portMAX_DELAY);
+        // We have obtained the mutex, now can run the task
+
+        float currentSpeed = getCarSpeed();
+        // TO DO: Change to getABSBrakePressureDuty when using with ABS controller 
+        //(Doesnt make a difference to output but shows we actually use the ABS duty not just our own)
+        uint8_t currentABSBrakeDuty = getABSBrakePressureDuty();
+        if (currentABSBrakeDuty != 0)
+        {
+            // Modify the speed dependant on brake pressure
+            float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel*taskPeriodms/1000.0/100.0;
+            if (newSpeed <= 0) {
+                    newSpeed = 0;
+            }
+
+            setCarSpeed(newSpeed);
+        }
+        
+        
+
+        // Tell the wheel update task to run
+        xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
+        // Give the mutex back
+        xSemaphoreGive(carStateMutex);
+        vTaskDelayUntil(&wake_time, taskPeriodms);
+    }   
 }
