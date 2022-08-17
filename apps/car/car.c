@@ -227,10 +227,10 @@ void decelerationTask (void* args)
         // TO DO: Change to getABSBrakePressureDuty when using with ABS controller 
         //(Doesnt make a difference to output but shows we actually use the ABS duty not just our own)
         uint8_t currentABSBrakeDuty = getABSBrakePressureDuty();
-        if (currentABSBrakeDuty == 0)
+        /*if (currentABSBrakeDuty == 0)
         {
             GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
-        }
+        }*/
         
         // Modify the speed dependant on brake pressure
         float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel*taskPeriodms/1000.0/100.0;
@@ -274,16 +274,17 @@ void processBrakeSignalTask(void* args)
     //Local variables
     static bool ABSState = false;
     static uint8_t brakeOnCount = 0;
+    PWMSignal_t pwmDetails;
     while(1)
     {
         //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
         uint8_t currentABSBrakeDuty;
-        HWREG(DELAY_TIMER_BASE + TIMER_O_TAV) = 0; // Reset delay timer
+        //HWREG(DELAY_TIMER_BASE + TIMER_O_TAV) = 0; // Reset delay timer
         bool highEdgeFound = false;
 
         // for 1/500s read the input pin level, if there is no high then ABS is on
         // sysclock is 80 mHz
-        while(TimerValueGet(DELAY_TIMER_BASE, DELAY_TIMER) < 80000000/500)
+        /*while(TimerValueGet(DELAY_TIMER_BASE, DELAY_TIMER) < 80000000/500)
         {
             if (GPIOPinRead(GPIO_PORTB_BASE, GPIO_PIN_0)) // Found high edge, use brake duty accordingly
             {
@@ -298,6 +299,7 @@ void processBrakeSignalTask(void* args)
                 break;
             }
         }
+
         
         // No high edge found in 1/500 s, ABS must be toggled on. 0 duty
         if (!highEdgeFound)
@@ -307,6 +309,23 @@ void processBrakeSignalTask(void* args)
             brakeOnCount = 0;
             currentABSBrakeDuty = 0;
             //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+        }*/
+        
+        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+        if(updatePWMInput(ABSPWM_ID)) // Timeout occured, ABS might be on
+        {
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+            ABSState = true;
+            brakeOnCount = 0;
+            currentABSBrakeDuty = 0;
+        } else{
+            pwmDetails = getPWMInputSignal(ABSPWM_ID);
+            currentABSBrakeDuty = pwmDetails.duty;
+            brakeOnCount++;
+            if (brakeOnCount >= 4) // 4 kinda arbitrary
+            {
+                ABSState = false;
+            }
         }
 
         // Wait until we can take the mutex to be able to use car state shared resource
@@ -343,7 +362,7 @@ int main(void) {
     createQueues();
     createSempahores();
 
-    DelayTimerInit();
+    //DelayTimerInit();
 
     xTaskCreate(&readInputsTask, "read inputs", 150, NULL, 0, &readInputsHandle);
     xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 0, &updateWheelInfoHandle);
