@@ -40,7 +40,8 @@
         "abs_input.h": "c",
         "hw_timer.h": "c",
         "system.h": "c",
-        "uart.h": "c"
+        "uart.h": "c",
+        "car_pwm.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

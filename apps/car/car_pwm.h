@@ -92,6 +92,7 @@ extern PWMOutputHardwareDetails_t PWMHardwareDetailsRR;
 extern PWMOutputHardwareDetails_t PWMHardwareDetailsBrake;
 extern PWMOutputHardwareDetails_t PWMHardwareDetailsSteering;
 
+void initCarPwm(void);
 
 /**
  * @brief Function to initialise then turn on all car output PWM signals

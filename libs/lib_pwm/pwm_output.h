@@ -128,6 +128,6 @@ void initialisePWM (void);
  */
 void updatePWMOutputsTask(void* args);
 
-
+void createPWMQueue(void);
 
 #endif

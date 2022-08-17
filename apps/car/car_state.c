@@ -53,6 +53,16 @@ static Car_t carState = {.speed=50.0, .steeringWheelDuty=50, .alpha=0.0, .roadCo
 
 SemaphoreHandle_t carStateMutex = NULL;
 
+void initCarState(void)
+{
+    // Create shared resource mutex
+    carStateMutex = xSemaphoreCreateMutex();
+
+    xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 1, &decelerationTaskHandle);
+    // Suspend deceleration task as brake initially off
+    vTaskSuspend(decelerationTaskHandle);
+}
+
 //*****************************Getters***************************************
 float getCarSpeed(void)
 {

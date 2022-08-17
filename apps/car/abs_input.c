@@ -20,8 +20,9 @@
 
 TaskHandle_t processABSInputSignalTaskHandle;
 
-void
-ABSDelayTimerInit()	
+void ABSDelayTimerInit();
+
+void ABSDelayTimerInit()	
 	{
 	/* Configure Timer 1. 
 	*/
@@ -29,6 +30,13 @@ ABSDelayTimerInit()
 
 	TimerConfigure(ABS_DELAY_TIMER_BASE, ABS_DELAY_TIMER_CONFIG);
 	TimerEnable(ABS_DELAY_TIMER_BASE, ABS_DELAY_TIMER);
+}
+
+void initABSInput(void)
+{
+    //Create timer for reading ABS brake input
+    ABSDelayTimerInit();
+    xTaskCreate(&processABSInputSignalTask, "ABS input task", 256, NULL, 3, &processABSInputSignalTaskHandle);
 }
 
 

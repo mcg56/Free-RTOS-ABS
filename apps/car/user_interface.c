@@ -16,9 +16,26 @@
 #include "car_pwm.h"
 #include "libs/lib_buttons/buttons.h"
 #include "libs/lib_pwm/pwm_output.h"
+#include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 
 TaskHandle_t processUserInputsTaskHandle;
 TaskHandle_t updateUARTTaskHandle;
+void initUserInterface(void)
+{
+    // Setup red LED on PF1
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
+    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1);
+
+    // Initialise peripherals
+    OLEDInitialise ();
+    initButtons();
+    initialiseUSB_UART ();
+
+    xTaskCreate(&processUserInputsTask, "Process inputs", 150, NULL, 0, &processUserInputsTaskHandle);
+    xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTTaskHandle);
+
+}
+
 
 void printInitialInformation(void);
 

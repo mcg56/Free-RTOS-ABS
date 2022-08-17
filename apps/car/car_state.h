@@ -22,6 +22,8 @@ typedef struct {
     bool slipping; 
 } Wheel;
 
+void initCarState(void);
+
 float getCarSpeed(void);
 uint8_t getSteeringDuty(void);
 float getSteeringAngle(void);

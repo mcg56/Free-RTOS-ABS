@@ -8,7 +8,7 @@
 
 extern TaskHandle_t processABSInputSignalTaskHandle;
 
-void ABSDelayTimerInit();
+void initABSInput(void);
 void processABSInputSignalTask(void* args);
 
 #endif

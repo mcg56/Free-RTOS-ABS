@@ -43,6 +43,11 @@ TaskHandle_t updatePWMOutputsTaskHandle;
 **********************************PUBLIC FUNCTIONS**********************************
 ************************************************************************************/
 
+void createPWMQueue(void)
+{
+    // Create queue for passing signals to PWM task
+    updatePWMQueue = xQueueCreate(10, sizeof(pwmOutputUpdate_t));
+}
 
 void
 initialisePWM (void)

@@ -20,6 +20,7 @@ void vt100_print_prr(char LF[6],char LR[6],char RF[6],char RR[6]);
 void vt100_print_condition(uint8_t condition);
 const char* get_condition(uint8_t condition);
 
+void initUserInterface(void);
 
 void processUserInputsTask(void* args);
 

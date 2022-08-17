@@ -17,6 +17,8 @@
  */
 void updateWheelInfoTask(void* args);
 
+void initWheels(void);
+
 extern TaskHandle_t updateWheelInfoHandle;
 
 #endif

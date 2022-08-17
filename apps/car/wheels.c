@@ -25,6 +25,8 @@
 
 TaskHandle_t updateWheelInfoHandle;
 
+
+
 //**********************Local function prototypes******************************
 
 
@@ -85,6 +87,14 @@ void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront,
 bool detectWheelSlip(Wheel* wheel, uint8_t condition, uint8_t pressure);
 
 
+
+void initWheels(void)
+{
+    xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 2, &updateWheelInfoHandle);
+    
+    // Tell the wheel update task to run, which fills out the wheels speeds with starting info
+    xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
+}
 
 float calculateSteeringAngle(float steeringWheelDuty)
 {
