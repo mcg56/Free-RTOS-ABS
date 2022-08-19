@@ -25,7 +25,7 @@ Last modified:  18/08/22
 #include "car_state.h"
 
 //*************************************************************
-// Constant Definitions
+// Private Constant Definitions
 //*************************************************************
 #define ABS_DELAY_TIMER_PERIPHERAL  SYSCTL_PERIPH_TIMER4
 #define ABS_DELAY_TIMER_BASE        TIMER4_BASE
@@ -68,7 +68,6 @@ TaskHandle_t processABSInputSignalTaskHandle;
 //*****************************************************************************
 // Functions
 //*****************************************************************************
-
 
 void ABSDelayTimerInit(void)	
 {
