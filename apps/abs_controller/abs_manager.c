@@ -24,7 +24,7 @@
 #define TOLERANCE               10      // 10% velocity difference as per guide
 #define FACTOR                  3.6     // m/s to km/h
 #define SCALE_FACTOR            100     // Scale result to percentage
-#define MIN_VELOCITY            10      // Minimum required velocity for ABS to function (m/s)
+#define MIN_VELOCITY            8       // Minimum required velocity for ABS to function (m/s)
 #define NUM_ABS_POLLS           2       // Number of times to check ABS state before changing (debouncing)
 #define MIN_BRAKE_DUTY          5       // Minimum duty cycle of brake signal while on
 #define UPDATE_CAR_TASK_RATE    50      // [ms]
@@ -236,8 +236,8 @@ checkVelTask(void* args)
 
         // REMOVE
         // char str[100];
-        // gcvt(car.steeringAngle, 3, str);
-        // // sprintf(str, "Abs state %d\r\n\n", car.steeringAngle);
+        // // gcvt(car.brake, 3, str);
+        // sprintf(str, "Abs state %d\r\n\n", car.brake);
         // UARTSend(str); 
         // UARTSend("\r\n"); 
     }

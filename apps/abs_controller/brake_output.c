@@ -88,6 +88,8 @@ initBrakeOutput (void)
     initializePWMGeneral (brakeSignal, 0, 0);
     initStatusLED ();
 
+    PWMOutputState(brakeSignal.base, brakeSignal.outbit, true);
+
     xTaskCreate(&updateABSTask, "updateABS", 256, NULL, 0, &updateABSHandle);
     xTaskCreate(&pulseABSTask, "pulseABS", 256, NULL, 0, &pulseABSHandle);
 
@@ -257,11 +259,11 @@ toggleABSState (void)
 int 
 setABSDuty (uint8_t duty)
 {
-    if (duty > 95 || duty < 0) 
+    if (duty > 95) 
     {
         return 0;
     }
-    else if (duty < 5 && duty > 0)
+    else if (duty < 5)
     {
         ABSDuty = 0;
     }
@@ -269,7 +271,7 @@ setABSDuty (uint8_t duty)
     {
         ABSDuty = duty;
     }
-
+    
     return 1;
 }
 
