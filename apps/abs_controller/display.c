@@ -40,7 +40,7 @@
 #define MAX_ANGLE_LEN 4
 
 #define UPDATE_DISPLAY_TASK_RATE            200 // [ms]
-#define UPDATE_DISPLAY_BUTTONS_TASK_RATE    10  // [ms]
+#define UPDATE_DISPLAY_BUTTONS_TASK_RATE    10 // [ms]
 
 //*************************************************************
 // Type Definitions
@@ -252,7 +252,7 @@ getSelectedPWM (void)
 static void
 updateScreenIndex (void)
 {
-    if (checkButton(UP) == PUSHED)
+    if (checkButton(UP) == RELEASED)
     {
         if (screenIndex == getCountPWMInputs())
         {
@@ -263,7 +263,7 @@ updateScreenIndex (void)
             screenIndex++;
         }
     }
-    else if (checkButton(DOWN) == PUSHED)
+    else if (checkButton(DOWN) == RELEASED)
     {
         if (screenIndex == 0)
         {

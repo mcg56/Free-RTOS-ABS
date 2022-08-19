@@ -35,7 +35,8 @@
 
 #define LEN(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
 #define MAX_NUM_SIGNALS         6   // Maximum number of signals
-#define BUFF_LEN                2
+#define DUTY_BUFF_LEN           2
+#define FREQ_BUFF_LEN           2
 
 #define EDGE_TIMER_PERIPH       SYSCTL_PERIPH_TIMER0
 #define EDGE_TIMER_BASE         TIMER0_BASE
@@ -265,8 +266,8 @@ registerPWMSignal (PWMSignal_t newSignal)
     PWMInputSignals.signals[PWMInputSignals.count] = newSignal;
     PWMInputSignals.pins |= newSignal.gpioPin;
 
-    freqBuff[PWMInputSignals.count] = create_buffer(BUFF_LEN);
-    dutyBuff[PWMInputSignals.count] = create_buffer(BUFF_LEN);
+    freqBuff[PWMInputSignals.count] = create_buffer(FREQ_BUFF_LEN);
+    dutyBuff[PWMInputSignals.count] = create_buffer(DUTY_BUFF_LEN);
 
     PWMInputSignals.count++;
 
@@ -484,7 +485,7 @@ calculatePWMProperties(PWMSignal_t* PWMSignal, edgeTimestamps_t timestamps)
     uint32_t duty = ceil(100 * (float)(timestamps.currFallingEdge - timestamps.lastRisingEdge) /
         (float)(timestamps.currRisingEdge - timestamps.lastRisingEdge));
 
-    if (duty > 0 && duty < 100)
+    if (duty > 1 && duty < 100)
     {
         add_to_buffer(dutyBuff[findPWMIndex(PWMSignal->id)], duty);
     }
