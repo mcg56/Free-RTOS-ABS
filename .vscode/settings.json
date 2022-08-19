@@ -41,7 +41,8 @@
         "hw_timer.h": "c",
         "system.h": "c",
         "uart.h": "c",
-        "car_pwm.h": "c"
+        "car_pwm.h": "c",
+        "buffer.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

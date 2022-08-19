@@ -35,9 +35,6 @@
 #define PWM_MAIN_GPIO_PIN    GPIO_PIN_5
 
 
-
-
-
 /************************************************************************************
 ***************************** PUBLIC STRUCT DEFINITIONS *****************************
 ************************************************************************************/
@@ -98,11 +95,6 @@ extern TaskHandle_t updatePWMOutputsTaskHandle;
  */
 void initializePWMGeneral(PWMOutputHardwareDetails_t PWM, uint32_t startHz, uint32_t startDuty);
 
-/********************************************************
- * Function to set the freq, duty cycle of M0PWM7
- ********************************************************/
-void setPWM (uint32_t ui32Freq, uint32_t ui32Duty);
-
 /**
  * @brief Set the frequency and duty cycle of any PWM signal
  * @param ui32Freq Desired PWM frequency (Hz)
@@ -113,13 +105,6 @@ void setPWM (uint32_t ui32Freq, uint32_t ui32Duty);
  * @return No return
  */
 void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, uint32_t base, uint32_t gen, uint32_t outnum);
-
-/*********************************************************
- * initialisePWM
- * M0PWM7 (J4-05, PC5) is used
- *********************************************************/
-void initialisePWM (void);
-
 
 /**
  * @brief Task that changes PWM output

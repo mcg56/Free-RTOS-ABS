@@ -36,6 +36,8 @@
 //*************************************************************
 #define OLED_CHAR_WIDTH 17 // OLED is 16 characters wide
 #define MAX_ID_LEN 12
+#define MAX_STATE_LEN 6
+#define MAX_ANGLE_LEN 4
 
 #define UPDATE_DISPLAY_TASK_RATE            200 // [ms]
 #define UPDATE_DISPLAY_BUTTONS_TASK_RATE    10  // [ms]
@@ -399,16 +401,23 @@ OLEDUpdateABSScreen (void)
     lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 
+    // Adds whitespace when changing from long IDs to shorter IDs TODO
+    int whiteSpaceLen = MAX_ANGLE_LEN - strlen(lineToDraw.str);
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "                ");
+    lineToDraw.str[whiteSpaceLen - 1] = 0;
+    lineToDraw.col = OLED_CHAR_WIDTH - MAX_ANGLE_LEN;
+    xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);   
+
     usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%s", getABSStateName(screen.content.absScreen.absState)); // TO DO: clear whitespace
     lineToDraw.row = 2;
     lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 
     // Adds whitespace when changing from long IDs to shorter IDs TODO
-    int whiteSpaceLen = MAX_ID_LEN - strlen(lineToDraw.str);
+    whiteSpaceLen = MAX_STATE_LEN - strlen(lineToDraw.str);
     usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "                ");
     lineToDraw.str[whiteSpaceLen - 1] = 0;
-    lineToDraw.col = OLED_CHAR_WIDTH - MAX_ID_LEN;
+    lineToDraw.col = OLED_CHAR_WIDTH - MAX_STATE_LEN;
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);   
 
     usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%2d%%", screen.content.absScreen.duty);

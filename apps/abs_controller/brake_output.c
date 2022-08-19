@@ -15,6 +15,8 @@
 #include <inc/hw_types.h>
 #include <driverlib/sysctl.h>
 #include <driverlib/gpio.h>
+#include <driverlib/pwm.h>
+#include <driverlib/pin_map.h>
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -29,7 +31,15 @@
 #define ABS_DUTY_DEFAULT        50      // [%]
 #define LED_BLINK_RATE_COEFF    0.08    // Coefficient for relating brake duty to blink rate
 
-// TO DO: This will be the output pin details but right now its just PC5
+#define BRAKE_BASE	            PWM0_BASE
+#define BRAKE_GEN               PWM_GEN_3
+#define BRAKE_OUTNUM            PWM_OUT_7
+#define BRAKE_OUTBIT            PWM_OUT_7_BIT
+#define BRAKE_PERIPH_PWM	    SYSCTL_PERIPH_PWM0
+#define BRAKE_PERIPH_GPIO       SYSCTL_PERIPH_GPIOC
+#define BRAKE_GPIO_BASE         GPIO_PORTC_BASE
+#define BRAKE_GPIO_CONFIG       GPIO_PC5_M0PWM7
+#define BRAKE_GPIO_PIN          GPIO_PIN_5
 
 #define PULSE_ABS_TASK_RATE     50 // [ms] (From requirements)
 #define UPDATE_ABS_TASK_RATE    50 // [ms]
@@ -50,6 +60,18 @@ static void     toggleABSState  (void);
 static enum absStates absState = ABS_OFF;
 static uint8_t ABSDuty = ABS_DUTY_DEFAULT;
 
+static PWMOutputHardwareDetails_t brakeSignal = {
+    .base           = BRAKE_BASE, 
+    .gen            = BRAKE_GEN, 
+    .outnum         = BRAKE_OUTNUM, 
+    .outbit         = BRAKE_OUTBIT, 
+    .periphPWM      = BRAKE_PERIPH_PWM,
+    .periphGPIO     = BRAKE_PERIPH_GPIO,
+    .gpioBase       = BRAKE_GPIO_BASE,
+    .gpioConfig     = BRAKE_GPIO_CONFIG,
+    .gpioPin        = BRAKE_GPIO_PIN,
+};
+
 static TaskHandle_t pulseABSHandle;
 static TaskHandle_t updateABSHandle;
 
@@ -60,7 +82,7 @@ static TaskHandle_t updateABSHandle;
 void
 initBrakeOutput (void)
 {
-    initialisePWM ();
+    initializePWMGeneral (brakeSignal, 0, 0);
     initStatusLED ();
 
     xTaskCreate(&updateABSTask, "updateABS", 256, NULL, 0, &updateABSHandle);
@@ -101,13 +123,13 @@ updateABS (void)
     switch (absState)
     {
         case ABS_ON:
-            vTaskResume(pulseABSHandle);
-            setStatusLEDState(BLINKING);
+            vTaskResume (pulseABSHandle);
+            setStatusLEDState (BLINKING);
             break;
         case ABS_OFF:
-            vTaskSuspend(pulseABSHandle);
-            setPWM(500, ABSDuty);
-            setStatusLEDState(FIXED_ON);
+            vTaskSuspend (pulseABSHandle);
+            setPWMGeneral (500, ABSDuty, brakeSignal.base, brakeSignal.gen, brakeSignal.outnum);
+            setStatusLEDState (FIXED_ON);
             break;
     }
 }
@@ -144,12 +166,12 @@ pulseABS (void)
 
     if (pulseOn)
     {
-        setPWM (500, ABSDuty);
+        setPWMGeneral (500, ABSDuty, brakeSignal.base, brakeSignal.gen, brakeSignal.outnum);
         pulseOn = false;
     }
     else
     {
-        setPWM (0, 0);
+        setPWMGeneral (0, 0, brakeSignal.base, brakeSignal.gen, brakeSignal.outnum);
         pulseOn = true;
     }  
 }

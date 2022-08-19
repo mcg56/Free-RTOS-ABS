@@ -27,6 +27,7 @@
 #include "driverlib/timer.h"
 
 #include "pwm_input.h"
+#include "buffer.h"
 
 //*************************************************************
 // Constant Definitions
@@ -34,6 +35,7 @@
 
 #define LEN(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
 #define MAX_NUM_SIGNALS         6   // Maximum number of signals
+#define BUFF_LEN                2
 
 #define EDGE_TIMER_PERIPH       SYSCTL_PERIPH_TIMER0
 #define EDGE_TIMER_BASE         TIMER0_BASE
@@ -107,6 +109,7 @@ static void calculatePWMProperties (PWMSignal_t* PWMSignal, edgeTimestamps_t tim
 static void updateAllPWMInputs(void);
 static bool refreshPWMDetails(PWMSignal_t* PWMSignal);
 static PWMSignal_t* findPWMInput(char* id);
+static int findPWMIndex(char* id);
 
 //*************************************************************
 // FreeRTOS handles
@@ -122,6 +125,8 @@ static volatile int risingEdgeCount;
 static volatile edgeTimestamps_t edgeTimestamps;
 static volatile bool PWMReadTimeout = false;
 static uint16_t PWMTimeoutRate = TIMEOUT_DEFAULT_RATE;
+static buffer_t* freqBuff[MAX_NUM_SIGNALS];
+static buffer_t* dutyBuff[MAX_NUM_SIGNALS];
 
 /**
  * @brief Initialise the timer used for edge tracking
@@ -257,8 +262,13 @@ registerPWMSignal (PWMSignal_t newSignal)
     
     initPWMInput(newSignal);
 
-    PWMInputSignals.signals[PWMInputSignals.count++] = newSignal;
+    PWMInputSignals.signals[PWMInputSignals.count] = newSignal;
     PWMInputSignals.pins |= newSignal.gpioPin;
+
+    freqBuff[PWMInputSignals.count] = create_buffer(BUFF_LEN);
+    dutyBuff[PWMInputSignals.count] = create_buffer(BUFF_LEN);
+
+    PWMInputSignals.count++;
 
     return true;
 }
@@ -462,23 +472,25 @@ calculatePWMProperties(PWMSignal_t* PWMSignal, edgeTimestamps_t timestamps)
     // Account for overflow of the timer
     if (timestamps.currRisingEdge < timestamps.lastRisingEdge)
     {
-        PWMSignal->frequency = SysCtlClockGet() / (timestamps.currRisingEdge
-            + SysCtlClockGet() - timestamps.lastRisingEdge);
+        add_to_buffer(freqBuff[findPWMIndex(PWMSignal->id)], ceil(SysCtlClockGet() / (timestamps.currRisingEdge
+            + SysCtlClockGet() - timestamps.lastRisingEdge)));
     }
     else
     {
-        PWMSignal->frequency = SysCtlClockGet() / (timestamps.currRisingEdge
-            - timestamps.lastRisingEdge);
+        add_to_buffer(freqBuff[findPWMIndex(PWMSignal->id)], ceil(SysCtlClockGet() / (timestamps.currRisingEdge
+            - timestamps.lastRisingEdge)));
     }
-
 
     uint32_t duty = ceil(100 * (float)(timestamps.currFallingEdge - timestamps.lastRisingEdge) /
         (float)(timestamps.currRisingEdge - timestamps.lastRisingEdge));
 
-    if (duty > 0 || duty < 100)
+    if (duty > 0 && duty < 100)
     {
-        PWMSignal->duty = duty;
+        add_to_buffer(dutyBuff[findPWMIndex(PWMSignal->id)], duty);
     }
+
+    PWMSignal->frequency = average_buffer(freqBuff[findPWMIndex(PWMSignal->id)]);
+    PWMSignal->duty = average_buffer(dutyBuff[findPWMIndex(PWMSignal->id)]);
 }
 
 /**
@@ -499,6 +511,26 @@ findPWMInput(char* id)
     }
 
     return NULL;
+}
+
+/**
+ * @brief Locates the index of a desired PWM signal
+ * 
+ * @param id String identifier for desired signal
+ * @return Pointer of desired PWM signal. Return NULL if not found
+ */
+static int
+findPWMIndex(char* id)
+{
+    for (int i = 0; i < PWMInputSignals.count; i++)
+    {
+        if (strcmp(PWMInputSignals.signals[i].id, id) == 0)
+        {
+            return i;
+        }
+    }
+
+    return -1;
 }
 
 /**
