@@ -245,9 +245,18 @@ toggleABSState (void)
 int 
 setABSDuty (uint8_t duty)
 {
-    if (duty < 5 || duty > 95) return 0;
-
-    ABSDuty = duty;
+    if (duty > 95 || duty < 0) 
+    {
+        return 0;
+    }
+    else if (duty < 5 && duty > 0)
+    {
+        ABSDuty = 0;
+    }
+    else
+    {
+        ABSDuty = duty;
+    }
 
     return 1;
 }

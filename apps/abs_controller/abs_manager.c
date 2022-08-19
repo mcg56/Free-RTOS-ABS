@@ -215,9 +215,8 @@ checkVelTask(void* args)
         else
         	absCount = 0;
 
-
-        setABS(car.absState);
         setABSDuty (car.brake);
+        setABS(car.absState);
         // char str[100];
         // gcvt(car.steeringAngle, 3, str);
         // // sprintf(str, "Abs state %d\r\n\n", car.steeringAngle);
