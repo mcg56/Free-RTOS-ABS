@@ -142,6 +142,9 @@ calcWheelVel(uint32_t frequency)
 float 
 calcAngle(int32_t duty)
 {   
+    if (duty == 0){
+        return 0;
+    }
     return (MID_DUTY-duty)*(MAX_ANGLE / HALF_DUTY);
 }
 
