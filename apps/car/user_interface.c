@@ -29,6 +29,27 @@ Last modified:  19/08/22
 #include "libs/lib_pwm/pwm_output.h"
 #include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 
+//*************************************************************
+// Private Constant Definitions
+//*************************************************************
+
+#define UART_TASK_DELAY_MS 333
+#define USER_INPUT_TASK_DELAY_MS 100
+#define CAR_SPEED_INCREMENT 100
+#define CAR_SPEED_DECREMENT 50
+#define CAR_SPEED_MIN 0
+#define DUTY_CYCLE_MIN 5
+#define STEERING_DUTY_INCREMENT 5
+#define DUTY_CYCLE_MAX 95
+#define BRAKE_PEDAL_INCREMENT 5
+#define ROAD_CONDITION_INCREMENT 1
+#define DRY_CONDITION 0
+#define WET_CONDITION 1
+#define ICY_CONDITION 2
+#define PEDAL_STATE_ON 1
+#define PEDAL_STATE_OFF 0
+
+
 //*****************************************************************************
 // Global variables
 //*****************************************************************************
@@ -70,6 +91,7 @@ void initUserInterface(void)
     initButtons();
     initialiseUSB_UART ();
 
+    // Create Tasks
     xTaskCreate(&processUserInputsTask, "Process inputs", 150, NULL, 0, &processUserInputsTaskHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTTaskHandle);
 
@@ -181,14 +203,12 @@ void vt100_print_condition(Condition condition) {
     } else {
         UARTSend ("ICY");
     }
-  
-    
 }
 
 void updateUARTTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = 333 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = UART_TASK_DELAY_MS / portTICK_PERIOD_MS;
 
     // Save previous writes to check if they need to be updated
     uint8_t prevSteeringDuty;
@@ -214,6 +234,8 @@ void updateUARTTask(void* args)
         // Wait until we can take the mutex to be able to use car state shared resource
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
         // We have obtained the mutex, now get all car state variables
+
+        //Get latest car information
         float speed = getCarSpeed();
         uint8_t steeringDuty = getSteeringDuty();
         float alpha = getSteeringAngle();
@@ -226,8 +248,9 @@ void updateUARTTask(void* args)
         Wheel RF = getRightFront();
         Wheel RR = getRightRear();
         xSemaphoreGive(carStateMutex);
+        // Returned semaphore before printing the UART information
 
-        //Steering line
+        // Steering line
         if (steeringDuty != prevSteeringDuty) // Only write line if there was a change
         {      
             gcvt (alpha, 4, &floatBuff);
@@ -300,6 +323,7 @@ void updateUARTTask(void* args)
             prevPedalState = pedalState;
         }
         
+        // If a wheel has started slipping, update the UART
         bool slipArray[4] = {LF.slipping, LR.slipping, RF.slipping, RR.slipping};
         if((prevSlipArray[0] != slipArray[0]) || (prevSlipArray[1] != slipArray[1]) || (prevSlipArray[2] != slipArray[2]) || (prevSlipArray[3] != slipArray[3]) || (absState != prevABSState))
         {
@@ -317,11 +341,13 @@ void updateUARTTask(void* args)
 
 void processUserInputsTask(void* args)
 {
-    (void)args; // unused
-    const TickType_t xDelay = 100 / portTICK_PERIOD_MS;
+    (void)args; // unused TODO
+    const TickType_t xDelay = USER_INPUT_TASK_DELAY_MS / portTICK_PERIOD_MS;
     while (true) 
     {
         updateButtons();
+
+        // Convert to lowercase in case of CAPSLOCK
         int32_t c = tolower(UARTCharGetNonBlocking(UART_USB_BASE));
 
         // Wait until we can take the mutex to be able to use car state shared resource
@@ -332,25 +358,27 @@ void processUserInputsTask(void* args)
         // Update values accodingly.
         bool change = false;
 
+        // Car speed user input
         if (checkButton(UP) == PUSHED || c == 'w')
         {
             float currentSpeed = getCarSpeed(); //TO DO limit to 120
-            setCarSpeed(currentSpeed + 100);
+            setCarSpeed(currentSpeed + CAR_SPEED_INCREMENT);
             change = true;            
         }
         if (checkButton(DOWN) == PUSHED || c == 's')
         {
             float currentSpeed = getCarSpeed();
-            if (currentSpeed != 0) {
-                setCarSpeed(currentSpeed - 5);
+            if (currentSpeed != CAR_SPEED_MIN) {
+                setCarSpeed(currentSpeed - CAR_SPEED_DECREMENT);
             }
             change = true;
         }
+        // Car steering user input
         if (checkButton(LEFT) == PUSHED || c == 'a')
         {
             uint8_t currentSteeringWheelDuty = getSteeringDuty();
-            if (currentSteeringWheelDuty > 5) {
-                setSteeringDuty(currentSteeringWheelDuty - 5);
+            if (currentSteeringWheelDuty > DUTY_CYCLE_MIN) {
+                setSteeringDuty(currentSteeringWheelDuty - STEERING_DUTY_INCREMENT);
             }
             // Notify PWM task to update steering PWM to new value
             pwmOutputUpdate_t steeringPWM = {getSteeringDuty(), PWM_STEERING_FIXED_HZ, PWMHardwareDetailsSteering};
@@ -360,19 +388,21 @@ void processUserInputsTask(void* args)
         if (checkButton(RIGHT) == PUSHED|| c == 'd')
         {
             uint8_t currentSteeringWheelDuty = getSteeringDuty();
-            if (currentSteeringWheelDuty < 95) {
-                setSteeringDuty(currentSteeringWheelDuty + 5);
+            if (currentSteeringWheelDuty < DUTY_CYCLE_MAX) {
+                setSteeringDuty(currentSteeringWheelDuty + STEERING_DUTY_INCREMENT);
             }
             // Notify PWM task to update steering PWM to new value
             pwmOutputUpdate_t steeringPWM = {getSteeringDuty(), PWM_STEERING_FIXED_HZ, PWMHardwareDetailsSteering};
             xQueueSendToBack(updatePWMQueue, &steeringPWM, 0);
             change = true;
         }
+
+        // Car brake pressure duty cycle
         if (c == '[')
         {
             uint8_t currentPedalBrakeDuty = getBrakePedalPressureDuty();
-            if (currentPedalBrakeDuty > 5) {
-                setBrakePedalPressureDuty(currentPedalBrakeDuty - 5);
+            if (currentPedalBrakeDuty > DUTY_CYCLE_MIN) {
+                setBrakePedalPressureDuty(currentPedalBrakeDuty - BRAKE_PEDAL_INCREMENT);
             }
             if(getPedalState()) // Brake pedal pressed, need to update brake PWM to abs controller
             {
@@ -385,8 +415,8 @@ void processUserInputsTask(void* args)
         if (c == ']')
         {
             uint8_t currentPedalBrakeDuty = getBrakePedalPressureDuty();
-            if (currentPedalBrakeDuty < 95) {
-                setBrakePedalPressureDuty(currentPedalBrakeDuty + 5);
+            if (currentPedalBrakeDuty < DUTY_CYCLE_MAX) {
+                setBrakePedalPressureDuty(currentPedalBrakeDuty + BRAKE_PEDAL_INCREMENT);
             }
             if(getPedalState()) // Brake pedal pressed, need to update brake PWM to abs controller
             {
@@ -396,20 +426,22 @@ void processUserInputsTask(void* args)
             }
             change = true;
         }
+
+        // Road condition user input
         if (c == 'r')
         {   
-    
-            if  ((getRoadCondition() + 1) > 2) setRoadCondition(0);
-                else (setRoadCondition(getRoadCondition() + 1));
+            if  ((getRoadCondition() + ROAD_CONDITION_INCREMENT) > ICY_CONDITION) setRoadCondition(DRY_CONDITION);
+                else (setRoadCondition(getRoadCondition() + ROAD_CONDITION_INCREMENT));
             change = true;
         }
 
+        // Brake pedal toggle user input
         if (c == 'b')
         {
             bool pedalState = getPedalState();
             if  (pedalState == 0)
             {
-                setPedalState(1);
+                setPedalState(PEDAL_STATE_ON);
                 // Start decleration task
                 vTaskResume(decelerationTaskHandle);
 
@@ -424,7 +456,7 @@ void processUserInputsTask(void* args)
                 pwmOutputUpdate_t brakePWM = {0, PWM_BRAKE_FIXED_HZ, PWMHardwareDetailsBrake};
                 xQueueSendToBack(updatePWMQueue, &brakePWM, 0);
 
-                setPedalState(0);
+                setPedalState(PEDAL_STATE_OFF);
             }
             change = true;
         }

@@ -18,6 +18,16 @@ Last modified:  19/08/22
 #include <FreeRTOS.h>
 #include <semphr.h>
 
+//*************************************************************
+// Private Constant Definitions
+//*************************************************************
+
+#define MILLISECOND_DIVIDER 1000.0
+#define PERCENTAGE_DIVIDER 100.0
+#define MAXIMUM_DECELERATION 15
+#define DECELERATION_TASK_PERIOD 50
+#define MIN_SPEED 0
+
 
 //*****************************************************************************
 // Global variables
@@ -221,29 +231,29 @@ void setRightRear(Wheel wheel)
 void decelerationTask (void* args)
 {
     (void)args;
-    const float maxDecel = 15; // m/s^2
-    const float taskPeriodms = 50; //ms
+    const float maxDecel = MAXIMUM_DECELERATION; // m/s^2
+    const float taskPeriodms = DECELERATION_TASK_PERIOD; //ms
      
     
     while (true)
     {
         TickType_t wake_time = xTaskGetTickCount();
-        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
+        
         // Wait until we can take the mutex to be able to use car state shared resource
-        //while(xSemaphoreTake( carStateMutex, ( TickType_t ) 10 ) != pdTRUE) continue;
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
         // We have obtained the mutex, now can run the task
 
+        //Obtain car speed
         float currentSpeed = getCarSpeed();
-        // TO DO: Change to getABSBrakePressureDuty when using with ABS controller 
-        //(Doesnt make a difference to output but shows we actually use the ABS duty not just our own)
+        //Obtain the brake pressure duty from ABS controller
         uint8_t currentABSBrakeDuty = getABSBrakePressureDuty();
+
         if (currentABSBrakeDuty != 0)
         {
             // Modify the speed dependant on brake pressure
-            float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel*taskPeriodms/1000.0/100.0;
-            if (newSpeed <= 0) {
-                    newSpeed = 0;
+            float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel*taskPeriodms/MILLISECOND_DIVIDER/PERCENTAGE_DIVIDER;
+            if (newSpeed <= MIN_SPEED) {
+                    newSpeed = MIN_SPEED;
             }
 
             setCarSpeed(newSpeed);
