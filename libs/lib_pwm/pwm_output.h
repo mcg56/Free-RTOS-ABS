@@ -1,7 +1,15 @@
-/*
- * pwm.h
- */
-
+// *******************************************************
+// 
+// pwm_output.h - Header file for managing the PWM outputs.
+// The module creates a pwm ouput task which manages the any desired 
+// PWM output. The PWM information is shared using a queue.
+//
+//
+// Original Code: P.J. Bones UCECE pwm_gen.c
+// Modifications: A.J Eason A. Musalov
+// Last modified:  19/08/22
+// 
+// *******************************************************
 #ifndef PWM_OUTPUT_H_
 #define PWM_OUTPUT_H_
 
@@ -23,7 +31,7 @@
 
 // I WANT TO DELETE THE BELOW BLOCK SOON
 //  PWM Hardware Details M0PWM7 (gen 3)
-//  ---Main Rotor PWM: PC5, J4-05
+//  ---Main Rotor PWM: PC5, J4-05 //TODO
 #define PWM_MAIN_BASE	     PWM0_BASE
 #define PWM_MAIN_GEN         PWM_GEN_3
 #define PWM_MAIN_OUTNUM      PWM_OUT_7
@@ -35,9 +43,9 @@
 #define PWM_MAIN_GPIO_PIN    GPIO_PIN_5
 
 
-/************************************************************************************
-***************************** PUBLIC STRUCT DEFINITIONS *****************************
-************************************************************************************/
+//*****************************************************************************
+// Struct Definitions
+//*****************************************************************************
 
 /**
  * @brief Contains hadware information about specific PWM output
@@ -76,15 +84,17 @@ PWMOutputHardwareDetails_t pwmOutput;
 }pwmOutputUpdate_t;
 
 
-/************************************************************************************
-**********************************GLOBAL VARIABLES**********************************
-************************************************************************************/
+//*****************************************************************************
+// Global variables
+//*****************************************************************************
+
 extern QueueHandle_t updatePWMQueue;
 extern TaskHandle_t updatePWMOutputsTaskHandle;
 
-/************************************************************************************
-*****************************PUBLIC FUNCTION PROTOTYPES*****************************
-************************************************************************************/
+//*************************************************************
+// Public function prototypes
+//*************************************************************
+
 /**
  * @brief Function to initialise a given PWM. Sets a start Hz and duty but turns
  * off the output.

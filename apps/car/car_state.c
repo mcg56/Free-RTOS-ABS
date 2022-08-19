@@ -1,3 +1,13 @@
+/**********************************************************
+car_state.c
+
+Module which handles the getter and setter functions for the
+car outputs. The module also handles the deceleration task.
+
+A.J Eason A. Musalov
+Last modified:  19/08/22
+***********************************************************/
+
 #include "car_state.h"
 #include <stdint.h>
 #include <stdbool.h>
@@ -5,11 +15,19 @@
 #include <inc/hw_memmap.h>
 #include <inc/hw_types.h>
 #include <driverlib/gpio.h>
-
 #include <FreeRTOS.h>
 #include <semphr.h>
 
+
+//*****************************************************************************
+// Global variables
+//*****************************************************************************
+
 TaskHandle_t decelerationTaskHandle;
+SemaphoreHandle_t carStateMutex = NULL;
+//*************************************************************
+// Struct definitions
+//*************************************************************
 
 /**
  * @brief Private struture for storing car state
@@ -30,7 +48,7 @@ typedef struct {
     float speed;
     uint8_t steeringWheelDuty;
     float alpha;
-    uint8_t roadCondition; 
+    Condition condition; 
     bool pedalState; 
     uint8_t brakePedalPressureDuty;
     uint8_t ABSBrakePressureDuty;
@@ -47,13 +65,26 @@ static const Wheel RF = {0, 0, 0, false};
 static const Wheel RR = {0, 0, 0, false};
 
 // Define local car state object
-static Car_t carState = {.speed=50.0, .steeringWheelDuty=50, .alpha=0.0, .roadCondition=0,
+static Car_t carState = {.speed=50.0, .steeringWheelDuty=50, .alpha=0.0, .condition=0,
                          .pedalState=false, .brakePedalPressureDuty=50, .ABSBrakePressureDuty=5,
                          .ABSState=false, .leftFront=LF, .leftRear=LR, .rightFront=RF, .rightRear=RR};
 
-SemaphoreHandle_t carStateMutex = NULL;
+//*************************************************************
+// Private function prototypes
+//*************************************************************
 
+/**
+ * @brief Task to update the speed of the car while braking.
+ * deceleration is calculated by currentABSBrakeDuty*maxDecel*taskPeriodms/1000.0/100.0.
+ * The task is started and stopped upon a brake press.
+ * @param args Unused
+ * @return No return
+ */
 void decelerationTask (void* args);
+
+//*****************************************************************************
+// Functions
+//*****************************************************************************
 
 void initCarState(void)
 {
@@ -81,9 +112,9 @@ float getSteeringAngle(void)
     return carState.alpha;
 }
 
-uint8_t getRoadCondition(void)
+Condition getRoadCondition(void)
 {
-    return carState.roadCondition;
+    return carState.condition;
 }
 
 bool getPedalState(void)
@@ -126,7 +157,6 @@ Wheel getRightRear(void)
     return carState.rightRear;
 }
 
-
 //*****************************Setters***************************************
 void setCarSpeed(float speed)
 {
@@ -143,9 +173,9 @@ void setSteeringAngle(float angle)
     carState.alpha = angle;
 }
 
-void setRoadCondition(uint8_t condition)
+void setRoadCondition(Condition condition)
 {
-    carState.roadCondition = condition;
+    carState.condition = condition;
 }
 
 void setPedalState(bool state)

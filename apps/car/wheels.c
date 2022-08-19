@@ -170,7 +170,7 @@ void calculateWheelPwmFreq(Wheel* leftFront, Wheel* leftRear, Wheel* rightFront,
     rightRear->pulseHz = PULSES_PER_REV*rightRear->speed*KPH_TO_MS_SCALE_FACTOR/WHEEL_DIAMETER/(PI);
 }
 
-bool detectWheelSlip(Wheel* wheel, uint8_t condition, uint8_t pressure)
+bool detectWheelSlip(Wheel* wheel, Condition condition, uint8_t pressure)
 {
     // Formula and constants from simple car/abs model description document
     const int8_t m = -1; // Slope of slipping curves

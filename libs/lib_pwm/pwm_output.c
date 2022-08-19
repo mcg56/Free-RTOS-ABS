@@ -1,15 +1,15 @@
-/**********************************************************
- *
- * pwmGen.c - Example code which generates a single PWM
- *    output on J4-05 (M0PWM7) with duty cycle fixed and
- *    the frequency controlled by UP and DOWN buttons in
- *    the range 50 Hz to 400 Hz.
- * 2017: Modified for Tiva and using straightforward, polled
- *    button debouncing implemented in 'buttons4' module.
- *
- * P.J. Bones   UCECE
- * Last modified:  7.2.2018
- **********************************************************/
+// *******************************************************
+// 
+// pwm_output.c - Module for initialising and managing PWM signals.
+// The module creates a pwm ouput task which manages the any desired 
+// PWM output. The PWM information is shared using a queue.
+//
+//
+// Original Code: P.J. Bones UCECE pwm_gen.c
+// Modifications: A.J Eason A. Musalov
+// Last modified:  19/08/22
+// 
+// *******************************************************
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -28,20 +28,16 @@
 #include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 #include <stdio.h>
 
-/************************************************************************************
-*****************************PRIVATE FUNCTION PROTOTYPES*****************************
-************************************************************************************/
+//*****************************************************************************
+// Global variables
+//*****************************************************************************
 
-
-/************************************************************************************
-**********************************GLOBAL VARIABLES**********************************
-************************************************************************************/
 QueueHandle_t updatePWMQueue = NULL;
 TaskHandle_t updatePWMOutputsTaskHandle;
 
-/************************************************************************************
-**********************************PUBLIC FUNCTIONS**********************************
-************************************************************************************/
+//*****************************************************************************
+// Functions
+//*****************************************************************************
 
 void createPWMQueue(void)
 {

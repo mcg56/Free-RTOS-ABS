@@ -29,7 +29,6 @@ Last modified:  18/08/22
 #include "wheels.h"
 #include "libs/lib_pwm/pwm_input.h"
 #include "libs/lib_pwm/pwm_output.h"
-#include "libs/lib_system/system.h"
 #include "libs/lib_uart/uart.h"
 #include "user_interface.h"
 #include "car_state.h"

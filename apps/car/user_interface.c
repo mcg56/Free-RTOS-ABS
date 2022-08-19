@@ -1,8 +1,19 @@
+/**********************************************************
+user_interface.c
+
+Module which primary function is to maintain the UART terminal
+user interface. The module contains the USB_UART initialisation
+and UART display functions.
+
+A.J Eason A. Musalov
+Last modified:  19/08/22
+***********************************************************/
+
 #include "user_interface.h"
 #include <math.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "stdlib.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -18,17 +29,35 @@
 #include "libs/lib_pwm/pwm_output.h"
 #include "libs/lib_OrbitOled/OrbitOLEDInterface.h"
 
+//*****************************************************************************
+// Global variables
+//*****************************************************************************
+
 TaskHandle_t processUserInputsTaskHandle;
 TaskHandle_t updateUARTTaskHandle;
 
+//*************************************************************
+// Private function prototypes
+//*************************************************************
+
+/**
+ * @brief Task to update the user input from the UART to control
+ * the car.
+ * @param args Unused
+ * @return No return
+ */
 void processUserInputsTask(void* args);
 
 /**
- * @brief Update the UART terminal with data about the car.
+ * @brief Task to update the car information on the UART display.
  * @param args Unused
  * @return No return
  */
 void updateUARTTask(void* args);
+
+//*****************************************************************************
+// Functions
+//*****************************************************************************
 
 void initUserInterface(void)
 {
@@ -44,71 +73,6 @@ void initUserInterface(void)
     xTaskCreate(&processUserInputsTask, "Process inputs", 150, NULL, 0, &processUserInputsTaskHandle);
     xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTTaskHandle);
 
-}
-
-
-void printInitialInformation(void);
-
-void vt100_print_text(void) {
-    vt100_clear();
-    vt100_set_yellow();
-    UARTSend ("*** ABS SIM (12.07.22) ***");
-    vt100_set_line_number(2);
-    UARTSend ("Steering -> (a, d):");
-    vt100_set_line_number(4);
-    UARTSend ("Car speed (km/h) -> (s, w):");
-    vt100_set_line_number(6);
-    UARTSend ("Wheel speed (km/h):");
-    vt100_set_line_number(8);
-    UARTSend ("Wheel PRR (Hz):");
-    vt100_set_line_number(10);
-    UARTSend ("Wheel radii (m)");
-    vt100_set_line_number(12);
-    UARTSend ("Brake pedal pressure -> ([, ]):");
-    vt100_set_line_number(14);
-    UARTSend ("Brake pedal push/release -> (b):");
-    vt100_set_line_number(16);
-    UARTSend ("Road Condition -> (r):");
-    vt100_set_line_number(18);
-    UARTSend ("Wheel Slip -> (LF LR RF RR):");
-    vt100_set_white();
-}
-
-
-void vt100_print_radii(char LF[6],char LR[6],char RF[6],char RR[6]) {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    vt100_set_line_number(11);
-    sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LF, LR, RF, RR);
-    UARTSend (ANSIString);
-}
-
-void vt100_print_prr(char LF[6],char LR[6],char RF[6],char RR[6]) {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    vt100_set_line_number(9);
-    sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LF, LR, RF, RR);
-    UARTSend (ANSIString);
-}
-
-void vt100_print_condition(uint8_t condition) {
-    char ANSIString[MAX_STR_LEN + 1]; // For uart message
-    vt100_set_line_number(17);
-    sprintf(ANSIString, "%s", get_condition(condition));
-    UARTSend (ANSIString);
-}
-
-const char* get_condition(uint8_t condition){
-    
-    if (condition == 0)
-    {
-        return "DRY";
-    }
-    else if (condition == 1)
-    {
-        return "WET";
-    }
-    else{
-        return "ICY";
-    }
 }
 
 void printInitialInformation(void)
@@ -169,6 +133,57 @@ void printInitialInformation(void)
     vt100_print_slipage(slipArray, absState);
 }
 
+void vt100_print_text(void) {
+    vt100_clear();
+    vt100_set_yellow();
+    UARTSend ("*** ABS SIM (12.07.22) ***");
+    vt100_set_line_number(2);
+    UARTSend ("Steering -> (a, d):");
+    vt100_set_line_number(4);
+    UARTSend ("Car speed (km/h) -> (s, w):");
+    vt100_set_line_number(6);
+    UARTSend ("Wheel speed (km/h):");
+    vt100_set_line_number(8);
+    UARTSend ("Wheel PRR (Hz):");
+    vt100_set_line_number(10);
+    UARTSend ("Wheel radii (m)");
+    vt100_set_line_number(12);
+    UARTSend ("Brake pedal pressure -> ([, ]):");
+    vt100_set_line_number(14);
+    UARTSend ("Brake pedal push/release -> (b):");
+    vt100_set_line_number(16);
+    UARTSend ("Road Condition -> (r):");
+    vt100_set_line_number(18);
+    UARTSend ("Wheel Slip -> (LF LR RF RR):");
+    vt100_set_white();
+}
+
+void vt100_print_radii(char LF[6],char LR[6],char RF[6],char RR[6]) {
+    char ANSIString[MAX_STR_LEN + 1]; // For uart message
+    vt100_set_line_number(11);
+    sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LF, LR, RF, RR);
+    UARTSend (ANSIString);
+}
+
+void vt100_print_prr(char LF[6],char LR[6],char RF[6],char RR[6]) {
+    char ANSIString[MAX_STR_LEN + 1]; // For uart message
+    vt100_set_line_number(9);
+    sprintf (ANSIString, "Lf: %5s, Lr: %5s, Rf: %5s, Rr: %5s\r\n\n", LF, LR, RF, RR);
+    UARTSend (ANSIString);
+}
+
+void vt100_print_condition(Condition condition) {
+    vt100_set_line_number(17);
+    if (condition == 0){
+        UARTSend ("DRY");
+    } else if (condition == 1){
+        UARTSend ("WET");
+    } else {
+        UARTSend ("ICY");
+    }
+  
+    
+}
 
 void updateUARTTask(void* args)
 {
@@ -300,11 +315,6 @@ void updateUARTTask(void* args)
     }
 }
 
-/**
- * @brief Reads the buttons and uart input and changes car state values accordingly
- * @param args Unused
- * @return No return
- */
 void processUserInputsTask(void* args)
 {
     (void)args; // unused
@@ -387,13 +397,12 @@ void processUserInputsTask(void* args)
             change = true;
         }
         if (c == 'r')
-        {
-            uint8_t currentRoadCondition = getRoadCondition(); 
-            if  (currentRoadCondition <= 2) setRoadCondition(currentRoadCondition + 1);
-            else setRoadCondition(0);
+        {   
+    
+            if  ((getRoadCondition() + 1) > 2) setRoadCondition(0);
+                else (setRoadCondition(getRoadCondition() + 1));
             change = true;
         }
-        
 
         if (c == 'b')
         {

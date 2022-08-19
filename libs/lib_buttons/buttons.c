@@ -1,17 +1,16 @@
 // *******************************************************
 // 
-// buttons4.c
+// buttons.c
 //
 // Support for a set of FOUR specific buttons on the Tiva/Orbit.
 // ENCE361 sample code.
 // The buttons are:  UP and DOWN (on the Orbit daughterboard) plus
 // LEFT and RIGHT on the Tiva.
 //
-// Note that pin PF0 (the pin for the RIGHT pushbutton - SW2 on
-//  the Tiva board) needs special treatment - See PhilsNotesOnTiva.rtf.
 //
-// P.J. Bones UCECE
-// Last modified:  7.2.2018
+// Original Code: P.J. Bones UCECE
+// Modifications: A.J Eason A. Musalov
+// Last modified:  19/08/22
 // 
 // *******************************************************
 
@@ -34,11 +33,11 @@ static uint8_t but_count[NUM_BUTS];
 static bool but_flag[NUM_BUTS];
 static bool but_normal[NUM_BUTS];   // Corresponds to the electrical state
 
-// *******************************************************
-// initButtons: Initialise the variables associated with the set of buttons
-// defined by the constants in the buttons2.h header file.
-void
-initButtons (void)
+//*****************************************************************************
+// Functions
+//*****************************************************************************
+
+void initButtons (void)
 {
 	int i;
 
@@ -82,17 +81,7 @@ initButtons (void)
 	}
 }
 
-// *******************************************************
-// updateButtons: Function designed to be called regularly. It polls all
-// buttons once and updates variables associated with the buttons if
-// necessary.  It is efficient enough to be part of an ISR, e.g. from
-// a SysTick interrupt.
-// Debounce algorithm: A state machine is associated with each button.
-// A state change occurs only after NUM_BUT_POLLS consecutive polls have
-// read the pin in the opposite condition, before the state changes and
-// a flag is set.  Set NUM_BUT_POLLS according to the polling rate.
-void
-updateButtons (void)
+void updateButtons (void)
 {
 	bool but_value[NUM_BUTS];
 	int i;
@@ -120,12 +109,8 @@ updateButtons (void)
 	}
 }
 
-// *******************************************************
-// checkButton: Function returns the new button logical state if the button
-// logical state (PUSHED or RELEASED) has changed since the last call,
-// otherwise returns NO_CHANGE.
-uint8_t
-checkButton (uint8_t butName)
+
+uint8_t checkButton (uint8_t butName)
 {
 	if (but_flag[butName])
 	{
