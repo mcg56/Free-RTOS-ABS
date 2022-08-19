@@ -219,8 +219,10 @@ checkVelTask(void* args)
         setABS(car.absState);
         setABSDuty (car.brake);
         // char str[100];
-        // sprintf(str, "Abs state %d\r\n\n", car.absState);
+        // gcvt(car.steeringAngle, 3, str);
+        // // sprintf(str, "Abs state %d\r\n\n", car.steeringAngle);
         // UARTSend(str); 
+        // UARTSend("\r\n"); 
 
     }
 }
