@@ -1,6 +1,6 @@
 /** @file   buffer.c
-    @author T. Peterson, J. Aitken
-    @date   11/05/22
+    @author T. Peterson
+    @date   19/08/22
     @brief  Moving average filter
 */
 

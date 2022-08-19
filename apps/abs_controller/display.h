@@ -7,6 +7,7 @@
 
 /**
  * @brief Initialise the display module
+ * 
  * @return None
  */
 void

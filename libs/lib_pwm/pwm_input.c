@@ -1,6 +1,6 @@
 /**********************************************************
  *
- * ap_pwm_input.c - Main controlling file for the 
+ * pwm_input.c - Main controlling file for input 
  *      PWM information.
  *
  * IMPORTANT - This assumes all signals are on port B or port C
@@ -34,25 +34,25 @@
 //*************************************************************
 
 #define LEN(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
-#define MAX_NUM_SIGNALS         6   // Maximum number of signals
-#define DUTY_BUFF_LEN           2
-#define FREQ_BUFF_LEN           2
+#define MAX_NUM_SIGNALS                 6   // Maximum number of signals
+#define DUTY_BUFF_LEN                   2
+#define FREQ_BUFF_LEN                   2
 
-#define EDGE_TIMER_PERIPH       SYSCTL_PERIPH_TIMER0
-#define EDGE_TIMER_BASE         TIMER0_BASE
-#define EDGE_TIMER              TIMER_A
-#define EDGE_TIMER_CONFIG       TIMER_CFG_A_PERIODIC_UP
-#define RISING_EDGE_TIMEOUT     2   // Minimum rising edges during an update
+#define EDGE_TIMER_PERIPH               SYSCTL_PERIPH_TIMER0
+#define EDGE_TIMER_BASE                 TIMER0_BASE
+#define EDGE_TIMER                      TIMER_A
+#define EDGE_TIMER_CONFIG               TIMER_CFG_A_PERIODIC_UP
+#define RISING_EDGE_TIMEOUT             2   // Minimum rising edges during an update
 
-#define TIMEOUT_TIMER_PERIPH    SYSCTL_PERIPH_TIMER2
-#define TIMEOUT_TIMER_BASE      TIMER2_BASE
-#define TIMEOUT_TIMER           TIMER_A
-#define TIMEOUT_TIMER_CONFIG    TIMER_CFG_A_PERIODIC
-#define TIMEOUT_TIMER_INT_FLAG  TIMER_TIMA_TIMEOUT
-#define TIMEOUT_DEFAULT_RATE    30  // [Hz]
+#define TIMEOUT_TIMER_PERIPH            SYSCTL_PERIPH_TIMER2
+#define TIMEOUT_TIMER_BASE              TIMER2_BASE
+#define TIMEOUT_TIMER                   TIMER_A
+#define TIMEOUT_TIMER_CONFIG            TIMER_CFG_A_PERIODIC
+#define TIMEOUT_TIMER_INT_FLAG          TIMER_TIMA_TIMEOUT
+#define TIMEOUT_DEFAULT_RATE            30  // [Hz]
 
-#define PWM_GPIO_BASE           GPIO_PORTB_BASE
-#define PWM_GPIO_PERIPH         SYSCTL_PERIPH_GPIOB | SYSCTL_PERIPH_GPIOC
+#define PWM_GPIO_BASE                   GPIO_PORTB_BASE
+#define PWM_GPIO_PERIPH                 SYSCTL_PERIPH_GPIOB | SYSCTL_PERIPH_GPIOC
 
 #define UPDATE_ALL_PWM_INPUTS_TASK_RATE 330 // [ms]
 
@@ -100,17 +100,17 @@ typedef struct {
 //*************************************************************
 // Function prototypes
 //*************************************************************
-static void updateAllPWMInputsTask(void* args);
-static void calculatePWMPropertiesTask(void* args);
-static void refreshPWMDetailsTask(void* args);
-static void setPWMTimeout (uint16_t timeoutRate);
-static void PWMEdgeIntHandler (void);
-static void PWMTimeoutHandler (void);
-static void calculatePWMProperties (PWMSignal_t* PWMSignal, edgeTimestamps_t timestamps);
-static void updateAllPWMInputs(void);
-static bool refreshPWMDetails(PWMSignal_t* PWMSignal);
-static PWMSignal_t* findPWMInput(char* id);
-static int findPWMIndex(char* id);
+static void         updateAllPWMInputsTask      (void* args);
+static void         calculatePWMPropertiesTask  (void* args);
+static void         refreshPWMDetailsTask       (void* args);
+static void         setPWMTimeout               (uint16_t timeoutRate);
+static void         PWMEdgeIntHandler           (void);
+static void         PWMTimeoutHandler           (void);
+static void         calculatePWMProperties      (PWMSignal_t* PWMSignal, edgeTimestamps_t timestamps);
+static void         updateAllPWMInputs          (void);
+static bool         refreshPWMDetails           (PWMSignal_t* PWMSignal);
+static PWMSignal_t* findPWMInput                (char* id);
+static int          findPWMIndex                (char* id);
 
 //*************************************************************
 // FreeRTOS handles
@@ -121,13 +121,13 @@ QueueHandle_t PWMUpdateTimestampsQueue;
 //*************************************************************
 // Static variables
 //*************************************************************
-static PWMInputSignals_t PWMInputSignals;
-static volatile int risingEdgeCount;
-static volatile edgeTimestamps_t edgeTimestamps;
-static volatile bool PWMReadTimeout = false;
-static uint16_t PWMTimeoutRate = TIMEOUT_DEFAULT_RATE;
-static buffer_t* freqBuff[MAX_NUM_SIGNALS];
-static buffer_t* dutyBuff[MAX_NUM_SIGNALS];
+static PWMInputSignals_t            PWMInputSignals;
+static volatile int                 risingEdgeCount;
+static volatile edgeTimestamps_t    edgeTimestamps;
+static volatile bool                PWMReadTimeout = false;
+static uint16_t                     PWMTimeoutRate = TIMEOUT_DEFAULT_RATE;
+static buffer_t*                    freqBuff[MAX_NUM_SIGNALS];
+static buffer_t*                    dutyBuff[MAX_NUM_SIGNALS];
 
 /**
  * @brief Initialise the timer used for edge tracking

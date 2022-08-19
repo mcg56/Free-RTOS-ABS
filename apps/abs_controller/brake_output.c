@@ -1,11 +1,10 @@
 /**********************************************************
  *
- * brake_output.c - File for output brake signal
+ * brake_output.c - Manages brake output signal
  * 
- * IMPORTANT - Much of this needs to be moved to abs_manager
  *
  * T.R Peterson, M.C Gardyne
- * Last modified:  3.8.22
+ * Last modified:  19.8.22
  **********************************************************/
 
 #include <stdint.h>
@@ -55,7 +54,7 @@ void            updateABS       (void);
 static void     toggleABSState  (void);
 
 //*****************************************************************************
-// Global variables
+// Static variables
 //*****************************************************************************
 static enum absStates absState = ABS_OFF;
 static uint8_t ABSDuty = ABS_DUTY_DEFAULT;
@@ -72,11 +71,15 @@ static PWMOutputHardwareDetails_t brakeSignal = {
     .gpioPin        = BRAKE_GPIO_PIN,
 };
 
+//*************************************************************
+// FreeRTOS handles
+//*************************************************************
 static TaskHandle_t pulseABSHandle;
 static TaskHandle_t updateABSHandle;
 
 /**
  * @brief Initialise brake output module
+ * 
  * @return None
  */
 void
@@ -93,6 +96,7 @@ initBrakeOutput (void)
 
 /**
  * @brief Pulse the ABS at a set rate
+ * 
  * @return None
  */
 void 
@@ -115,6 +119,7 @@ updateABSTask (void* args)
 
 /**
  * @brief Update the ABS state
+ * 
  * @return None
  */
 void 
@@ -136,6 +141,7 @@ updateABS (void)
 
 /**
  * @brief Pulse the ABS at a set rate
+ * 
  * @return None
  */
 void 
@@ -157,6 +163,7 @@ pulseABSTask (void* args)
 
 /**
  * @brief Change the ABS output
+ * 
  * @return None
  */
 void 
@@ -178,6 +185,7 @@ pulseABS (void)
 
 /**
  * @brief External function to set ABS
+ * 
  * @return None
  */
 void
@@ -191,7 +199,8 @@ setABS (enum absStates state)
 
 /**
  * @brief Sets the ABS state
- * @param state The state to set the ABS to
+ * 
+ * @param state - The state to set the ABS to
  * @return None
  */
 static void 
@@ -209,6 +218,7 @@ setABSState (enum absStates state)
 
 /**
  * @brief External access to toggle the ABS
+ * 
  * @return None
  */
 void
@@ -221,7 +231,8 @@ toggleABS (void)
 }
 
 /**
- * @brief Toggle the ABS state.
+ * @brief Toggle the ABS state
+ * 
  * @return None
  */
 static void 
@@ -239,6 +250,7 @@ toggleABSState (void)
 
 /**
  * @brief Sets the duty cycle of the ABS signal
+ * 
  * @param duty - Percentage duty cycle
  * @return int - 1 if successful, 0 if failed
  */
@@ -263,6 +275,7 @@ setABSDuty (uint8_t duty)
 
 /**
  * @brief Passes the ABS state out of the module
+ * 
  * @return enum absStates - Current ABS state
  */
 enum absStates 
@@ -273,6 +286,7 @@ getABSState (void)
 
 /**
  * @brief Passes the ABS duty out of the module
+ * 
  * @return int ABSDuty - The current ABS duty
  */
 uint8_t 
