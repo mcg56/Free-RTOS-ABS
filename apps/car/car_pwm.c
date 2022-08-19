@@ -16,6 +16,7 @@ Last modified:  19/08/22
 //*************************************************************
 // Private Constant Definitions
 //*************************************************************
+
 // Left front wheel output PWM hardware details
 #define PWM_LF_BASE	        PWM0_BASE
 #define PWM_LF_GEN          PWM_GEN_1
@@ -87,6 +88,7 @@ Last modified:  19/08/22
 //*****************************************************************************
 // Global variables
 //*****************************************************************************
+
 PWMOutputHardwareDetails_t PWMHardwareDetailsLF = {PWM_LF_BASE, PWM_LF_GEN, PWM_LF_OUTNUM, PWM_LF_OUTBIT, PWM_LF_PERIPH_PWM, PWM_LF_PERIPH_GPIO, PWM_LF_GPIO_BASE, PWM_LF_GPIO_CONFIG, PWM_LF_GPIO_PIN};
 PWMOutputHardwareDetails_t PWMHardwareDetailsLR = {PWM_LR_BASE, PWM_LR_GEN, PWM_LR_OUTNUM, PWM_LR_OUTBIT, PWM_LR_PERIPH_PWM, PWM_LR_PERIPH_GPIO, PWM_LR_GPIO_BASE, PWM_LR_GPIO_CONFIG, PWM_LR_GPIO_PIN};
 PWMOutputHardwareDetails_t PWMHardwareDetailsRF = {PWM_RF_BASE, PWM_RF_GEN, PWM_RF_OUTNUM, PWM_RF_OUTBIT, PWM_RF_PERIPH_PWM, PWM_RF_PERIPH_GPIO, PWM_RF_GPIO_BASE, PWM_RF_GPIO_CONFIG, PWM_RF_GPIO_PIN};

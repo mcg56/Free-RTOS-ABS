@@ -26,6 +26,7 @@ Last modified:  19/08/22
 //*************************************************************
 // Public Constant Definitions
 //*************************************************************
+
 #define PWM_WHEEL_FIXED_DUTY    50
 #define PWM_WHEEL_START_HZ      0
 #define PWM_BRAKE_FIXED_HZ      500
@@ -35,6 +36,7 @@ Last modified:  19/08/22
 //*****************************************************************************
 // Global variables
 //*****************************************************************************
+
 extern PWMOutputHardwareDetails_t PWMHardwareDetailsLF;
 extern PWMOutputHardwareDetails_t PWMHardwareDetailsLR;
 extern PWMOutputHardwareDetails_t PWMHardwareDetailsRF;

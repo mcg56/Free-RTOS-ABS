@@ -27,6 +27,7 @@ Last modified:  18/08/22
 //*************************************************************
 // Private Constant Definitions
 //*************************************************************
+
 #define ABS_DELAY_TIMER_PERIPHERAL  SYSCTL_PERIPH_TIMER4
 #define ABS_DELAY_TIMER_BASE        TIMER4_BASE
 #define ABS_DELAY_TIMER             TIMER_A
@@ -36,6 +37,12 @@ Last modified:  18/08/22
 #define ABS_INPUT_TASK_PRIORITY     3
 #define ABS_INPUT_PWM_HZ            500
 #define ABS_OFF_REQUIRED_READS      4
+
+//*****************************************************************************
+// Global variables
+//*****************************************************************************
+
+TaskHandle_t processABSInputSignalTaskHandle;
 
 
 //*************************************************************
@@ -58,12 +65,6 @@ void ABSDelayTimerInit();
  * @return None
  */
 void processABSInputSignalTask(void* args);
-
-//*****************************************************************************
-// Global variables
-//*****************************************************************************
-TaskHandle_t processABSInputSignalTaskHandle;
-
 
 //*****************************************************************************
 // Functions
