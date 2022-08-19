@@ -26,7 +26,8 @@ extern TaskHandle_t processABSInputSignalTaskHandle;
 //*************************************************************
 
 /**
- * @brief Initialises the abs_input module.
+ * @brief Initialises the abs_input module. Initialises
+ * timer and creates tasks.
  * @return None
  */
 void initABSInput(void);
