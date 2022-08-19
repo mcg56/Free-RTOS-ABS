@@ -142,7 +142,7 @@ calcWheelVel(uint32_t frequency)
 float 
 calcAngle(int32_t duty)
 {   
-    return (MID_DUTY-duty-1)*(MAX_ANGLE / HALF_DUTY);
+    return (MID_DUTY-duty)*(MAX_ANGLE / HALF_DUTY);
 }
 
 /**
@@ -252,7 +252,7 @@ void
 updateCarTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = UPDATE_CAR_TASK_RATE / portTICK_PERIOD_MS
+    const TickType_t xDelay = UPDATE_CAR_TASK_RATE / portTICK_PERIOD_MS;
     while (true) 
     {
         updateCar();
