@@ -10,6 +10,7 @@
 //*************************************************************
 // Type Definitions
 //*************************************************************
+
 /**
  * @brief Struture for storing car data
  * @param wheelVel          Individual wheel velocity
@@ -24,6 +25,9 @@ typedef struct {
     float steeringAngle;
 } CarAttributes_t;
 
+/**
+ * @brief Enumerator for car wheels
+ */
 typedef enum {
     REAR_LEFT = 0, 
     REAR_RIGHT, 
@@ -31,14 +35,19 @@ typedef enum {
     FRONT_RIGHT
 } Wheels;
 
-
 /**
  * @brief Regularly scheduled task for checking if the vehicle is slipping
+ * 
  * @return None
  */
 extern void 
 initABSManager (void);
 
+/**
+ * @brief Pass the car steering angle out of the module
+ * 
+ * @return int - Steering angle
+ */
 extern int 
 getSteeringAngle (void);
 

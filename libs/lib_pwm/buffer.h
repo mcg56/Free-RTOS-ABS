@@ -1,6 +1,6 @@
 /** @file   buffer.h
-    @author T. Peterson, J. Aitken
-    @date   11/05/22
+    @author T. Peterson
+    @date   19/08/22
     @brief  
 */
 
@@ -17,12 +17,27 @@ typedef struct
     int16_t array[];
 } buffer_t;
 
+/**
+ * @brief Create a dynamically allocated buffer
+ * 
+ * @return buffer - Pointer to the created buffer
+ */
 extern buffer_t
 *create_buffer (int16_t length);
 
+/**
+ * @brief Add a value to a buffer
+ * 
+ * @return bool - Represents if the addition was successful
+ */
 extern bool 
 add_to_buffer (buffer_t *buffer, int16_t value);
 
+/**
+ * @brief Averages the current buffer contents
+ * 
+ * @return int - Average buffer value
+ */
 extern int16_t
 average_buffer (buffer_t *buffer);
 

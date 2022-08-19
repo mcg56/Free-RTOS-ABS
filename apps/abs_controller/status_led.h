@@ -13,13 +13,29 @@ enum statusLEDState {BLINKING = 0, FIXED_ON, FIXED_OFF};
 //*************************************************************
 // Function handles
 //*************************************************************
-//TO DO: headers
+
+/**
+ * @brief Initialise LED
+ * 
+ * @return None
+ */
 extern void
 initStatusLED (void);
 
-void
+/**
+ * @brief Set the Status LED State object
+ * 
+ * @return None
+ */
+extern void
 setStatusLEDState (enum statusLEDState state);
 
+/**
+ * @brief Set the Blink Rate object
+ * 
+ * @param rateHz - Rate to blink the LED in Hertz
+ * @return None
+ */
 extern void 
 setStatusLEDBlinkRate (float rateHz);
 

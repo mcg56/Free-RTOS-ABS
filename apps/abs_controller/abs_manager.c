@@ -1,11 +1,11 @@
 /**********************************************************
  *
- * abs_manager.c - Main controlling file for the 
- *      ABS information.
+ * abs_manager.c - Manages the ABS output
  *
  * T.R Peterson, M.C Gardyne
  * Last modified:  24.7.22
  **********************************************************/
+
 #include "libs/lib_pwm/pwm_input.h"
 #include "abs_manager.h"
 #include "math.h"
@@ -24,7 +24,7 @@
 #define TOLERANCE               10      // 10% velocity difference as per guide
 #define FACTOR                  3.6     // m/s to km/h
 #define SCALE_FACTOR            100     // Scale result to percentage
-#define MIN_VELOCITY            10      // Minimum required velocity for ABS to function (m/s)
+#define MIN_VELOCITY            8       // Minimum required velocity for ABS to function (m/s)
 #define NUM_ABS_POLLS           2       // Number of times to check ABS state before changing (debouncing)
 #define MIN_BRAKE_DUTY          5       // Minimum duty cycle of brake signal while on
 #define UPDATE_CAR_TASK_RATE    50      // [ms]
@@ -32,20 +32,27 @@
 //*************************************************************
 // Function prototype
 //*************************************************************
-void checkVelTask(void* args);
-void updateCarTask(void* args);
-void updateCar(void);
-void checkVelTask(void* args);
-int getSteeringAngle (void);
-uint32_t calcCarVel(uint32_t wheel);
-uint32_t calcWheelVel(uint32_t frequency);
-float calcAngle(int32_t duty);
+void        checkVelTask        (void* args);
+void        updateCarTask       (void* args);
+void        updateCar           (void);
+void        checkVelTask        (void* args);
+int         getSteeringAngle    (void);
+uint32_t    calcCarVel          (uint32_t wheel);
+uint32_t    calcWheelVel        (uint32_t frequency);
+float       calcAngle           (int32_t duty);
 
-
+//*************************************************************
+// FreeRTOS handles
+//*************************************************************
 CarAttributes_t car; // Probably not very reliable
 TaskHandle_t checkVelHandle;
 TaskHandle_t updateCarHandle;
 
+/**
+ * @brief Initialise the ABS manager module
+ * 
+ * @return None
+ */
 void
 initABSManager (void)
 {
@@ -54,15 +61,21 @@ initABSManager (void)
     xTaskCreate(&checkVelTask, "checkVel", 256, NULL, 0, &checkVelHandle);
 }
 
+/**
+ * @brief Pass the car steering angle out of the module
+ * 
+ * @return int - Steering angle
+ */
 int 
 getSteeringAngle (void)
 {
     return car.steeringAngle;
 }
 
-
 /**
- * @brief Calculates the hypothetical vehicle velocity based on outer-most wheel from individual wheel velocity
+ * @brief Calculates the hypothetical vehicle velocity based on 
+ *        outer-most wheel from individual wheel velocity
+ * 
  * @param - Target wheel
  * @return - Hypothetical vehicle velocity
  */
@@ -110,8 +123,9 @@ calcCarVel(uint32_t wheel)
 
 /**
  * @brief Calculates the wheel velocity based on input frequency
- * @param frequency Duty cycle of steering input
- * @return Int (wheel speed)
+ * 
+ * @param frequency - Duty cycle of steering input
+ * @return Int - (wheel speed)
  */
 uint32_t 
 calcWheelVel(uint32_t frequency)
@@ -121,27 +135,32 @@ calcWheelVel(uint32_t frequency)
 
 /**
  * @brief Calculates the turn angle based off input PWM signal
- * @param duty Duty cycle of steering input
- * @return Float (steering angle)
+ * 
+ * @param duty - Duty cycle of steering input
+ * @return Float - (steering angle)
  */
 float 
 calcAngle(int32_t duty)
 {   
-    return (MID_DUTY-duty-1)*(MAX_ANGLE / HALF_DUTY);
+    if (duty == 0){
+        return 0;
+    }
+    return (MID_DUTY-duty)*(MAX_ANGLE / HALF_DUTY);
 }
 
 /**
  * @brief Updates car attributes
- * @param 
- * @return 
+ *  
+ * @return None
  */
 void 
 updateCar(void)
 {   
     // Update steering angle
     car.steeringAngle = calcAngle(getPWMInputSignal(STEERING_ID).duty);
-    car.brake = getPWMInputSignal(BRAKE_PEDAL_ID).duty;
 
+    // Update pedal pressure
+    car.brake = getPWMInputSignal(BRAKE_PEDAL_ID).duty;
 
     // Calculate individual wheel velocities
     car.wheelVel[REAR_LEFT] = calcWheelVel(getPWMInputSignal(RL_WHEEL_ID).frequency);
@@ -154,8 +173,8 @@ updateCar(void)
 
 /**
  * @brief Updates car attributes
- * @param void
- * @return 
+ * 
+ * @return None
  */
 void 
 checkVelTask(void* args)
@@ -217,24 +236,26 @@ checkVelTask(void* args)
 
         setABSDuty (car.brake);
         setABS(car.absState);
+
+        // REMOVE
         // char str[100];
-        // gcvt(car.steeringAngle, 3, str);
-        // // sprintf(str, "Abs state %d\r\n\n", car.steeringAngle);
+        // // gcvt(car.brake, 3, str);
+        // sprintf(str, "Abs state %d\r\n\n", car.brake);
         // UARTSend(str); 
         // UARTSend("\r\n"); 
-
     }
 }
 
 /**
  * @brief Regularly scheduled task for updating all PWM signals
+ * 
  * @return None
  */
 void 
 updateCarTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = UPDATE_CAR_TASK_RATE / portTICK_PERIOD_MS; // TO DO: magic number
+    const TickType_t xDelay = UPDATE_CAR_TASK_RATE / portTICK_PERIOD_MS;
     while (true) 
     {
         updateCar();

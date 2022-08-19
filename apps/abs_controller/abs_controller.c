@@ -7,24 +7,6 @@
  * Last modified:  24.7.22
  **********************************************************/
 
-/**
- * General plan
- * 
- * 1. In the background have all the PWM information updating
- * 2. Do some calculations based on the PWM states to determine if the car
- *    is slipping.
- * 3. Output a brake PWM according to calculation
- * 4. Update the screen to reflect the current state/information
- * 5. Update an LED
- * 
- */
-
-/**
- * This will contain:
- * 
- * 1. The overall main and task creation stuff
- *
- */
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -51,6 +33,10 @@
 #include "pwm_info.h"
 
 #include "status_led.h"
+
+//*************************************************************
+// FreeRTOS handles
+//*************************************************************
 
 TaskHandle_t testHandle;
 TaskHandle_t updateAllPWMInputsHandle;
@@ -131,9 +117,7 @@ int main (void)
     initDisplay ();
     initABSManager ();
 
-    // TO DO: Should all this PWM stuff be its own module? pwm_manager?
-    PWMOutputState(PWM_MAIN_BASE, PWM_MAIN_OUTBIT, true);
-
+    // Initialise input signals
     PWMSignal_t LFPWM = {.id = FL_WHEEL_ID, .gpioPort = FL_WHEEL_GPIO_BASE, .gpioPin = FL_WHEEL_GPIO_PIN};
     registerPWMSignal(LFPWM);
 
@@ -152,8 +136,8 @@ int main (void)
     PWMSignal_t BrakePedalPWM = {.id = BRAKE_PEDAL_ID, .gpioPort = BRAKE_PEDAL_GPIO_BASE, .gpioPin = BRAKE_PEDAL_GPIO_PIN};
     registerPWMSignal(BrakePedalPWM); 
 
-    xTaskCreate(&testTask, "testTask", 256, NULL, 0, &testHandle);
-
+    xTaskCreate(&testTask, "testTask", 256, NULL, 0, &testHandle); //REMOVE
+    
     vTaskStartScheduler();
 
     return 0;
@@ -166,5 +150,3 @@ void vAssertCalled( const char * pcFile, unsigned long ulLine ) {
     (void)ulLine; // unused
     while (true) ;
 }
-
-// TO DO: Fix pwm numbers accurate

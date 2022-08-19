@@ -3,7 +3,7 @@
  * display.c - Displays information on the OrbitOLED.
  *
  * T.R Peterson, M.C Gardyne
- * Last modified:  6.8.22
+ * Last modified:  619.8.22
  **********************************************************/
 
 #include <stdint.h>
@@ -34,10 +34,10 @@
 //*************************************************************
 // Constant Definitions
 //*************************************************************
-#define OLED_CHAR_WIDTH 17 // OLED is 16 characters wide
-#define MAX_ID_LEN 12
-#define MAX_STATE_LEN 6
-#define MAX_ANGLE_LEN 4
+#define OLED_CHAR_WIDTH                     17 // OLED is 16 characters wide
+#define MAX_ID_LEN                          12
+#define MAX_STATE_LEN                       6
+#define MAX_ANGLE_LEN                       4
 
 #define UPDATE_DISPLAY_TASK_RATE            200 // [ms]
 #define UPDATE_DISPLAY_BUTTONS_TASK_RATE    10 // [ms]
@@ -101,34 +101,34 @@ typedef struct {
 //*************************************************************
 // Function prototype
 //*************************************************************
-static void updateDisplayTask (void* args);
-static void updateDisplayButtonsTask (void* args);
-static void updateDisplay (void);
-static void updateSelectedScreen (void);
-static void updateScreenIndex (void);
-static void updateScreen (void);
-static void OLEDUpdateABSScreen (void);
-static void OLEDUpdatePWMScreen (void);
-static void OLEDDrawTemplate (void);
-static void OLEDDrawABSTemplate (void);
-static void OLEDDrawPWMTemplate (void);
-static void OLEDDrawTask(void* args);
-static void OLEDDraw(char str[], int col, int row);
-static void clearScreen (void);
-static char* getABSStateName (enum absStates state);
-static PWMSignal_t getSelectedPWM (void);
+static void         updateDisplayTask           (void* args);
+static void         updateDisplayButtonsTask    (void* args);
+static void         updateDisplay               (void);
+static void         updateSelectedScreen        (void);
+static void         updateScreenIndex           (void);
+static void         updateScreen                (void);
+static void         OLEDUpdateABSScreen         (void);
+static void         OLEDUpdatePWMScreen         (void);
+static void         OLEDDrawTemplate            (void);
+static void         OLEDDrawABSTemplate         (void);
+static void         OLEDDrawPWMTemplate         (void);
+static void         OLEDDrawTask                (void* args);
+static void         OLEDDraw                    (char str[], int col, int row);
+static void         clearScreen                 (void);
+static char*        getABSStateName             (enum absStates state);
+static PWMSignal_t  getSelectedPWM              (void);
 
 //*************************************************************
 // FreeRTOS Handles
 //*************************************************************
-QueueHandle_t OLEDDrawQueue;
-SemaphoreHandle_t OLEDDrawMutex;
+QueueHandle_t       OLEDDrawQueue;
+SemaphoreHandle_t   OLEDDrawMutex;
 
 //*****************************************************************************
 // Global variables
 //*****************************************************************************
 static Screen_t screen; 
-static int screenIndex = 0;
+static int      screenIndex = 0;
 
 /**
  * @brief Initialise the display module
@@ -396,24 +396,24 @@ OLEDUpdateABSScreen (void)
 {
     OLEDDraw_t lineToDraw;
 	
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%d", getSteeringAngle()); // TO DO: clear whitespace
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%d", getSteeringAngle());
     lineToDraw.row = 1;
     lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 
-    // Adds whitespace when changing from long IDs to shorter IDs TODO
+    // Adds whitespace when changing from long IDs to shorter IDs
     int whiteSpaceLen = MAX_ANGLE_LEN - strlen(lineToDraw.str);
     usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "                ");
     lineToDraw.str[whiteSpaceLen - 1] = 0;
     lineToDraw.col = OLED_CHAR_WIDTH - MAX_ANGLE_LEN;
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);   
 
-    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%s", getABSStateName(screen.content.absScreen.absState)); // TO DO: clear whitespace
+    usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "%s", getABSStateName(screen.content.absScreen.absState));
     lineToDraw.row = 2;
     lineToDraw.col = OLED_CHAR_WIDTH - 1 - strlen(lineToDraw.str);
     xQueueSendToBack(OLEDDrawQueue, &lineToDraw, 0);
 
-    // Adds whitespace when changing from long IDs to shorter IDs TODO
+    // Adds whitespace when changing from long IDs to shorter IDs
     whiteSpaceLen = MAX_STATE_LEN - strlen(lineToDraw.str);
     usnprintf (lineToDraw.str, sizeof(lineToDraw.str), "                ");
     lineToDraw.str[whiteSpaceLen - 1] = 0;
@@ -524,7 +524,12 @@ clearScreen (void)
 }
 
 
-// Maybe shouldn't be in this file?
+/**
+ * @brief Converts the ABS state to a string for printing
+ * 
+ * @param state - ABS state
+ * @return char* - String
+ */
 static char* 
 getABSStateName (enum absStates state)
 {

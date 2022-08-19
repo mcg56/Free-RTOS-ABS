@@ -3,7 +3,7 @@
  * status_led.c - Main controlling file for Tiva display
  * 
  * T.R Peterson, M.C Gardyne
- * Last modified:  24.7.22
+ * Last modified:  19.8.22
  **********************************************************/
 
 #include <stdint.h>
@@ -42,13 +42,12 @@ static void ledOff              (void);
 //*****************************************************************************
 // freeRTOS handles
 //*****************************************************************************
-TaskHandle_t blinkLEDHandle;
+TaskHandle_t    blinkLEDHandle;
+QueueHandle_t   blinkRateQueue;
 
-QueueHandle_t blinkRateQueue;
-
-//*************************************************************
+//*****************************************************************************
 // Static variables
-//*************************************************************
+//*****************************************************************************
 static TickType_t blinkTaskDelay = DEFAULT_BLINK_RATE / portTICK_PERIOD_MS;
 
 /**
@@ -158,6 +157,7 @@ setBlinkDelay (TickType_t delay)
 
 /**
  * @brief Toggles the LED on/off
+ * 
  * @return None
  */
 static void
@@ -168,6 +168,7 @@ toggleLED (void)
 
 /**
  * @brief Set LED on
+ * 
  * @return None
  */
 static void
@@ -178,6 +179,7 @@ ledOn (void)
 
 /**
  * @brief Set LED off
+ * 
  * @return None
  */
 static void

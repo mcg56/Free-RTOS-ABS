@@ -1,8 +1,23 @@
 #ifndef PWM_INPUTS_H_
 #define PWM_INPUTS_H_
 
+/**********************************************************
+ *
+ * pwm_input.c - Main controlling file for input 
+ *      PWM information.
+ *
+ * IMPORTANT - This assumes all signals are on port B or port C
+ * 
+ * T.R Peterson, M.C Gardyne
+ * Last modified:  24.7.22
+ **********************************************************/
+
 #include <stdint.h>
 #include <stddef.h>
+
+//*************************************************************
+// Constant Definitions
+//*************************************************************
 
 #define ID_LEN 20
 #define ABSPWM_ID "ABS"
