@@ -54,7 +54,7 @@
 #define PWM_GPIO_BASE                   GPIO_PORTB_BASE
 #define PWM_GPIO_PERIPH                 SYSCTL_PERIPH_GPIOB | SYSCTL_PERIPH_GPIOC
 
-#define UPDATE_ALL_PWM_INPUTS_TASK_RATE 330 // [ms]
+#define UPDATE_ALL_PWM_INPUTS_TASK_RATE 480 // [ms]
 
 //*************************************************************
 // Type Definitions
@@ -210,9 +210,9 @@ initPWMInputManager (uint16_t PWMMinFreq)
     PWMCalcDetailsQueue = xQueueCreate(6, sizeof(PWMRefreshInfo_t));
     PWMUpdateTimestampsQueue = xQueueCreate(6, sizeof(PWMSignal_t*));
 
-    xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 0, NULL);
-    xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 128, NULL, 0, NULL);
-    xTaskCreate(&refreshPWMDetailsTask, "refreshPWMDetails", 128, NULL, 0, NULL);
+    xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 1, NULL);
+    xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 128, NULL, 1, NULL);
+    xTaskCreate(&refreshPWMDetailsTask, "refreshPWMDetails", 128, NULL, 1, NULL);
 }
 
 
@@ -398,7 +398,9 @@ refreshPWMDetailsTask(void* args)
     {
         if (xQueueReceive(PWMUpdateTimestampsQueue, &PWMSignalPtr, portMAX_DELAY) == pdPASS)
         {
+            GPIOPinWrite(GPIO_PORTC_BASE, GPIO_PIN_5, GPIO_PIN_5);
             refreshPWMDetails(PWMSignalPtr);
+            GPIOPinWrite(GPIO_PORTC_BASE, GPIO_PIN_5, ~GPIO_PIN_5);
         }
     }   
 }

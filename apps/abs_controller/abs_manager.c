@@ -57,8 +57,8 @@ void
 initABSManager (void)
 {
     car.absState = ABS_OFF;
-    xTaskCreate(&updateCarTask, "updateCar", 256, NULL, 0, &updateCarHandle);
-    xTaskCreate(&checkVelTask, "checkVel", 256, NULL, 0, &checkVelHandle);
+    xTaskCreate(&updateCarTask, "updateCar", 256, NULL, 4, &updateCarHandle);
+    xTaskCreate(&checkVelTask, "checkVel", 256, NULL, 4, &checkVelHandle);
 }
 
 /**
@@ -257,8 +257,9 @@ updateCarTask(void* args)
     (void)args;
     const TickType_t xDelay = UPDATE_CAR_TASK_RATE / portTICK_PERIOD_MS;
     while (true) 
-    {
+    {      
         updateCar();
+
         vTaskDelay(xDelay);
     }   
 }

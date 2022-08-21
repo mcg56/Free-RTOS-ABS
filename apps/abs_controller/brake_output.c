@@ -90,8 +90,8 @@ initBrakeOutput (void)
 
     PWMOutputState(brakeSignal.base, brakeSignal.outbit, true);
 
-    xTaskCreate(&updateABSTask, "updateABS", 256, NULL, 0, &updateABSHandle);
-    xTaskCreate(&pulseABSTask, "pulseABS", 256, NULL, 0, &pulseABSHandle);
+    xTaskCreate(&updateABSTask, "updateABS", 256, NULL, 3, &updateABSHandle);
+    xTaskCreate(&pulseABSTask, "pulseABS", 256, NULL, 4, &pulseABSHandle);
 
     updateABS();
 }
@@ -115,7 +115,7 @@ updateABSTask (void* args)
 
         updateABS();
 
-        vTaskDelay(xDelay);
+        // vTaskDelay(xDelay);
     }   
 }
 

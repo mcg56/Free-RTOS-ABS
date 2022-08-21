@@ -145,9 +145,9 @@ initDisplay (void)
 
     OLEDDrawMutex = xSemaphoreCreateMutex();
 
-    xTaskCreate(&updateDisplayTask, "updateDisplay", 256, NULL, 0, NULL);
-    xTaskCreate(&updateDisplayButtonsTask, "updateButtons", 256, NULL, 0, NULL);
-    xTaskCreate(&OLEDDrawTask, "OLEDDraw", 256, NULL, 0, NULL);
+    xTaskCreate(&updateDisplayTask, "updateDisplay", 256, NULL, 2, NULL);
+    xTaskCreate(&updateDisplayButtonsTask, "updateButtons", 256, NULL, 2, NULL);
+    xTaskCreate(&OLEDDrawTask, "OLEDDraw", 256, NULL, 2, NULL);
 
     OLEDDrawTemplate ();
 }
