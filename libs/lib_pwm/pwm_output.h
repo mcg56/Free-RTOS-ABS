@@ -26,8 +26,8 @@
 #define PWM_RATE_MIN_HZ    50
 #define PWM_RATE_MAX_HZ    400
 #define PWM_FIXED_DUTY     40
-#define PWM_DIVIDER_CODE   SYSCTL_PWMDIV_16
-#define PWM_DIVIDER        16
+#define PWM_DIVIDER_CODE   SYSCTL_PWMDIV_64
+#define PWM_DIVIDER        64
 
 // I WANT TO DELETE THE BELOW BLOCK SOON
 //  PWM Hardware Details M0PWM7 (gen 3)

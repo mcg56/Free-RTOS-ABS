@@ -128,6 +128,8 @@ void processABSInputSignalTask(void* args)
         // No high edge found in 1/500 s, ABS must be toggled on. 0 duty
         if (!highEdgeFound)
         {
+            // Toggle GPIO LED to show we are reading every 50 ms
+            GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, ~GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_1));
             ABSState = true;
             brakeOnCount = 0;
             currentABSBrakeDuty = 0;
@@ -135,9 +137,17 @@ void processABSInputSignalTask(void* args)
 
         // Wait until we can take the mutex to be able to use car state shared resource
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
+        bool brakeOn = getPedalState();
         // Change car state values
         setABSBrakePressureDuty(currentABSBrakeDuty);
-        setABSState(ABSState);
+        if (brakeOn)
+        {
+            setABSState(ABSState);
+        } else
+        {
+            setABSState(false);
+        }
+        
         xSemaphoreGive(carStateMutex);
 
         //Delay so task runs at 20 Hz

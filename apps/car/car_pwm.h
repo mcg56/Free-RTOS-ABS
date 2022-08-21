@@ -29,7 +29,7 @@ Last modified:  19/08/22
 
 #define PWM_WHEEL_FIXED_DUTY    50
 #define PWM_WHEEL_START_HZ      0
-#define PWM_BRAKE_FIXED_HZ      500
+#define PWM_BRAKE_FIXED_HZ      200
 #define PWM_STEERING_FIXED_HZ   PWM_BRAKE_FIXED_HZ // As on the same generator
 
 

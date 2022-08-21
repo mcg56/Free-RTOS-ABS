@@ -33,11 +33,12 @@ Last modified:  19/08/22
 // Private Constant Definitions
 //*************************************************************
 
-#define UART_TASK_DELAY_MS 333
-#define USER_INPUT_TASK_DELAY_MS 100
-#define CAR_SPEED_INCREMENT 100
-#define CAR_SPEED_DECREMENT 50
-#define CAR_SPEED_MIN 0
+#define UART_TASK_DELAY_MS          333
+#define USER_INPUT_TASK_DELAY_MS    100
+#define CAR_SPEED_INCREMENT         2
+#define CAR_SPEED_DECREMENT         2
+#define MAX_SPEED                   120
+#define MIN_SPEED 0
 #define DUTY_CYCLE_MIN 5
 #define STEERING_DUTY_INCREMENT 5
 #define DUTY_CYCLE_MAX 95
@@ -259,7 +260,9 @@ void updateUARTTask(void* args)
         }
         
         // Car speed line
-        if (speed != prevSpeed) // Only write line if there was a change
+        // Only write line if there was a change.
+        // Need >= as = comparison for very small speeds returns incorrect boolean
+        if (fabs(speed - prevSpeed) >= 0.0f) 
         {
             gcvt (speed, 4, &floatBuff);
             vt100_print_car_speed(floatBuff);
@@ -362,15 +365,13 @@ void processUserInputsTask(void* args)
         if (checkButton(UP) == PUSHED || c == 'w')
         {
             float currentSpeed = getCarSpeed(); //TO DO limit to 120
-            setCarSpeed(currentSpeed + CAR_SPEED_INCREMENT);
+            setCarSpeed(fmin(currentSpeed + CAR_SPEED_INCREMENT, MAX_SPEED));
             change = true;            
         }
         if (checkButton(DOWN) == PUSHED || c == 's')
         {
             float currentSpeed = getCarSpeed();
-            if (currentSpeed != CAR_SPEED_MIN) {
-                setCarSpeed(currentSpeed - CAR_SPEED_DECREMENT);
-            }
+            setCarSpeed(fmax(currentSpeed - CAR_SPEED_INCREMENT, MIN_SPEED));
             change = true;
         }
         // Car steering user input

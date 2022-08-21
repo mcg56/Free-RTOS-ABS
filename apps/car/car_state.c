@@ -26,7 +26,7 @@ Last modified:  19/08/22
 #define PERCENTAGE_DIVIDER 100.0
 #define MAXIMUM_DECELERATION 15
 #define DECELERATION_TASK_PERIOD 50
-#define MIN_SPEED 0
+#define MIN_SPEED 0.0
 
 
 //*****************************************************************************
@@ -253,7 +253,7 @@ void decelerationTask (void* args)
             // Modify the speed dependant on brake pressure
             float newSpeed = currentSpeed - (float)currentABSBrakeDuty*maxDecel*taskPeriodms/MILLISECOND_DIVIDER/PERCENTAGE_DIVIDER;
             if (newSpeed <= MIN_SPEED) {
-                    newSpeed = MIN_SPEED;
+                newSpeed = MIN_SPEED;
             }
 
             setCarSpeed(newSpeed);

@@ -24,7 +24,7 @@
 #define TOLERANCE               10      // 10% velocity difference as per guide
 #define FACTOR                  3.6     // m/s to km/h
 #define SCALE_FACTOR            100     // Scale result to percentage
-#define MIN_VELOCITY            8       // Minimum required velocity for ABS to function (m/s)
+#define MIN_VELOCITY            10       // Minimum required velocity for ABS to function (m/s)
 #define NUM_ABS_POLLS           2       // Number of times to check ABS state before changing (debouncing)
 #define MIN_BRAKE_DUTY          5       // Minimum duty cycle of brake signal while on
 #define UPDATE_CAR_TASK_RATE    50      // [ms]
@@ -145,7 +145,7 @@ calcAngle(int32_t duty)
     if (duty == 0){
         return 0;
     }
-    return (MID_DUTY-duty)*(MAX_ANGLE / HALF_DUTY);
+    return (duty - MID_DUTY)*(MAX_ANGLE / HALF_DUTY);
 }
 
 /**
@@ -190,7 +190,7 @@ checkVelTask(void* args)
         static uint8_t absValue = ABS_OFF;
 
         // Keep ABS state on if triggered and brake remains depressed as per requirements
-        if ((absValue == ABS_ON) && (car.brake > MIN_BRAKE_DUTY)) {
+        if ((absValue == ABS_ON) && (car.brake >= MIN_BRAKE_DUTY)) {
             absValue = ABS_ON;
         } else {
             absValue = ABS_OFF;

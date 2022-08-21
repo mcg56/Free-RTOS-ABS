@@ -118,6 +118,9 @@ int main (void)
     initABSManager ();
 
     // Initialise input signals
+    PWMSignal_t BrakePedalPWM = {.id = BRAKE_PEDAL_ID, .gpioPort = BRAKE_PEDAL_GPIO_BASE, .gpioPin = BRAKE_PEDAL_GPIO_PIN};
+    registerPWMSignal(BrakePedalPWM); 
+
     PWMSignal_t LFPWM = {.id = FL_WHEEL_ID, .gpioPort = FL_WHEEL_GPIO_BASE, .gpioPin = FL_WHEEL_GPIO_PIN};
     registerPWMSignal(LFPWM);
 
@@ -132,9 +135,6 @@ int main (void)
 
     PWMSignal_t SteeringPWM = {.id = STEERING_ID, .gpioPort = STEERING_GPIO_BASE, .gpioPin = STEERING_GPIO_PIN};
     registerPWMSignal(SteeringPWM);
-
-    PWMSignal_t BrakePedalPWM = {.id = BRAKE_PEDAL_ID, .gpioPort = BRAKE_PEDAL_GPIO_BASE, .gpioPin = BRAKE_PEDAL_GPIO_PIN};
-    registerPWMSignal(BrakePedalPWM); 
 
     xTaskCreate(&testTask, "testTask", 256, NULL, 0, &testHandle); //REMOVE
     
