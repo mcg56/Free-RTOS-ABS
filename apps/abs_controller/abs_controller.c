@@ -54,7 +54,7 @@ printPWM(char* id)
     UARTSend(str);
     sprintf(str, "Frequency = %ld Hz\r\n", signal.frequency);
     UARTSend(str);
-    sprintf(str, "Duty : %ld\r\n\n", signal.duty);
+    sprintf(str, "Duty : %d\r\n\n", signal.duty);
     UARTSend(str);
 }
 

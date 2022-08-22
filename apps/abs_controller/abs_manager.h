@@ -18,10 +18,10 @@
  * @param carVel            Car velocity (max of wheel signals)
  */
 typedef struct {
-    int32_t wheelVel[NUM_WHEELS];
-    int32_t carVel;
+    int16_t wheelVel[NUM_WHEELS];
+    int16_t carVel;
     uint8_t absState;
-    uint32_t brake;
+    uint8_t brake;
     float steeringAngle;
 } CarAttributes_t;
 
