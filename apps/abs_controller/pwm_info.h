@@ -1,6 +1,12 @@
 #ifndef PWM_INFO_H_
 #define PWM_INFO_H_
 
+/** @file   pwm_info.h
+    @author T. Peterson, M. Gardyne
+    @date   22/08/22
+    @brief  Contains input signal information
+*/
+
 //*************************************************************
 // Wheel Input Definitions
 //*************************************************************

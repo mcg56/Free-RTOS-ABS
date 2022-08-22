@@ -1,10 +1,8 @@
-/**********************************************************
- *
- * abs_manager.c - Manages the ABS output
- *
- * T.R Peterson, M.C Gardyne
- * Last modified:  24.7.22
- **********************************************************/
+/** @file   abs_manager.c
+    @author T. Peterson, M. Gardyne
+    @date   22/08/22
+    @brief  Determines and controls the ABS state of the car
+*/
 
 #include "libs/lib_pwm/pwm_input.h"
 #include "abs_manager.h"
@@ -15,19 +13,25 @@
 #include "brake_output.h"
 #include "pwm_info.h"
 
-#define DIAMETER                0.5     // Wheel diameter (m)
-#define HALF_DUTY               45      // Half of duty range (95-5)/2
-#define MID_DUTY                50      // Mid of duty between 95-5
-#define MAX_ANGLE               29.1    // Max absolute turn angle (deg)
-#define TRACK                   1.5     // Wheel seperation (m)
-#define TICKS_PER_REV           20      // Encoder pulses per single wheel revolution
-#define TOLERANCE               10      // 10% velocity difference as per guide
-#define FACTOR                  3.6     // m/s to km/h
-#define SCALE_FACTOR            100     // Scale result to percentage
-#define MIN_VELOCITY            10       // Minimum required velocity for ABS to function (m/s)
-#define NUM_ABS_POLLS           2       // Number of times to check ABS state before changing (debouncing)
-#define MIN_BRAKE_DUTY          5       // Minimum duty cycle of brake signal while on
-#define UPDATE_CAR_TASK_RATE    50      // [ms]
+//*************************************************************
+// Constant definitions
+//*************************************************************
+
+#define DIAMETER                    0.5     // Wheel diameter (m)
+#define HALF_DUTY                   45      // Half of duty range (95-5)/2
+#define MID_DUTY                    50      // Mid of duty between 95-5
+#define MAX_ANGLE                   29.1    // Max absolute turn angle (deg)
+#define TRACK                       1.5     // Wheel seperation (m)
+#define TICKS_PER_REV               20      // Encoder pulses per single wheel revolution
+#define TOLERANCE                   10      // 10% velocity difference as per guide
+#define CONV_FACTOR                      3.6     // m/s to km/h
+#define SCALE_FACTOR                100     // Scale result to percentage
+#define MIN_VELOCITY                10      // Minimum required velocity for ABS to function (m/s)
+#define NUM_ABS_POLLS               2       // Number of times to check ABS state before changing (debouncing)
+#define MIN_BRAKE_DUTY              5       // Minimum duty cycle of brake signal while on
+#define UPDATE_CAR_TASK_RATE        50      // [ms]
+#define UPDATE_CAR_TASK_PRIORITY    4
+#define UPDATE_VEL_TASK_PRIORITY    4
 
 //*************************************************************
 // Function prototype
@@ -37,9 +41,9 @@ void        updateCarTask       (void* args);
 void        updateCar           (void);
 void        checkVelTask        (void* args);
 int         getSteeringAngle    (void);
-uint32_t    calcCarVel          (uint32_t wheel);
-uint32_t    calcWheelVel        (uint32_t frequency);
-float       calcAngle           (int32_t duty);
+uint16_t    calcCarVel          (uint32_t wheel);
+uint16_t    calcWheelVel        (uint32_t frequency);
+float       calcAngle           (int8_t duty);
 
 //*************************************************************
 // FreeRTOS handles
@@ -47,6 +51,7 @@ float       calcAngle           (int32_t duty);
 CarAttributes_t car; // Probably not very reliable
 TaskHandle_t checkVelHandle;
 TaskHandle_t updateCarHandle;
+
 
 /**
  * @brief Initialise the ABS manager module
@@ -57,8 +62,8 @@ void
 initABSManager (void)
 {
     car.absState = ABS_OFF;
-    xTaskCreate(&updateCarTask, "updateCar", 256, NULL, 4, &updateCarHandle);
-    xTaskCreate(&checkVelTask, "checkVel", 256, NULL, 4, &checkVelHandle);
+    xTaskCreate(&updateCarTask, "updateCar", 256, NULL, UPDATE_CAR_TASK_PRIORITY, &updateCarHandle);
+    xTaskCreate(&checkVelTask, "checkVel", 256, NULL, UPDATE_VEL_TASK_PRIORITY, &checkVelHandle);
 }
 
 /**
@@ -79,7 +84,7 @@ getSteeringAngle (void)
  * @param - Target wheel
  * @return - Hypothetical vehicle velocity
  */
-uint32_t 
+uint16_t 
 calcCarVel(uint32_t wheel)
 {
     // Radians conversion for math.h
@@ -127,10 +132,10 @@ calcCarVel(uint32_t wheel)
  * @param frequency - Duty cycle of steering input
  * @return Int - (wheel speed)
  */
-uint32_t 
+uint16_t 
 calcWheelVel(uint32_t frequency)
 {
-    return (FACTOR*DIAMETER*M_PI*frequency)/(TICKS_PER_REV);
+    return (CONV_FACTOR*DIAMETER*M_PI*frequency)/(TICKS_PER_REV);
 }
 
 /**
@@ -140,12 +145,13 @@ calcWheelVel(uint32_t frequency)
  * @return Float - (steering angle)
  */
 float 
-calcAngle(int32_t duty)
+calcAngle(int8_t duty)
 {   
     if (duty == 0){
         return 0;
+    } else {
+        return (duty - MID_DUTY)*(MAX_ANGLE / HALF_DUTY);
     }
-    return (duty - MID_DUTY)*(MAX_ANGLE / HALF_DUTY);
 }
 
 /**
@@ -156,10 +162,8 @@ calcAngle(int32_t duty)
 void 
 updateCar(void)
 {   
-    // Update steering angle
+    // Update steering angle and pedal pressure
     car.steeringAngle = calcAngle(getPWMInputSignal(STEERING_ID).duty);
-
-    // Update pedal pressure
     car.brake = getPWMInputSignal(BRAKE_PEDAL_ID).duty;
 
     // Calculate individual wheel velocities
@@ -167,6 +171,7 @@ updateCar(void)
     car.wheelVel[REAR_RIGHT] = calcWheelVel(getPWMInputSignal(RR_WHEEL_ID).frequency);
     car.wheelVel[FRONT_LEFT] = calcWheelVel(getPWMInputSignal(FL_WHEEL_ID).frequency);
     car.wheelVel[FRONT_RIGHT] = calcWheelVel(getPWMInputSignal(FR_WHEEL_ID).frequency);
+
     // Tell checkVel to compare speeds
     xTaskNotifyGiveIndexed( checkVelHandle, 0 ); 
 }
@@ -207,7 +212,7 @@ checkVelTask(void* args)
         car.carVel = 0;
 
         // Loop through each hypotheticle car velocity and update car velocity to maximum value
-        for (uint32_t i = 0; i < NUM_WHEELS; i++){
+        for (uint8_t i = 0; i < NUM_WHEELS; i++){
             if (calcHypoVel[i] > car.carVel) {
                 car.carVel = calcHypoVel[i];
             }
@@ -215,7 +220,7 @@ checkVelTask(void* args)
 
         // Loop through each hypotheticle car velocity and compare to maximum car velocity.
         // If absolute differnce greater than 10% and car velocity greater than 10 m/s turn ABS on and if the brakes are on
-        for (uint32_t i = 0; i < NUM_WHEELS; i++){
+        for (uint8_t i = 0; i < NUM_WHEELS; i++){
             float diff = ((car.carVel - calcHypoVel[i])*SCALE_FACTOR)/car.carVel;
             if ((diff > TOLERANCE) && (car.carVel > MIN_VELOCITY) && (car.brake > MIN_BRAKE_DUTY)) {
                 absValue = ABS_ON;
@@ -236,13 +241,6 @@ checkVelTask(void* args)
 
         setABSDuty (car.brake);
         setABS(car.absState);
-
-        // REMOVE
-        // char str[100];
-        // // gcvt(car.brake, 3, str);
-        // sprintf(str, "Abs state %d\r\n\n", car.brake);
-        // UARTSend(str); 
-        // UARTSend("\r\n"); 
     }
 }
 

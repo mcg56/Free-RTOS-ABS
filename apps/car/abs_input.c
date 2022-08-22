@@ -111,8 +111,8 @@ void processABSInputSignalTask(void* args)
             {
                 highEdgeFound = true;
                 // Read the duty and frequency
-                updatePWMInput(ABSPWM_ID);
-                pwmDetails = getPWMInputSignal(ABSPWM_ID);
+                updatePWMInput(ABS_PWM_ID);
+                pwmDetails = getPWMInputSignal(ABS_PWM_ID);
                 currentABSBrakeDuty = pwmDetails.duty;
 
                 //Update count to determine if ABS is off yet

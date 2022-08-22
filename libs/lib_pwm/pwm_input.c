@@ -1,13 +1,11 @@
-/**********************************************************
- *
- * pwm_input.c - Main controlling file for input 
- *      PWM information.
- *
- * IMPORTANT - This assumes all signals are on port B or port C
- * 
- * T.R Peterson, M.C Gardyne
- * Last modified:  24.7.22
- **********************************************************/
+/** @file   pwm_input.c
+    @author T. Peterson, M. Gardyne
+    @date   22/08/22
+    @brief  Manages and updates the duty 
+    and frequency of a set of input PWM signals.
+
+    IMPORTANT - This assumes all signals are on port B or port C
+*/
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -34,27 +32,31 @@
 //*************************************************************
 
 #define LEN(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
-#define MAX_NUM_SIGNALS                 6   // Maximum number of signals
-#define DUTY_BUFF_LEN                   2
-#define FREQ_BUFF_LEN                   2
+#define MAX_NUM_SIGNALS                         6 // Maximum number of signals
+#define DUTY_BUFF_LEN                           2
+#define FREQ_BUFF_LEN                           2
 
-#define EDGE_TIMER_PERIPH               SYSCTL_PERIPH_TIMER0
-#define EDGE_TIMER_BASE                 TIMER0_BASE
-#define EDGE_TIMER                      TIMER_A
-#define EDGE_TIMER_CONFIG               TIMER_CFG_A_PERIODIC_UP
-#define RISING_EDGE_TIMEOUT             2   // Minimum rising edges during an update
+#define EDGE_TIMER_PERIPH                       SYSCTL_PERIPH_TIMER0
+#define EDGE_TIMER_BASE                         TIMER0_BASE
+#define EDGE_TIMER                              TIMER_A
+#define EDGE_TIMER_CONFIG                       TIMER_CFG_A_PERIODIC_UP
+#define RISING_EDGE_TIMEOUT                     2 // Minimum rising edges during an update
 
-#define TIMEOUT_TIMER_PERIPH            SYSCTL_PERIPH_TIMER2
-#define TIMEOUT_TIMER_BASE              TIMER2_BASE
-#define TIMEOUT_TIMER                   TIMER_A
-#define TIMEOUT_TIMER_CONFIG            TIMER_CFG_A_PERIODIC
-#define TIMEOUT_TIMER_INT_FLAG          TIMER_TIMA_TIMEOUT
-#define TIMEOUT_DEFAULT_RATE            30  // [Hz]
+#define TIMEOUT_TIMER_PERIPH                    SYSCTL_PERIPH_TIMER2
+#define TIMEOUT_TIMER_BASE                      TIMER2_BASE
+#define TIMEOUT_TIMER                           TIMER_A
+#define TIMEOUT_TIMER_CONFIG                    TIMER_CFG_A_PERIODIC
+#define TIMEOUT_TIMER_INT_FLAG                  TIMER_TIMA_TIMEOUT
+#define TIMEOUT_DEFAULT_RATE                    30 // [Hz]
 
-#define PWM_GPIO_BASE                   GPIO_PORTB_BASE
-#define PWM_GPIO_PERIPH                 SYSCTL_PERIPH_GPIOB | SYSCTL_PERIPH_GPIOC
+#define PWM_GPIO_BASE                           GPIO_PORTB_BASE
+#define PWM_GPIO_PERIPH                         SYSCTL_PERIPH_GPIOB | SYSCTL_PERIPH_GPIOC
 
-#define UPDATE_ALL_PWM_INPUTS_TASK_RATE 480 // [ms]
+#define UPDATE_ALL_PWM_INPUTS_TASK_RATE         480 // [ms]
+#define UPDATE_ALL_PWM_INPUTS_TASK_PRIORITY     1
+#define CALCULATE_PWM_PROPERTIES_TASK_PRIORITY  1
+#define REFRESH_PWM_DETAILS_TASK_PRIORITY       1
+
 
 //*************************************************************
 // Type Definitions
@@ -210,9 +212,9 @@ initPWMInputManager (uint16_t PWMMinFreq)
     PWMCalcDetailsQueue = xQueueCreate(6, sizeof(PWMRefreshInfo_t));
     PWMUpdateTimestampsQueue = xQueueCreate(6, sizeof(PWMSignal_t*));
 
-    xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, 1, NULL);
-    xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 128, NULL, 1, NULL);
-    xTaskCreate(&refreshPWMDetailsTask, "refreshPWMDetails", 128, NULL, 1, NULL);
+    xTaskCreate(&updateAllPWMInputsTask, "updateAllPWMInputs", 256, NULL, UPDATE_ALL_PWM_INPUTS_TASK_PRIORITY, NULL);
+    xTaskCreate(&calculatePWMPropertiesTask, "calculatePWMProperties", 128, NULL, CALCULATE_PWM_PROPERTIES_TASK_PRIORITY, NULL);
+    xTaskCreate(&refreshPWMDetailsTask, "refreshPWMDetails", 128, NULL, REFRESH_PWM_DETAILS_TASK_PRIORITY, NULL);
 }
 
 
