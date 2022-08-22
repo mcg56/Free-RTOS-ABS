@@ -348,7 +348,7 @@ void updateUARTTask(void* args)
 
 void processUserInputsTask(void* args)
 {
-    (void)args; // unused TODO
+    (void)args; // unused
     const float taskPeriodms = USER_INPUT_TASK_DELAY_MS; //ms
     while (true) 
     {
@@ -475,8 +475,6 @@ void processUserInputsTask(void* args)
             // Tell the wheel update task to run
             xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);
         }
-
-        taskYIELD(); // Not sure if this is needed or not
         vTaskDelayUntil(&wake_time, taskPeriodms);
     }
 }
