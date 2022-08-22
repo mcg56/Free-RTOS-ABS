@@ -33,7 +33,7 @@ Last modified:  19/08/22
 // Private Constant Definitions
 //*************************************************************
 
-#define UART_TASK_DELAY_MS          333
+#define UART_TASK_DELAY_MS          500
 #define USER_INPUT_TASK_DELAY_MS    100
 #define CAR_SPEED_INCREMENT         2
 #define CAR_SPEED_DECREMENT         2
@@ -213,8 +213,7 @@ void vt100_print_condition(Condition condition) {
 void updateUARTTask(void* args)
 {
     (void)args;
-    const TickType_t xDelay = UART_TASK_DELAY_MS / portTICK_PERIOD_MS;
-
+    const float taskPeriodms = UART_TASK_DELAY_MS;
     // Save previous writes to check if they need to be updated
     uint8_t prevSteeringDuty;
     uint8_t prevSpeed;
@@ -236,6 +235,7 @@ void updateUARTTask(void* args)
     
     while(true)
     {
+        TickType_t wake_time = xTaskGetTickCount();
         // Wait until we can take the mutex to be able to use car state shared resource
         xSemaphoreTake(carStateMutex, portMAX_DELAY);
         // We have obtained the mutex, now get all car state variables
@@ -342,16 +342,17 @@ void updateUARTTask(void* args)
             prevABSState = absState;
         }
 
-        vTaskDelay(xDelay);
+        vTaskDelayUntil(&wake_time, taskPeriodms);
     }
 }
 
 void processUserInputsTask(void* args)
 {
     (void)args; // unused TODO
-    const TickType_t xDelay = USER_INPUT_TASK_DELAY_MS / portTICK_PERIOD_MS;
+    const float taskPeriodms = USER_INPUT_TASK_DELAY_MS; //ms
     while (true) 
     {
+        TickType_t wake_time = xTaskGetTickCount();
         updateButtons();
 
         // Convert to lowercase in case of CAPSLOCK
@@ -476,6 +477,6 @@ void processUserInputsTask(void* args)
         }
 
         taskYIELD(); // Not sure if this is needed or not
-        vTaskDelay(xDelay);
+        vTaskDelayUntil(&wake_time, taskPeriodms);
     }
 }
