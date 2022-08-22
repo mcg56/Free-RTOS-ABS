@@ -1,14 +1,18 @@
-/** @file   buffer.h
-    @author T. Peterson
-    @date   19/08/22
-    @brief  
-*/
-
 #ifndef BUFFER_H
 #define BUFFER_H
 
+/** @file   buffer.h
+    @author T. Peterson
+    @date   22/08/22
+    @brief  Moving average filter
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
+
+//*************************************************************
+// Type Definitions
+//*************************************************************
 
 typedef struct 
 {
@@ -16,6 +20,10 @@ typedef struct
     int8_t index;
     int16_t array[];
 } buffer_t;
+
+//*************************************************************
+// Function handles
+//*************************************************************
 
 /**
  * @brief Create a dynamically allocated buffer

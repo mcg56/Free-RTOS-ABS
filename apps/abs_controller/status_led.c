@@ -1,10 +1,8 @@
-/**********************************************************
- *
- * status_led.c - Main controlling file for Tiva display
- * 
- * T.R Peterson, M.C Gardyne
- * Last modified:  19.8.22
- **********************************************************/
+/** @file   status_led.c
+    @author T. Peterson, M. Gardyne
+    @date   22/08/22
+    @brief  Controls the ABS status light
+*/
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -23,11 +21,14 @@
 //*************************************************************
 // Constant Definitions
 //*************************************************************
-#define DEFAULT_BLINK_RATE  500                 // [ms]
+#define DEFAULT_BLINK_RATE              500 // [ms]
 
-#define STATUS_LED_PERIPH   SYSCTL_PERIPH_GPIOF
-#define STATUS_LED_BASE     GPIO_PORTF_BASE
-#define STATUS_LED_PIN      GPIO_PIN_1
+#define STATUS_LED_PERIPH               SYSCTL_PERIPH_GPIOF
+#define STATUS_LED_BASE                 GPIO_PORTF_BASE
+#define STATUS_LED_PIN                  GPIO_PIN_1
+
+#define BLINK_TASK_PRIORITY             0
+#define SET_BLINK_DELAY_TASK_PRIORITY   0
 
 //*************************************************************
 // Function prototypes
@@ -63,8 +64,8 @@ initStatusLED (void)
 
     blinkRateQueue = xQueueCreate(5, sizeof(TickType_t));
 
-    xTaskCreate(&blinkTask, "blinkLED", 256, NULL, 0, &blinkLEDHandle);
-    xTaskCreate(&setBlinkDelayTask, "setBlinkDelay", 256, NULL, 0, NULL);
+    xTaskCreate(&blinkTask, "blinkLED", 256, NULL, BLINK_TASK_PRIORITY, &blinkLEDHandle);
+    xTaskCreate(&setBlinkDelayTask, "setBlinkDelay", 256, NULL, SET_BLINK_DELAY_TASK_PRIORITY, NULL);
 }
 
 /**

@@ -1,11 +1,19 @@
 #ifndef ABS_MANAGER_H_
 #define ABS_MANAGER_H_
 
+/** @file   abs_manager.H
+    @author T. Peterson, M. Gardyne
+    @date   22/08/22
+    @brief  Determines and controls the ABS state of the car
+*/
+
 #include <stdint.h>
 #include <stdbool.h>
 
-#define NUM_WHEELS              4
-
+//*************************************************************
+// Constant Definitions
+//*************************************************************
+#define NUM_WHEELS              4 // Number of wheels
 
 //*************************************************************
 // Type Definitions
@@ -34,6 +42,10 @@ typedef enum {
     FRONT_LEFT, 
     FRONT_RIGHT
 } Wheels;
+
+//*************************************************************
+// Function Prototypes
+//*************************************************************
 
 /**
  * @brief Regularly scheduled task for checking if the vehicle is slipping

@@ -1,16 +1,14 @@
 #ifndef PWM_INPUTS_H_
 #define PWM_INPUTS_H_
 
-/**********************************************************
- *
- * pwm_input.c - Main controlling file for input 
- *      PWM information.
- *
- * IMPORTANT - This assumes all signals are on port B or port C
- * 
- * T.R Peterson, M.C Gardyne
- * Last modified:  24.7.22
- **********************************************************/
+/** @file   pwm_input.h
+    @author T. Peterson, M. Gardyne
+    @date   22/08/22
+    @brief  Manages and updates the duty 
+    and frequency of a set of input PWM signals.
+
+    IMPORTANT - This assumes all signals are on port B or port C
+*/
 
 #include <stdint.h>
 #include <stddef.h>
@@ -19,10 +17,10 @@
 // Constant Definitions
 //*************************************************************
 
-#define ID_LEN 20
-#define ABSPWM_ID "ABS"
-#define ABS_PWM_MIN_FREQ      30 // [Hz]
-#define CAR_PWM_MIN_FREQ      500 // [Hz] should be 500??
+#define ID_LEN                  20
+#define ABS_PWM_ID              "ABS"
+#define ABS_PWM_MIN_FREQ        30  // [Hz]
+#define CAR_PWM_MIN_FREQ        500 // [Hz]
 
 //*************************************************************
 // Type Definitions
@@ -96,7 +94,7 @@ getPWMInputSignal (char* id);
  * 
  * @return int - Number of signals
  */
-int 
+extern int 
 getCountPWMInputs (void);
 
 /**
@@ -105,7 +103,7 @@ getCountPWMInputs (void);
  * @param ids - An array to fill the IDs with
  * @param len - The length of the ids list
  */
-void
+extern void
 getIDList (char* ids[], size_t len);
 
 #endif

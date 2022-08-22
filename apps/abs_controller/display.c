@@ -1,10 +1,8 @@
-/**********************************************************
- *
- * display.c - Displays information on the OrbitOLED.
- *
- * T.R Peterson, M.C Gardyne
- * Last modified:  619.8.22
- **********************************************************/
+/** @file   display.c
+    @author T. Peterson, M. Gardyne
+    @date   22/08/22
+    @brief  Displays information on the OrbitOLED
+*/
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -40,7 +38,10 @@
 #define MAX_ANGLE_LEN                       4
 
 #define UPDATE_DISPLAY_TASK_RATE            200 // [ms]
-#define UPDATE_DISPLAY_BUTTONS_TASK_RATE    10 // [ms]
+#define UPDATE_BUTTONS_TASK_RATE            10 // [ms]
+#define UPDATE_DISPLAY_TASK_PRIORITY        2
+#define UPDATE_BUTTONS_TASK_PRIORITY        2 
+#define OLED_DRAW_TASK_PRIORITY             2
 
 //*************************************************************
 // Type Definitions
@@ -127,8 +128,8 @@ SemaphoreHandle_t   OLEDDrawMutex;
 //*****************************************************************************
 // Global variables
 //*****************************************************************************
-static Screen_t screen; 
-static int      screenIndex = 0;
+static Screen_t     screen; 
+static int          screenIndex = 0;
 
 /**
  * @brief Initialise the display module
@@ -145,9 +146,9 @@ initDisplay (void)
 
     OLEDDrawMutex = xSemaphoreCreateMutex();
 
-    xTaskCreate(&updateDisplayTask, "updateDisplay", 256, NULL, 2, NULL);
-    xTaskCreate(&updateDisplayButtonsTask, "updateButtons", 256, NULL, 2, NULL);
-    xTaskCreate(&OLEDDrawTask, "OLEDDraw", 256, NULL, 2, NULL);
+    xTaskCreate(&updateDisplayTask, "updateDisplay", 256, NULL, UPDATE_DISPLAY_TASK_PRIORITY, NULL);
+    xTaskCreate(&updateDisplayButtonsTask, "updateButtons", 256, NULL, UPDATE_BUTTONS_TASK_PRIORITY, NULL);
+    xTaskCreate(&OLEDDrawTask, "OLEDDraw", 256, NULL, OLED_DRAW_TASK_PRIORITY, NULL);
 
     OLEDDrawTemplate ();
 }
@@ -162,7 +163,7 @@ updateDisplayTask (void* args)
 {
     (void)args;
 
-    const TickType_t xDelay = UPDATE_DISPLAY_TASK_RATE / portTICK_PERIOD_MS; //TO DO: set rate
+    const TickType_t xDelay = UPDATE_DISPLAY_TASK_RATE / portTICK_PERIOD_MS;
 
     while (true)
     {
@@ -182,7 +183,7 @@ updateDisplayButtonsTask (void* args)
 {
     (void)args;
 
-    const TickType_t xDelay = UPDATE_DISPLAY_BUTTONS_TASK_RATE / portTICK_PERIOD_MS; //TO DO: set rate
+    const TickType_t xDelay = UPDATE_BUTTONS_TASK_RATE / portTICK_PERIOD_MS;
 
     while (true)
     {

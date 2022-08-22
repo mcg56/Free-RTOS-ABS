@@ -1,14 +1,11 @@
 #ifndef BRAKE_OUTPUT_H_
 #define BRAKE_OUTPUT_H_
 
-/**********************************************************
- *
- * brake_output.h - Manages brake output signal
- * 
- *
- * T.R Peterson, M.C Gardyne
- * Last modified:  19.8.22
- **********************************************************/
+/** @file   brake_output.h
+    @author T. Peterson, M. Gardyne
+    @date   22/08/22
+    @brief  Controls the output brake signal to car simulator
+*/
 
 //*************************************************************
 // Type Definitions
@@ -28,7 +25,7 @@ enum absStates {ABS_OFF = 0, ABS_ON};
  * 
  * @return None
  */
-void
+extern void
 initBrakeOutput (void);
 
 /**
@@ -36,7 +33,7 @@ initBrakeOutput (void);
  * @return None
  * 
  */
-void
+extern void
 setABS (enum absStates state);
 
 /**
@@ -44,7 +41,7 @@ setABS (enum absStates state);
  * 
  * @return None
  */
-void
+extern void
 toggleABS (void);
 
 /**
@@ -53,7 +50,7 @@ toggleABS (void);
  * @param duty - Percentage duty cycle
  * @return int - 1 if successful, 0 if failed
  */
-int 
+extern int 
 setABSDuty (uint8_t duty);
 
 /**
@@ -61,7 +58,7 @@ setABSDuty (uint8_t duty);
  * 
  * @return enum absStates - Current ABS state
  */
-enum absStates 
+extern enum absStates 
 getABSState (void);
 
 /**
@@ -69,7 +66,7 @@ getABSState (void);
  * 
  * @return int ABSDuty - The current ABS duty
  */
-uint8_t 
+extern uint8_t 
 getABSDuty (void);
 
 

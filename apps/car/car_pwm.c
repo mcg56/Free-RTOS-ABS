@@ -111,7 +111,7 @@ void initCarPwm(void)
     initializeCarPWMOutputs();
 
     // Create and register input ABS pwm
-    PWMSignal_t ABSPWM = {.id = ABSPWM_ID, .gpioPort = GPIO_PORTB_BASE, .gpioPin = GPIO_PIN_0};
+    PWMSignal_t ABSPWM = {.id = ABS_PWM_ID, .gpioPort = GPIO_PORTB_BASE, .gpioPin = GPIO_PIN_0};
     registerPWMSignal(ABSPWM);
 
     // Create PWM outut task

@@ -1,6 +1,12 @@
 #ifndef STATUS_LED_H_
 #define STATUS_LED_H_
 
+/** @file   status_led.h
+    @author T. Peterson, M. Gardyne
+    @date   22/08/22
+    @brief  Controls the ABS status light
+*/
+
 //*************************************************************
 // Type Definitions
 //*************************************************************

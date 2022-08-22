@@ -1,6 +1,6 @@
 /** @file   buffer.c
     @author T. Peterson
-    @date   19/08/22
+    @date   22/08/22
     @brief  Moving average filter
 */
 
