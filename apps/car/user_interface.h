@@ -20,6 +20,7 @@ Last modified:  19/08/22
 #include <task.h>
 #include <queue.h>
 #include "wheels.h"
+#include "car_state.h"
 
 //*****************************************************************************
 // Global variables
@@ -27,16 +28,6 @@ Last modified:  19/08/22
 
 extern TaskHandle_t processUserInputsTaskHandle;
 extern TaskHandle_t updateUARTTaskHandle;
-
-//*****************************************************************************
-// Enumerated data types
-//*****************************************************************************
-
-typedef enum {
-    DRY,
-    WET,
-    ICY
-} Condition;
 
 //*************************************************************
 // Function handles

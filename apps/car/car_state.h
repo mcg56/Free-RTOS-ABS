@@ -16,7 +16,6 @@ Last modified:  19/08/22
 #include <FreeRTOS.h>
 #include <semphr.h>
 #include "wheels.h"
-#include "user_interface.h"
 
 //*****************************************************************************
 // Structures
@@ -35,6 +34,16 @@ typedef struct {
     float pulseHz; //Hz
     bool slipping; 
 } Wheel;
+
+//*****************************************************************************
+// Enumerated data types
+//*****************************************************************************
+
+typedef enum {
+    DRY,
+    WET,
+    ICY
+} Condition;
 
 
 //*************************************************************

@@ -22,13 +22,18 @@ Last modified:  19/08/22
 // Private Constant Definitions
 //*************************************************************
 
-#define MILLISECOND_DIVIDER 1000.0
-#define PERCENTAGE_DIVIDER 100.0
-#define MAXIMUM_DECELERATION 15
-#define DECELERATION_TASK_PERIOD 50
-#define MIN_SPEED 0.0
-#define DECEL_TASK_PRIORITY 1
-#define DECEL_TASK_STACK_SIZE   256
+#define MILLISECOND_DIVIDER         1000.0
+#define PERCENTAGE_DIVIDER          100.0
+#define MAXIMUM_DECELERATION        15 // [m/s^2]
+#define DECELERATION_TASK_PERIOD    50 // [ms]
+#define MIN_SPEED                   0.0 // [km/h]
+#define DECEL_TASK_PRIORITY         1 
+#define DECEL_TASK_STACK_SIZE       256
+#define STARTING_SPEED              50.0 // [km/h]
+#define STARTING_STEERING_DUTY      50 // %
+#define STARTING_BRAKE_DUTY         50 // %
+#define STARTING_ALPHA              0.0 // Degrees
+#define STARTING_ROAD_CONDITION     DRY
 
 
 //*****************************************************************************
@@ -77,8 +82,8 @@ static const Wheel RF = {0, 0, 0, false};
 static const Wheel RR = {0, 0, 0, false};
 
 // Define local car state object
-static Car_t carState = {.speed=50.0, .steeringWheelDuty=50, .alpha=0.0, .condition=0,
-                         .pedalState=false, .brakePedalPressureDuty=50, .ABSBrakePressureDuty=5,
+static Car_t carState = {.speed=STARTING_SPEED, .steeringWheelDuty=STARTING_STEERING_DUTY, .alpha=STARTING_ALPHA, .condition=STARTING_ROAD_CONDITION,
+                         .pedalState=false, .brakePedalPressureDuty=STARTING_BRAKE_DUTY, .ABSBrakePressureDuty=STARTING_BRAKE_DUTY,
                          .ABSState=false, .leftFront=LF, .leftRear=LR, .rightFront=RF, .rightRear=RR};
 
 //*************************************************************
@@ -234,7 +239,7 @@ void decelerationTask (void* args)
 {
     (void)args;
     const float maxDecel = MAXIMUM_DECELERATION; // m/s^2
-    const float taskPeriodms = DECELERATION_TASK_PERIOD; //ms
+    const float taskPeriodms = DECELERATION_TASK_PERIOD; // ms
      
     
     while (true)

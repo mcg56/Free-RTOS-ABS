@@ -180,11 +180,11 @@ bool detectWheelSlip(Wheel* wheel, Condition condition, uint8_t pressure)
 
     // Set y intercepts of slipping curve based on road condition
     // Lower y intercept means car slips at less speed+braking
-    if (condition == 0) {
+    if (condition == DRY) {
         c = DRY_Y_INTERCEPT; // [km/h]
-    } else if (condition == 1){
+    } else if (condition == WET){
         c = WET_Y_INTERCEPT; // [km/h]
-    } else if (condition == 2){
+    } else if (condition == ICY){
         c = ICY_Y_INTERCEPT; // [km/h]
     }
 
