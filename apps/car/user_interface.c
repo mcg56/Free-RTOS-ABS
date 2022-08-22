@@ -38,17 +38,21 @@ Last modified:  19/08/22
 #define CAR_SPEED_INCREMENT         2
 #define CAR_SPEED_DECREMENT         2
 #define MAX_SPEED                   120
-#define MIN_SPEED 0
-#define DUTY_CYCLE_MIN 5
-#define STEERING_DUTY_INCREMENT 5
-#define DUTY_CYCLE_MAX 95
-#define BRAKE_PEDAL_INCREMENT 5
-#define ROAD_CONDITION_INCREMENT 1
-#define DRY_CONDITION 0
-#define WET_CONDITION 1
-#define ICY_CONDITION 2
-#define PEDAL_STATE_ON 1
-#define PEDAL_STATE_OFF 0
+#define MIN_SPEED                   0
+#define DUTY_CYCLE_MIN              5
+#define STEERING_DUTY_INCREMENT     5
+#define DUTY_CYCLE_MAX              95
+#define BRAKE_PEDAL_INCREMENT       5
+#define ROAD_CONDITION_INCREMENT    1
+#define DRY_CONDITION               0
+#define WET_CONDITION               1
+#define ICY_CONDITION               2
+#define PEDAL_STATE_ON              1
+#define PEDAL_STATE_OFF             0
+#define USER_INPUT_TASK_PRIORITY    1
+#define USER_INPUT_TASK_STACK_SIZE  150
+#define UART_TASK_PRIORITY          0
+#define UART_TASK_STACK_SIZE        256
 
 
 //*****************************************************************************
@@ -63,8 +67,8 @@ TaskHandle_t updateUARTTaskHandle;
 //*************************************************************
 
 /**
- * @brief Task to update the user input from the UART to control
- * the car.
+ * @brief Task to process the user input from the UART and  buttons to control
+ * the car simulator.
  * @param args Unused
  * @return No return
  */
@@ -93,8 +97,8 @@ void initUserInterface(void)
     initialiseUSB_UART ();
 
     // Create Tasks
-    xTaskCreate(&processUserInputsTask, "Process inputs", 150, NULL, 0, &processUserInputsTaskHandle);
-    xTaskCreate(&updateUARTTask, "update UART", 256, NULL, 0, &updateUARTTaskHandle);
+    xTaskCreate(&processUserInputsTask, "Process inputs", USER_INPUT_TASK_STACK_SIZE, NULL, USER_INPUT_TASK_PRIORITY, &processUserInputsTaskHandle);
+    xTaskCreate(&updateUARTTask, "update UART", UART_TASK_STACK_SIZE, NULL, UART_TASK_PRIORITY, &updateUARTTaskHandle);
 
 }
 

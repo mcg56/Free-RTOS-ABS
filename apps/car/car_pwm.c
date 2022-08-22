@@ -85,6 +85,8 @@ Last modified:  19/08/22
 #define PWM_STEER_GPIO_PIN      GPIO_PIN_3
 #define PWM_STEERING_START_DUTY 50
 
+#define OUTPUT_PWM_TASK_STACK   256
+#define OUTPUT_PWM_TASK_PRIORITY 2
 //*****************************************************************************
 // Global variables
 //*****************************************************************************
@@ -113,7 +115,7 @@ void initCarPwm(void)
     registerPWMSignal(ABSPWM);
 
     // Create PWM outut task
-    xTaskCreate(&updatePWMOutputsTask, "update PWM", 256, NULL, 2, &updatePWMOutputsTaskHandle);
+    xTaskCreate(&updatePWMOutputsTask, "update PWM", OUTPUT_PWM_TASK_STACK, NULL, OUTPUT_PWM_TASK_PRIORITY, &updatePWMOutputsTaskHandle);
 
 }
 

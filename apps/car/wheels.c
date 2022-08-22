@@ -47,6 +47,8 @@ Last modified:  19/08/22
 #define ICY_Y_INTERCEPT         80 // [km/h]
 #define CAR_MIN_SLIP_SPEED      10 // [km/h]
 #define NUM_WHEELS              4
+#define UPDATE_WHEELS_TASK_PRIORITY 2
+#define UPDATE_WHEELS_TASK_STACK_SIZE 256
 
 
 //*****************************************************************************
@@ -124,7 +126,7 @@ bool detectWheelSlip(Wheel* wheel, uint8_t condition, uint8_t pressure);
 
 void initWheels(void)
 {
-    xTaskCreate(&updateWheelInfoTask, "update wheel info", 256, NULL, 2, &updateWheelInfoHandle);
+    xTaskCreate(&updateWheelInfoTask, "update wheel info", UPDATE_WHEELS_TASK_STACK_SIZE, NULL, UPDATE_WHEELS_TASK_PRIORITY, &updateWheelInfoHandle);
     
     // Tell the wheel update task to run, which fills out the wheels speeds with starting info
     xTaskNotifyGiveIndexed(updateWheelInfoHandle, 0);

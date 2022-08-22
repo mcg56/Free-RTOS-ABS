@@ -27,6 +27,8 @@ Last modified:  19/08/22
 #define MAXIMUM_DECELERATION 15
 #define DECELERATION_TASK_PERIOD 50
 #define MIN_SPEED 0.0
+#define DECEL_TASK_PRIORITY 1
+#define DECEL_TASK_STACK_SIZE   256
 
 
 //*****************************************************************************
@@ -101,7 +103,7 @@ void initCarState(void)
     // Create shared resource mutex
     carStateMutex = xSemaphoreCreateMutex();
 
-    xTaskCreate(&decelerationTask, "decelerationTask", 256, NULL, 1, &decelerationTaskHandle);
+    xTaskCreate(&decelerationTask, "decelerationTask", DECEL_TASK_STACK_SIZE, NULL, DECEL_TASK_PRIORITY, &decelerationTaskHandle);
     // Suspend deceleration task as brake initially off
     vTaskSuspend(decelerationTaskHandle);
 }
