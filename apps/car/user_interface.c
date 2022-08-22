@@ -226,7 +226,7 @@ void updateUARTTask(void* args)
     float prevLFSpeed;
     float prevLFRadius;
     uint8_t prevBrakeDuty;
-    uint8_t prevRoadCondition;
+    Condition prevRoadCondition;
     bool prevPedalState;
     bool prevSlipArray[4];
     bool prevABSState;
@@ -250,7 +250,7 @@ void updateUARTTask(void* args)
         float speed = getCarSpeed();
         uint8_t steeringDuty = getSteeringDuty();
         float alpha = getSteeringAngle();
-        uint8_t roadCondition = getRoadCondition();
+        Condition roadCondition = getRoadCondition();
         bool pedalState = getPedalState();
         uint8_t brakeDuty = getBrakePedalPressureDuty();
         bool absState = getABSState();
