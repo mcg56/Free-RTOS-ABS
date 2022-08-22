@@ -1,15 +1,12 @@
-// *******************************************************
-// 
-// pwm_output.c - Module for initialising and managing PWM signals.
-// The module creates a pwm ouput task which manages the any desired 
-// PWM output. The PWM information is shared using a queue.
-//
-//
-// Original Code: P.J. Bones UCECE pwm_gen.c
-// Modifications: A.J Eason A. Musalov
-// Last modified:  19/08/22
-// 
-// *******************************************************
+/** @file   pwm_output.c
+    @author A.J Eason A. Musalov
+    @date   21/08/22
+    @brief  Module for initialising and managing PWM signals.
+            The module creates a pwm ouput task which manages the any desired 
+            PWM output. The PWM information is shared using a queue.
+
+            Original Code: P.J. Bones UCECE pwm_gen.c
+*/
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -56,11 +53,12 @@ void setPWMGeneral(uint32_t ui32Freq, uint32_t ui32Duty, uint32_t base, uint32_t
 void updatePWMOutputsTask(void* args) 
 {
     (void)args; // unused
+    TickType_t ticksToWait = 100;
     while(true)
     {
         // Wait until a new pwm is to be updated, when its added to queue
         pwmOutputUpdate_t requestedPWM;
-        portBASE_TYPE status = xQueueReceive(updatePWMQueue, &requestedPWM, 100);
+        portBASE_TYPE status = xQueueReceive(updatePWMQueue, &requestedPWM, ticksToWait);
         if (status == pdPASS)
         {
             setPWMGeneral(requestedPWM.freq, requestedPWM.duty, requestedPWM.pwmOutput.base, requestedPWM.pwmOutput.gen, requestedPWM.pwmOutput.outnum);

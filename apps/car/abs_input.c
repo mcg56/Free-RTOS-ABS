@@ -1,14 +1,10 @@
-/**********************************************************
-abs_input.c
-
-Module based around reading and processing the ABS input
-signal from the ABS controller. Contains tasks and functions
-to detect ABS using a timer and read the duty.
-
-A.J Eason A. Musalov
-Last modified:  18/08/22
-***********************************************************/
-
+/** @file   abs_input.c
+    @author A.J Eason A. Musalov
+    @date   18/08/22
+    @brief  Module based around reading and processing the ABS input
+            signal from the ABS controller. Contains tasks and functions
+            to detect ABS using a timer and read the duty.
+*/
 #include <FreeRTOS.h>
 #include <semphr.h>
 #include <stdint.h>

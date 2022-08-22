@@ -1,9 +1,8 @@
-/**********************************************************
-car.c - Main controlling file for the car simulator
-
-A.J Eason A. Musalov
-Last modified:  18/08/22
- **********************************************************/
+/** @file   car_state.h
+    @author A.J Eason A. Musalov
+    @date   22/08/22
+    @brief  Main controlling file for the car simulator
+*/
 
 #include <stdint.h>
 #include <stdbool.h>

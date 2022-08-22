@@ -1,13 +1,10 @@
-/**********************************************************
-car_pwm.c
-
-Module concerned with the car PWM outputs. Contains structs
-of the PWM signal hardware details and initialisation 
-functions.
-
-A.J Eason A. Musalov
-Last modified:  19/08/22
-***********************************************************/
+/** @file   car_pwm.c
+    @author A.J Eason A. Musalov
+    @date   19/08/22
+    @brief  Module concerned with the car PWM outputs. Contains structs
+            of the PWM signal hardware details and initialisation 
+            functions.
+*/
 
 #include "car_pwm.h"
 #include "libs/lib_pwm/pwm_output.h"

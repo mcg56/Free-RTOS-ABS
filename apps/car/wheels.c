@@ -1,13 +1,10 @@
-/**********************************************************
-wheels.c
-
-Module for controlling wheel attributes. Functions and tasks
-for calculating steering angle, wheel radii, wheel speed, slip
-etc.
-
-A.J Eason A. Musalov
-Last modified:  19/08/22
-***********************************************************/
+/** @file   wheels.c
+    @author A.J Eason A. Musalov
+    @date   22/08/22
+    @brief  Module for controlling wheel attributes. Functions and tasks
+            for calculating steering angle, wheel radii, wheel speed, slip
+            etc.
+*/
 
 #include "wheels.h"
 #include <math.h>

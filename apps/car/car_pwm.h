@@ -1,13 +1,10 @@
-/**********************************************************
-car_pwm.h
-
-Header file for the car PWM outputs module. Contains 
-global structs of the PWM signal hardware details and 
-initialisation functions handles.
-
-A.J Eason A. Musalov
-Last modified:  19/08/22
-***********************************************************/
+/** @file   car_pwm.h
+    @author A.J Eason A. Musalov
+    @date   19/08/22
+    @brief  Header file for the car PWM outputs module. Contains 
+            global structs of the PWM signal hardware details and 
+            initialisation functions handles.
+*/
 
 #ifndef CAR_PWM_H_
 #define CAR_PWM_H_

@@ -1,12 +1,10 @@
-/**********************************************************
-car_state.h
+/** @file   car_state.h
+    @author A.J Eason A. Musalov
+    @date   19/08/22
+    @brief  Header file for controlling the getter and setter functions for
+            the car outputs. The module also handles the deceleration task.
+*/
 
-Header file for controlling the getter and setter functions for
-the car outputs. The module also handles the deceleration task.
-
-A.J Eason A. Musalov
-Last modified:  19/08/22
-***********************************************************/
 #ifndef CAR_STATE_H_
 #define CAR_STATE_H_
 

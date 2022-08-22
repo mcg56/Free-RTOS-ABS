@@ -1,15 +1,13 @@
-// *******************************************************
-// 
-// pwm_output.h - Header file for managing the PWM outputs.
-// The module creates a pwm ouput task which manages the any desired 
-// PWM output. The PWM information is shared using a queue.
-//
-//
-// Original Code: P.J. Bones UCECE pwm_gen.c
-// Modifications: A.J Eason A. Musalov
-// Last modified:  19/08/22
-// 
-// *******************************************************
+/** @file   pwm_output.h
+    @author A.J Eason A. Musalov
+    @date   21/08/22
+    @brief  Module for initialising and managing PWM signals.
+            The module creates a pwm ouput task which manages the any desired 
+            PWM output. The PWM information is shared using a queue.
+
+            Original Code: P.J. Bones UCECE pwm_gen.c
+*/
+
 #ifndef PWM_OUTPUT_H_
 #define PWM_OUTPUT_H_
 

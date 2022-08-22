@@ -1,12 +1,9 @@
-/**********************************************************
-user_interface.h
-
-Header file for controlling the UART USB user interface. Has
-initialisation function handle and task handle.
-
-A.J Eason A. Musalov
-Last modified:  19/08/22
-***********************************************************/
+/** @file   user_interface.h
+    @author A.J Eason A. Musalov
+    @date   22/08/22
+    @brief  Header file for controlling the UART USB user interface. Has
+            initialisation function handle and task handle.
+*/
 
 #ifndef UI_H_
 #define UI_H_

@@ -1,13 +1,10 @@
-/**********************************************************
-user_interface.c
-
-Module which primary function is to maintain the UART terminal
-user interface. The module contains the USB_UART initialisation
-and UART display functions.
-
-A.J Eason A. Musalov
-Last modified:  19/08/22
-***********************************************************/
+/** @file   user_interface.c
+    @author A.J Eason A. Musalov
+    @date   22/08/22
+    @brief  Module which primary function is to maintain the UART terminal
+            user interface. The module contains the USB_UART initialisation
+            and UART display functions.
+*/
 
 #include "user_interface.h"
 #include <math.h>
@@ -67,6 +64,15 @@ TaskHandle_t updateUARTTaskHandle;
 //*************************************************************
 
 /**
+ * @brief Converts a double or float to a string.
+ * @param x         Floating point number
+ * @param ndigit    Numer of digits of precision
+ * @param buf       Char buffer to write to
+ * @return Pointer to char buffer
+ */
+char *gcvt(double x, int ndigit, char *buf);
+
+/**
  * @brief Task to process the user input from the UART and  buttons to control
  * the car simulator.
  * @param args Unused
@@ -113,11 +119,11 @@ void printInitialInformation(void)
     vt100_print_text();
 
     // Steering angle
-    gcvt (getSteeringAngle(), 4, &floatBuff);
+    gcvt (getSteeringAngle(), 4, floatBuff);
     vt100_print_steering_angle(getSteeringDuty(), floatBuff);
 
     // Car speed
-    gcvt (getCarSpeed(), 4, &floatBuff);
+    gcvt (getCarSpeed(), 4, floatBuff);
     vt100_print_car_speed(floatBuff);
 
     // Wheel information
@@ -127,26 +133,26 @@ void printInitialInformation(void)
     Wheel RR = getRightRear();
     // Wheel speed line
     //Convert floats to strings
-    gcvt (LF.speed, 4, &LFbuff);
-    gcvt (LR.speed, 4, &LRbuff);
-    gcvt (RF.speed, 4, &RFbuff);
-    gcvt (RR.speed, 4, &RRbuff);
+    gcvt (LF.speed, 4, LFbuff);
+    gcvt (LR.speed, 4, LRbuff);
+    gcvt (RF.speed, 4, RFbuff);
+    gcvt (RR.speed, 4, RRbuff);
     vt100_print_wheel_speed(LFbuff, LRbuff, RFbuff, RRbuff);
 
     //Wheel PRR line
     //First, convert floats to strings
-    gcvt (LF.pulseHz, 4, &LFbuff);
-    gcvt (LR.pulseHz, 4, &LRbuff);
-    gcvt (RF.pulseHz, 4, &RFbuff);
-    gcvt (RR.pulseHz, 4, &RRbuff);
+    gcvt (LF.pulseHz, 4, LFbuff);
+    gcvt (LR.pulseHz, 4, LRbuff);
+    gcvt (RF.pulseHz, 4, RFbuff);
+    gcvt (RR.pulseHz, 4, RRbuff);
     vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
 
     //Radius line
     //First, convert floats to strings
-    gcvt (LF.turnRadius, 4, &LFbuff);
-    gcvt (LR.turnRadius, 4, &LRbuff);
-    gcvt (RF.turnRadius, 4, &RFbuff);
-    gcvt (RR.turnRadius, 4, &RRbuff);
+    gcvt (LF.turnRadius, 4, LFbuff);
+    gcvt (LR.turnRadius, 4, LRbuff);
+    gcvt (RF.turnRadius, 4, RFbuff);
+    gcvt (RR.turnRadius, 4, RRbuff);
     vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
 
     // Brake pressure, road condition and pedal state
@@ -258,7 +264,7 @@ void updateUARTTask(void* args)
         // Steering line
         if (steeringDuty != prevSteeringDuty) // Only write line if there was a change
         {      
-            gcvt (alpha, 4, &floatBuff);
+            gcvt (alpha, 4, floatBuff);
             vt100_print_steering_angle(steeringDuty, floatBuff);
             prevSteeringDuty = steeringDuty;
         }
@@ -268,7 +274,7 @@ void updateUARTTask(void* args)
         // Need >= as = comparison for very small speeds returns incorrect boolean
         if (fabs(speed - prevSpeed) >= 0.0f) 
         {
-            gcvt (speed, 4, &floatBuff);
+            gcvt (speed, 4, floatBuff);
             vt100_print_car_speed(floatBuff);
             prevSpeed = speed;
         }
@@ -280,19 +286,19 @@ void updateUARTTask(void* args)
         {
             // Wheel speed line
             //Convert floats to strings
-            gcvt (LF.speed, 4, &LFbuff);
-            gcvt (LR.speed, 4, &LRbuff);
-            gcvt (RF.speed, 4, &RFbuff);
-            gcvt (RR.speed, 4, &RRbuff);
+            gcvt (LF.speed, 4, LFbuff);
+            gcvt (LR.speed, 4, LRbuff);
+            gcvt (RF.speed, 4, RFbuff);
+            gcvt (RR.speed, 4, RRbuff);
 
             vt100_print_wheel_speed(LFbuff, LRbuff, RFbuff, RRbuff);
 
             //Wheel PRR line
             //First, convert floats to strings
-            gcvt (LF.pulseHz, 4, &LFbuff);
-            gcvt (LR.pulseHz, 4, &LRbuff);
-            gcvt (RF.pulseHz, 4, &RFbuff);
-            gcvt (RR.pulseHz, 4, &RRbuff);
+            gcvt (LF.pulseHz, 4, LFbuff);
+            gcvt (LR.pulseHz, 4, LRbuff);
+            gcvt (RF.pulseHz, 4, RFbuff);
+            gcvt (RR.pulseHz, 4, RRbuff);
 
             vt100_print_prr(LFbuff, LRbuff, RFbuff, RRbuff);
             prevLFSpeed = LF.speed;
@@ -303,10 +309,10 @@ void updateUARTTask(void* args)
         if (LF.turnRadius != prevLFRadius) // Only write line if there was a change
         {
             //First, convert floats to strings
-            gcvt (LF.turnRadius, 4, &LFbuff);
-            gcvt (LR.turnRadius, 4, &LRbuff);
-            gcvt (RF.turnRadius, 4, &RFbuff);
-            gcvt (RR.turnRadius, 4, &RRbuff);
+            gcvt (LF.turnRadius, 4, LFbuff);
+            gcvt (LR.turnRadius, 4, LRbuff);
+            gcvt (RF.turnRadius, 4, RFbuff);
+            gcvt (RR.turnRadius, 4, RRbuff);
 
             vt100_print_radii(LFbuff, LRbuff, RFbuff, RRbuff);
             prevLFRadius = LF.turnRadius;

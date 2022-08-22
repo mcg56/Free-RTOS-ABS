@@ -1,26 +1,26 @@
+/** @file   uart.h
+    @author A.J Eason A. Musalov
+    @date   17/08/22
+    @brief  File containing all the functions related to the UART
+            functionality on the Tiva/Orbit board. Contains
+            ANSI escape sequences for UART user interface printing.
+            Also contains functions to print information used by 
+            both the car simulator and abs controller. E.g 
+            steering angle, wheel speed, brake pressure, abs state,
+            wheel slippage etc. Useful for debugging and knowing 
+            the state of the car/controller.
+
+            Acknowledgements:
+            Code from labs ~ Author Phil Bones:
+                Code from UARTDemo.c:
+                -initialiseUSB_UART
+                -UARTSend
+*/
+
 #ifndef UART_H
 #define UART_H
 
-/*************************************************************
-uart.h:
-File containing all the functions related to the UART
-functionality on the Tiva/Orbit board. Contains
-ANSI escape sequences for UART user interface printing.
-Also contains functions to print information used by 
-both the car simulator and abs controller. E.g 
-steering angle, wheel speed, brake pressure, abs state,
-wheel slippage etc. Useful for debugging and knowing 
-the state of the car/controller.
 
-Authors: Angus Eason, Anton Musalov
-
-Acknowledgements:
-Code from labs ~ Author Phil Bones:
-    Code from UARTDemo.c:
-    -initialiseUSB_UART
-    -UARTSend
-
- ************************************************************/
 #include <stdint.h>
 #include <stdbool.h>
 

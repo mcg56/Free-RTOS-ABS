@@ -1,12 +1,9 @@
-/**********************************************************
-wheels.h
-
-Header file for controlling wheel attributes. Has
-initialisation function handle and task handle.
-
-A.J Eason A. Musalov
-Last modified:  19/08/22
-***********************************************************/
+/** @file   wheels.h
+    @author A.J Eason A. Musalov
+    @date   22/08/22
+    @brief  Header file for controlling wheel attributes. Has
+            initialisation function handle and task handle.
+*/
 
 #ifndef WHEELS_H_
 #define WHEELS_H_
