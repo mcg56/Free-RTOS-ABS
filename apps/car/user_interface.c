@@ -369,7 +369,7 @@ void processUserInputsTask(void* args)
         // Car speed user input
         if (checkButton(UP) == PUSHED || c == 'w')
         {
-            float currentSpeed = getCarSpeed(); //TO DO limit to 120
+            float currentSpeed = getCarSpeed(); 
             setCarSpeed(fmin(currentSpeed + CAR_SPEED_INCREMENT, MAX_SPEED));
             change = true;            
         }

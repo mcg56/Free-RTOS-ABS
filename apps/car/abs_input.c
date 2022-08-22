@@ -38,6 +38,8 @@ Last modified:  18/08/22
 #define ABS_INPUT_PWM_HZ            500
 #define ABS_OFF_REQUIRED_READS      4
 
+#define ABSINPUT_TASK_PERIOD        50
+
 //*****************************************************************************
 // Global variables
 //*****************************************************************************
@@ -92,7 +94,7 @@ void processABSInputSignalTask(void* args)
     //Local variables
     static bool ABSState = false;
     static uint8_t brakeOnCount = 0;
-    const float taskPeriodms = 50; // [ms]
+    const float taskPeriodms = ABSINPUT_TASK_PERIOD; // [ms]
     PWMSignal_t pwmDetails;
     (void)args; // Unused
     while(1)
