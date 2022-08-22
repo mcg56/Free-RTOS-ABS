@@ -23,6 +23,7 @@
 #include "libs/lib_pwm/pwm_output.h"
 #include "brake_output.h"
 #include "status_led.h"
+#include "libs/lib_pwm/pwm_input.h"
 
 //*************************************************************
 // Constant Definitions
@@ -136,7 +137,12 @@ updateABS (void)
         case ABS_OFF:
             vTaskSuspend (pulseABSHandle);
             setPWMGeneral (500, ABSDuty, brakeSignal.base, brakeSignal.gen, brakeSignal.outnum);
-            setStatusLEDState (FIXED_ON);
+            if (getPWMInputSignal("BrakePedal").duty != 0){
+                setStatusLEDState(FIXED_ON);
+            } else {
+                setStatusLEDState(FIXED_OFF);
+            }
+
             break;
     }
 }
